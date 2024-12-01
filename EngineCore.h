@@ -27,6 +27,7 @@ namespace EngineCore
 		void WaitForPreviousFrame();
 		bool CreateDevice();
 		bool CreateCommandQueue();
+		bool CreateSwapChain();
 
 	private:
 		// Handle to the window
@@ -54,8 +55,15 @@ namespace EngineCore
 		IDXGIFactory4* dxgiFactory;
 		IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 		ID3D12Device* device; // direct3d device
+
 		D3D12_COMMAND_QUEUE_DESC cqDesc = {};
+
+		DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our display mode
+		DXGI_SAMPLE_DESC sampleDesc = {}; // describe our multi-sampling. We are not multi-sampling, so we set the count to 1 (we need at least one sample of course)
+		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+		IDXGISwapChain* tempSwapChain;
 		IDXGISwapChain3* swapChain; // swapchain used to switch between render targets
+		
 		ID3D12CommandQueue* commandQueue; // container for command lists
 		ID3D12DescriptorHeap* rtvDescriptorHeap; // a descriptor heap to hold resources like the render targets
 		ID3D12Resource* renderTargets[frameBufferCount]; // number of render targets equal to buffer count
