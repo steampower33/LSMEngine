@@ -4,6 +4,9 @@
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 
+// this will only call release if an object exists (prevents exceptions calling release on non existant objects)
+#define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
+
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
