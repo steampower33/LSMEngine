@@ -28,6 +28,7 @@ namespace EngineCore
 		bool CreateDevice();
 		bool CreateCommandQueue();
 		bool CreateSwapChain();
+		bool CreateRenderTargetViews();
 
 	private:
 		// Handle to the window

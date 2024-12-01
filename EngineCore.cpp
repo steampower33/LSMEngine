@@ -226,15 +226,9 @@ namespace EngineCore
 		return true;
 	}
 
-	bool AppBase::InitD3D()
+	bool AppBase::CreateRenderTargetViews()
 	{
 		HRESULT hr;
-
-		if (!CreateDevice()) return false;
-
-		if (!CreateCommandQueue()) return false;
-		
-		if (!CreateSwapChain()) return false;
 
 		// -- Create the Back Buffers (render target views) Descriptor Heap -- //
 
@@ -278,6 +272,22 @@ namespace EngineCore
 			// we increment the rtv handle by the rtv descriptor size we got above
 			rtvHandle.Offset(1, rtvDescriptorSize);
 		}
+
+		return true;
+
+	}
+
+	bool AppBase::InitD3D()
+	{
+		HRESULT hr;
+
+		if (!CreateDevice()) return false;
+
+		if (!CreateCommandQueue()) return false;
+		
+		if (!CreateSwapChain()) return false;
+
+		if (!CreateRenderTargetViews()) return false;
 
 		// -- Create the Command Allocators -- //
 
