@@ -114,20 +114,17 @@ namespace EngineCore
 		return true;
 	}
 
-	bool AppBase::InitD3D()
+	bool AppBase::CreateDevice()
 	{
 		HRESULT hr;
 
 		// -- Create the Device -- //
 
-		IDXGIFactory4* dxgiFactory;
 		hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
 		{
 			return false;
 		}
-
-		IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 
 		int adapterIndex = 0; // we'll start looking for directx 12  compatible graphics devices starting at index 0
 
@@ -172,18 +169,34 @@ namespace EngineCore
 			return false;
 		}
 
+		return true;
+	}
+
+	bool AppBase::CreateCommandQueue()
+	{
 		// -- Create a direct command queue -- //
 
-		D3D12_COMMAND_QUEUE_DESC cqDesc = {};
 		cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
 
+		HRESULT hr;
 		hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
 		if (FAILED(hr))
 		{
 			return false;
 		}
 
+		return true;
+	}
+
+	bool AppBase::InitD3D()
+	{
+		HRESULT hr;
+
+		if (!CreateDevice()) return false;
+
+		if (!CreateCommandQueue()) return false;
+		
 		// -- Create the Swap Chain (double/tripple buffering) -- //
 
 		DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our display mode

@@ -25,6 +25,8 @@ namespace EngineCore
 		bool InitD3D();
 		void Cleanup();
 		void WaitForPreviousFrame();
+		bool CreateDevice();
+		bool CreateCommandQueue();
 
 	private:
 		// Handle to the window
@@ -49,7 +51,10 @@ namespace EngineCore
 		// direct3d stuff
 		static const int frameBufferCount = 3; // number of buffers we want, 2 for double buffering, 3 for tripple buffering
 
+		IDXGIFactory4* dxgiFactory;
+		IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 		ID3D12Device* device; // direct3d device
+		D3D12_COMMAND_QUEUE_DESC cqDesc = {};
 		IDXGISwapChain3* swapChain; // swapchain used to switch between render targets
 		ID3D12CommandQueue* commandQueue; // container for command lists
 		ID3D12DescriptorHeap* rtvDescriptorHeap; // a descriptor heap to hold resources like the render targets
