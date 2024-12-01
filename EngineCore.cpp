@@ -277,18 +277,9 @@ namespace EngineCore
 
 	}
 
-	bool AppBase::InitD3D()
+	bool AppBase::CreateCommandTools()
 	{
 		HRESULT hr;
-
-		if (!CreateDevice()) return false;
-
-		if (!CreateCommandQueue()) return false;
-		
-		if (!CreateSwapChain()) return false;
-
-		if (!CreateRenderTargetViews()) return false;
-
 		// -- Create the Command Allocators -- //
 
 		for (int i = 0; i < frameBufferCount; i++)
@@ -331,6 +322,22 @@ namespace EngineCore
 		{
 			return false;
 		}
+
+	}
+
+	bool AppBase::InitD3D()
+	{
+		HRESULT hr;
+
+		if (!CreateDevice()) return false;
+
+		if (!CreateCommandQueue()) return false;
+		
+		if (!CreateSwapChain()) return false;
+
+		if (!CreateRenderTargetViews()) return false;
+
+		if (!CreateCommandTools()) return false;
 
 		return true;
 	}

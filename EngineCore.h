@@ -29,6 +29,7 @@ namespace EngineCore
 		bool CreateCommandQueue();
 		bool CreateSwapChain();
 		bool CreateRenderTargetViews();
+		bool CreateCommandTools();
 
 	private:
 		// Handle to the window
