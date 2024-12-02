@@ -17,14 +17,8 @@
     <ClCompile Include="EngineCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D3D12Utils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D3D12Utils.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="d3dx12.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -32,9 +26,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vertex.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
