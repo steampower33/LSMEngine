@@ -41,6 +41,7 @@ namespace EngineCore
 		bool CreatePipelineStateObject();
 		bool CreateVertexBuffer();
 		bool CreateIndexBuffer();
+		bool CreateConstantBuffer();
 		bool SetCommandQueueFence();
 		void SetViewport();
 		void SetScissorRect();
@@ -54,6 +55,11 @@ namespace EngineCore
 			Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
 			XMFLOAT3 pos;
 			XMFLOAT4 color;
+		};
+
+		// this is the structure of our constant buffer.
+		struct ConstantBuffer {
+			XMFLOAT4 colorMultiplier;
 		};
 
 		// Handle to the window
@@ -127,6 +133,15 @@ namespace EngineCore
 		D3D12_VIEWPORT viewport; // area that output from rasterizer will be stretched to.
 
 		D3D12_RECT scissorRect; // the area to draw in. pixels outside that area will not be drawn onto
+
+		ID3D12DescriptorHeap* mainDescriptorHeap[frameBufferCount]; // this heap will store the descripor to our constant buffer
+		ID3D12Resource* constantBufferUploadHeap[frameBufferCount]; // this is the memory on the gpu where our constant buffer will be placed.
+
+		ConstantBuffer cbColorMultiplierData; // this is the constant buffer data we will send to the gpu 
+		// (which will be placed in the resource we created above)
+
+		UINT8* cbColorMultiplierGPUAddress[frameBufferCount]; // this is a pointer to the memory location we get when we map our constant buffer
+
 
 	};
 }
