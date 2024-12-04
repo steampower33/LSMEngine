@@ -14,3 +14,7 @@
 #include <DirectXMath.h>
 #include "d3dx12.h"
 #include <string>
+#include <iostream>
+
+using namespace DirectX; // we will be using the directxmath library
+using Microsoft::WRL::ComPtr;
