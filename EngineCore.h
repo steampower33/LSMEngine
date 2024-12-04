@@ -44,6 +44,7 @@ namespace EngineCore
 		bool CreateVertexBuffer();
 		bool CreateIndexBuffer();
 		bool CreateConstantBuffer();
+		bool CreateTexture();
 		bool SetCommandQueueFence();
 		void SetViewport();
 		void SetScissorRect();
@@ -54,9 +55,9 @@ namespace EngineCore
 
 	private:
 		struct Vertex {
-			Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
+			Vertex(float x, float y, float z, float u, float v) : pos(x, y, z), texCoord(u, v) {}
 			XMFLOAT3 pos;
-			XMFLOAT4 color;
+			XMFLOAT2 texCoord;
 		};
 
 		// Handle to the window
@@ -170,6 +171,20 @@ namespace EngineCore
 		XMFLOAT4 cube2PositionOffset; // our second cube will rotate around the first cube, so this is the position offset from the first cube
 
 		int numCubeIndices; // the number of indices to draw the cube
+
+		ID3D12Resource* textureBuffer; // the resource heap containing our texture
+		ID3D12Resource* textureBuffer1; // the resource heap containing our texture
+
+		int LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow);
+
+		DXGI_FORMAT GetDXGIFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
+		WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
+		int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
+
+		ID3D12DescriptorHeap* mainDescriptorHeap;
+		ID3D12Resource* textureBufferUploadHeap;
+
+		BYTE* imageData;
 	};
 
 
