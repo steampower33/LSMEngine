@@ -1,4 +1,4 @@
-#include "EngineCore.h"
+#include "AppBase.h"
 
 namespace EngineCore
 {
@@ -11,8 +11,8 @@ namespace EngineCore
 	}
 
 	AppBase::AppBase() :
-		WindowName(L"LSMEngine"), WindowTitle(L"LSMEngine Window"),
-		Width(800), Height(600), FullScreen(false), Running(true)
+		m_windowName(L"LSMEngine"), m_windowTitle(L"LSMEngine Window"),
+		m_width(1280), m_height(960), m_fullScreen(false), m_running(true)
 	{
 		if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
 		{
@@ -22,6 +22,7 @@ namespace EngineCore
 
 	AppBase::~AppBase()
 	{
+		DestroyWindow(m_hwnd);
 	}
 
 	std::wstring AppBase::GetLatestWinPixGpuCapturerPath()
@@ -67,10 +68,10 @@ namespace EngineCore
 		return &output[0];
 	}
 
-	bool AppBase::RunApplication(HINSTANCE hInstance, int nShowCmd)
+	bool AppBase::Initialize()
 	{
 		// create the window
-		if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
+		if (!InitializeWindow())
 		{
 			MessageBox(0, L"Window Initialization - Failed",
 				L"Error", MB_OK);
@@ -86,14 +87,38 @@ namespace EngineCore
 			return 1;
 		}
 
-		// start the main loop
-		mainloop();
+		// 콘솔창이 렌더링 창을 덮는 것을 방지
+		SetForegroundWindow(m_hwnd);
+
+		return true;
+	}
+
+	bool AppBase::Run()
+	{
+		MSG msg;
+		ZeroMemory(&msg, sizeof(MSG));
+
+		while (m_running)
+		{
+			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				if (msg.message == WM_QUIT)
+					break;
+
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+			else {
+				Update();
+				Render();
+			}
+		}
 
 		// we want to wait for the gpu to finish executing the command list before we start releasing everything
 		WaitForPreviousFrame();
 
 		// close the fence event
-		CloseHandle(fenceEvent);
+		CloseHandle(m_fenceEvent);
 
 		// clean up everything
 		Cleanup();
@@ -103,33 +128,21 @@ namespace EngineCore
 
 
 	// create and show the window
-	bool AppBase::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen)
+	bool AppBase::InitializeWindow()
 	{
-		if (fullscreen)
-		{
-			HMONITOR hmon = MonitorFromWindow(hwnd,
-				MONITOR_DEFAULTTONEAREST);
-			MONITORINFO mi = { sizeof(mi) };
-			GetMonitorInfo(hmon, &mi);
 
-			Width = mi.rcMonitor.right - mi.rcMonitor.left;
-			Height = mi.rcMonitor.bottom - mi.rcMonitor.top;
-		}
-
-		WNDCLASSEX wc;
-
-		wc.cbSize = sizeof(WNDCLASSEX);
-		wc.style = CS_HREDRAW | CS_VREDRAW;
-		wc.lpfnWndProc = WndProc;
-		wc.cbClsExtra = NULL;
-		wc.cbWndExtra = NULL;
-		wc.hInstance = hInstance;
-		wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
-		wc.lpszMenuName = NULL;
-		wc.lpszClassName = WindowName;
-		wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+		WNDCLASSEX wc = { sizeof(WNDCLASSEX),
+					 CS_CLASSDC,
+					 WndProc,
+					 0L,
+					 0L,
+					 GetModuleHandle(NULL),
+					 NULL,
+					 NULL,
+					 NULL,
+					 NULL,
+					 L"LSMEngine", // lpszClassName, L-string
+					 NULL };
 
 		if (!RegisterClassEx(&wc))
 		{
@@ -138,31 +151,25 @@ namespace EngineCore
 			return false;
 		}
 
-		hwnd = CreateWindowEx(NULL,
-			WindowName,
-			WindowTitle,
+		RECT wr = { 0, 0, m_width, m_height };
+		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
+		m_hwnd = CreateWindow(wc.lpszClassName, L"LSMEngine",
 			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT,
-			Width, Height,
-			NULL,
-			NULL,
-			hInstance,
-			NULL);
+			100, // 윈도우 좌측 상단의 x 좌표
+			100, // 윈도우 좌측 상단의 y 좌표
+			wr.right - wr.left, // 윈도우 가로 방향 해상도
+			wr.bottom - wr.top, // 윈도우 세로 방향 해상도
+			NULL, NULL, wc.hInstance, NULL);
 
-		if (!hwnd)
+		if (!m_hwnd)
 		{
 			MessageBox(NULL, L"Error creating window",
 				L"Error", MB_OK | MB_ICONERROR);
 			return false;
 		}
 
-		if (fullscreen)
-		{
-			SetWindowLong(hwnd, GWL_STYLE, 0);
-		}
-
-		ShowWindow(hwnd, ShowWnd);
-		UpdateWindow(hwnd);
+		ShowWindow(m_hwnd, SW_SHOWDEFAULT);
+		UpdateWindow(m_hwnd);
 
 		return true;
 	}
@@ -171,7 +178,7 @@ namespace EngineCore
 	{
 		// -- Create the Device -- //
 
-		HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
+		HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&m_dxgiFactory));
 		if (FAILED(hr))
 		{
 			return false;
@@ -182,10 +189,10 @@ namespace EngineCore
 		bool adapterFound = false; // set this to true when a good one was found
 
 		// find first hardware gpu that supports d3d 12
-		while (dxgiFactory->EnumAdapters1(adapterIndex, &adapter) != DXGI_ERROR_NOT_FOUND)
+		while (m_dxgiFactory->EnumAdapters1(adapterIndex, &m_adapter) != DXGI_ERROR_NOT_FOUND)
 		{
 			DXGI_ADAPTER_DESC1 desc;
-			adapter->GetDesc1(&desc);
+			m_adapter->GetDesc1(&desc);
 
 			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 			{
@@ -194,7 +201,7 @@ namespace EngineCore
 			}
 
 			// we want a device that is compatible with direct3d 12 (feature level 11 or higher)
-			hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
+			hr = D3D12CreateDevice(m_adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
 			if (SUCCEEDED(hr))
 			{
 				adapterFound = true;
@@ -211,9 +218,9 @@ namespace EngineCore
 
 		// Create the device
 		hr = D3D12CreateDevice(
-			adapter,
+			m_adapter.Get(),
 			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&device)
+			IID_PPV_ARGS(&m_device)
 		);
 		if (FAILED(hr))
 		{
@@ -230,7 +237,7 @@ namespace EngineCore
 		cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
 
-		HRESULT hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
+		HRESULT hr = m_device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&m_commandQueue)); // create the command queue
 		if (FAILED(hr))
 		{
 			return false;
@@ -243,33 +250,33 @@ namespace EngineCore
 	{
 		// -- Create the Swap Chain (double/tripple buffering) -- //
 
-		backBufferDesc.Width = Width; // buffer width
-		backBufferDesc.Height = Height; // buffer height
-		backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the buffer (rgba 32 bits, 8 bits for each chanel)
+		m_backBufferDesc.Width = m_width; // buffer width
+		m_backBufferDesc.Height = m_height; // buffer height
+		m_backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the buffer (rgba 32 bits, 8 bits for each chanel)
 
-		sampleDesc.Count = 1; // multisample count (no multisampling, so we just put 1, since we still need 1 sample)
+		m_sampleDesc.Count = 1; // multisample count (no multisampling, so we just put 1, since we still need 1 sample)
 
 		// Describe and create the swap chain.
-		swapChainDesc.BufferCount = frameBufferCount; // number of buffers we have
-		swapChainDesc.BufferDesc = backBufferDesc; // our back buffer description
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // this says the pipeline will render to this swap chain
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // dxgi will discard the buffer (data) after we call present
-		swapChainDesc.OutputWindow = hwnd; // handle to our window
-		swapChainDesc.SampleDesc = sampleDesc; // our multi-sampling description
-		swapChainDesc.Windowed = !FullScreen; // set to true, then if in fullscreen must call SetFullScreenState with true for full screen to get uncapped fps
+		m_swapChainDesc.BufferCount = m_frameBufferCount; // number of buffers we have
+		m_swapChainDesc.BufferDesc = m_backBufferDesc; // our back buffer description
+		m_swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // this says the pipeline will render to this swap chain
+		m_swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // dxgi will discard the buffer (data) after we call present
+		m_swapChainDesc.OutputWindow = m_hwnd; // handle to our window
+		m_swapChainDesc.SampleDesc = m_sampleDesc; // our multi-sampling description
+		m_swapChainDesc.Windowed = !m_fullScreen; // set to true, then if in fullscreen must call SetFullScreenState with true for full screen to get uncapped fps
 
-		HRESULT hr = dxgiFactory->CreateSwapChain(
-			commandQueue, // the queue will be flushed once the swap chain is created
-			&swapChainDesc, // give it the swap chain description we created above
-			&tempSwapChain // store the created swap chain in a temp IDXGISwapChain interface
+		HRESULT hr = m_dxgiFactory->CreateSwapChain(
+			m_commandQueue.Get(), // the queue will be flushed once the swap chain is created
+			&m_swapChainDesc, // give it the swap chain description we created above
+			&m_tempSwapChain // store the created swap chain in a temp IDXGISwapChain interface
 		);
 
 		if (FAILED(hr))
 			return false;
 
-		swapChain = static_cast<IDXGISwapChain3*>(tempSwapChain);
+		m_swapChain = static_cast<IDXGISwapChain3*>(m_tempSwapChain.Get());
 
-		frameIndex = swapChain->GetCurrentBackBufferIndex();
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 		return true;
 	}
@@ -280,13 +287,13 @@ namespace EngineCore
 
 		// describe an rtv descriptor heap and create
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = frameBufferCount; // number of descriptors for this heap.
+		rtvHeapDesc.NumDescriptors = m_frameBufferCount; // number of descriptors for this heap.
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; // this heap is a render target view heap
 
 		// This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from the pipeline
 		// otherwise we would set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		HRESULT hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
+		HRESULT hr = m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvDescriptorHeap));
 		if (FAILED(hr))
 		{
 			return false;
@@ -295,28 +302,28 @@ namespace EngineCore
 		// get the size of a descriptor in this heap (this is a rtv heap, so only rtv descriptors should be stored in it.
 		// descriptor sizes may vary from device to device, which is why there is no set size and we must ask the 
 		// device to give us the size. we will use this size to increment a descriptor handle offset
-		rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		// get a handle to the first descriptor in the descriptor heap. a handle is basically a pointer,
 		// but we cannot literally use it like a c++ pointer.
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 		// Create a RTV for each buffer (double buffering is two buffers, tripple buffering is 3).
-		for (int i = 0; i < frameBufferCount; i++)
+		for (int i = 0; i < m_frameBufferCount; i++)
 		{
 			// first we get the n'th buffer in the swap chain and store it in the n'th
 			// position of our ID3D12Resource array
-			hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i]));
+			hr = m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i]));
 			if (FAILED(hr))
 			{
 				return false;
 			}
 
 			// the we "create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
-			device->CreateRenderTargetView(renderTargets[i], nullptr, rtvHandle);
+			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
 
 			// we increment the rtv handle by the rtv descriptor size we got above
-			rtvHandle.Offset(1, rtvDescriptorSize);
+			rtvHandle.Offset(1, m_rtvDescriptorSize);
 		}
 
 		return true;
@@ -327,9 +334,9 @@ namespace EngineCore
 	{
 		// -- Create the Command Allocators -- //
 
-		for (int i = 0; i < frameBufferCount; i++)
+		for (int i = 0; i < m_frameBufferCount; i++)
 		{
-			HRESULT hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i]));
+			HRESULT hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[i]));
 			if (FAILED(hr))
 			{
 				return false;
@@ -339,7 +346,7 @@ namespace EngineCore
 		// -- Create a Command List -- //
 
 		// create the command list with the first allocator
-		HRESULT hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex], NULL, IID_PPV_ARGS(&commandList));
+		HRESULT hr = m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), NULL, IID_PPV_ARGS(&m_commandList));
 		if (FAILED(hr))
 		{
 			return false;
@@ -348,19 +355,19 @@ namespace EngineCore
 		// -- Create a Fence & Fence Event -- //
 
 		// create the fences
-		for (int i = 0; i < frameBufferCount; i++)
+		for (int i = 0; i < m_frameBufferCount; i++)
 		{
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence[i]));
+			hr = m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence[i]));
 			if (FAILED(hr))
 			{
 				return false;
 			}
-			fenceValue[i] = 0; // set the initial fence value to 0
+			m_fenceValue[i] = 0; // set the initial fence value to 0
 		}
 
 		// create a handle to a fence event
-		fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (fenceEvent == nullptr)
+		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_fenceEvent == nullptr)
 		{
 			return false;
 		}
@@ -439,7 +446,7 @@ namespace EngineCore
 			return false;
 		}
 
-		hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+		hr = m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
 		if (FAILED(hr))
 		{
 			return false;
@@ -465,18 +472,18 @@ namespace EngineCore
 			"vs_5_0",
 			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 			0,
-			&vertexShader,
-			&errorBuff);
+			&m_vertexShader,
+			&m_errorBuff);
 		if (FAILED(hr))
 		{
-			OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+			OutputDebugStringA((char*)m_errorBuff->GetBufferPointer());
 			return false;
 		}
 
 		// fill out a shader bytecode structure, which is basically just a pointer
 		// to the shader bytecode and the size of the shader bytecode
-		vertexShaderBytecode.BytecodeLength = vertexShader->GetBufferSize();
-		vertexShaderBytecode.pShaderBytecode = vertexShader->GetBufferPointer();
+		m_vertexShaderBytecode.BytecodeLength = m_vertexShader->GetBufferSize();
+		m_vertexShaderBytecode.pShaderBytecode = m_vertexShader->GetBufferPointer();
 
 		return true;
 	}
@@ -491,17 +498,17 @@ namespace EngineCore
 			"ps_5_0",
 			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 			0,
-			&pixelShader,
-			&errorBuff);
+			&m_pixelShader,
+			&m_errorBuff);
 		if (FAILED(hr))
 		{
-			OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+			OutputDebugStringA((char*)m_errorBuff->GetBufferPointer());
 			return false;
 		}
 
 		// fill out shader bytecode structure for pixel shader
-		pixelShaderBytecode.BytecodeLength = pixelShader->GetBufferSize();
-		pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
+		m_pixelShaderBytecode.BytecodeLength = m_pixelShader->GetBufferSize();
+		m_pixelShaderBytecode.pShaderBytecode = m_pixelShader->GetBufferPointer();
 
 		return true;
 	}
@@ -540,12 +547,12 @@ namespace EngineCore
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {}; // a structure to define a pso
 		psoDesc.InputLayout = inputLayoutDesc; // the structure describing our input layout
-		psoDesc.pRootSignature = rootSignature; // the root signature that describes the input data this pso needs
-		psoDesc.VS = vertexShaderBytecode; // structure describing where to find the vertex shader bytecode and how large it is
-		psoDesc.PS = pixelShaderBytecode; // same as VS but for pixel shader
+		psoDesc.pRootSignature = m_rootSignature.Get() ; // the root signature that describes the input data this pso needs
+		psoDesc.VS = m_vertexShaderBytecode; // structure describing where to find the vertex shader bytecode and how large it is
+		psoDesc.PS = m_pixelShaderBytecode; // same as VS but for pixel shader
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // type of topology we are drawing
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the render target
-		psoDesc.SampleDesc = sampleDesc; // must be the same sample description as the swapchain and depth/stencil buffer
+		psoDesc.SampleDesc = m_sampleDesc; // must be the same sample description as the swapchain and depth/stencil buffer
 		psoDesc.SampleMask = 0xffffffff; // sample mask has to do with multi-sampling. 0xffffffff means point sampling is done
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); // a default rasterizer state.
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT); // a default blent state.
@@ -553,7 +560,7 @@ namespace EngineCore
 		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT); // a default depth stencil state
 
 		// create the pso
-		HRESULT hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
+		HRESULT hr = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineStateObject));
 		if (FAILED(hr))
 		{
 			return false;
@@ -614,17 +621,17 @@ namespace EngineCore
 		CD3DX12_HEAP_PROPERTIES defaultheapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_RESOURCE_DESC defaultResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
-		device->CreateCommittedResource(
+		m_device->CreateCommittedResource(
 			&defaultheapProperties, // a default heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&defaultResourceDesc, // resource description for a buffer
 			D3D12_RESOURCE_STATE_COPY_DEST, // we will start this heap in the copy destination state since we will copy data
 			// from the upload heap to this heap
 			nullptr, // optimized clear value must be null for this type of resource. used for render targets and depth/stencil buffers
-			IID_PPV_ARGS(&vertexBuffer));
+			IID_PPV_ARGS(&m_vertexBuffer));
 
 		// we can give resource heaps a name so when we debug with the graphics debugger we know what resource we are looking at
-		vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
+		m_vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
 		// create upload heap
 		// upload heaps are used to upload data to the GPU. CPU can write to it, GPU can read from it
@@ -634,7 +641,7 @@ namespace EngineCore
 		CD3DX12_RESOURCE_DESC uploadResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
 		ID3D12Resource* vertexBufferUpload;
-		HRESULT hr = device->CreateCommittedResource(
+		HRESULT hr = m_device->CreateCommittedResource(
 			&uploadheapProperties, // upload heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&uploadResourceDesc, // resource description for a buffer
@@ -658,20 +665,20 @@ namespace EngineCore
 
 		// we are now creating a command with the command list to copy the data from
 		// the upload heap to the default heap
-		UpdateSubresources(commandList, vertexBuffer, vertexBufferUpload, 0, 0, 1, &vertexData);
+		UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexBufferUpload, 0, 0, 1, &vertexData);
 
 		// transition the vertex buffer data from copy destination state to vertex buffer state
 		D3D12_RESOURCE_BARRIER resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			vertexBuffer,                             // resource
+			m_vertexBuffer.Get(),                             // resource
 			D3D12_RESOURCE_STATE_COPY_DEST,           // before state
 			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER // new state
 		);
-		commandList->ResourceBarrier(1, &resourceBarrier);
+		m_commandList->ResourceBarrier(1, &resourceBarrier);
 
 		// create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
-		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
-		vertexBufferView.StrideInBytes = sizeof(Vertex);
-		vertexBufferView.SizeInBytes = vBufferSize;
+		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+		m_vertexBufferView.SizeInBytes = vBufferSize;
 
 		return true;
 	}
@@ -715,13 +722,13 @@ namespace EngineCore
 		CD3DX12_RESOURCE_DESC defaultResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iBufferSize);
 
 		// create default heap to hold index buffer
-		HRESULT hr = device->CreateCommittedResource(
+		HRESULT hr = m_device->CreateCommittedResource(
 			&defaultheapProperties, // a default heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&defaultResourceDesc, // resource description for a buffer
 			D3D12_RESOURCE_STATE_COPY_DEST, // start in the copy destination state
 			nullptr, // optimized clear value must be null for this type of resource
-			IID_PPV_ARGS(&indexBuffer));
+			IID_PPV_ARGS(&m_indexBuffer));
 
 		if (FAILED(hr))
 		{
@@ -730,13 +737,13 @@ namespace EngineCore
 		}
 
 		// we can give resource heaps a name so when we debug with the graphics debugger we know what resource we are looking at
-		vertexBuffer->SetName(L"Index Buffer Resource Heap");
+		m_vertexBuffer->SetName(L"Index Buffer Resource Heap");
 
 		// create upload heap to upload index buffer
 		ID3D12Resource* iBufferUploadHeap;
 		CD3DX12_HEAP_PROPERTIES uploadheapProperties(D3D12_HEAP_TYPE_UPLOAD);
 		CD3DX12_RESOURCE_DESC uploadResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iBufferSize);
-		hr = device->CreateCommittedResource(
+		hr = m_device->CreateCommittedResource(
 			&uploadheapProperties, // upload heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&uploadResourceDesc, // resource description for a buffer
@@ -759,20 +766,20 @@ namespace EngineCore
 
 		// we are now creating a command with the command list to copy the data from
 		// the upload heap to the default heap
-		UpdateSubresources(commandList, indexBuffer, iBufferUploadHeap, 0, 0, 1, &indexData);
+		UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), iBufferUploadHeap, 0, 0, 1, &indexData);
 
 		// transition the vertex buffer data from copy destination state to vertex buffer state
 		D3D12_RESOURCE_BARRIER resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			vertexBuffer,                             // resource
+			m_vertexBuffer.Get(),                             // resource
 			D3D12_RESOURCE_STATE_COPY_DEST,           // before state
 			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER // new state
 		);
-		commandList->ResourceBarrier(1, &resourceBarrier);
+		m_commandList->ResourceBarrier(1, &resourceBarrier);
 
 		// create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
-		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
-		indexBufferView.Format = DXGI_FORMAT_R32_UINT; // 32-bit unsigned integer (this is what a dword is, double word, a word is 2 bytes)
-		indexBufferView.SizeInBytes = iBufferSize;
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT; // 32-bit unsigned integer (this is what a dword is, double word, a word is 2 bytes)
+		m_indexBufferView.SizeInBytes = iBufferSize;
 
 		return true;
 	}
@@ -782,8 +789,8 @@ namespace EngineCore
 		// Fill out the Viewport
 		viewport.TopLeftX = 0;
 		viewport.TopLeftY = 0;
-		viewport.Width = Width;
-		viewport.Height = Height;
+		viewport.Width = m_width;
+		viewport.Height = m_height;
 		viewport.MinDepth = 0.0f;
 		viewport.MaxDepth = 1.0f;
 	}
@@ -793,23 +800,23 @@ namespace EngineCore
 		// Fill out a scissor rect
 		scissorRect.left = 0;
 		scissorRect.top = 0;
-		scissorRect.right = Width;
-		scissorRect.bottom = Height;
+		scissorRect.right = m_width;
+		scissorRect.bottom = m_height;
 	}
 
 	bool AppBase::SetCommandQueueFence()
 	{
 		// Now we execute the command list to upload the initial assets (triangle data)
-		commandList->Close();
-		ID3D12CommandList* ppCommandLists[] = { commandList };
-		commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		m_commandList->Close();
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get()};
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 		// increment the fence value now, otherwise the buffer might not be uploaded by the time we start drawing
-		fenceValue[frameIndex]++;
-		HRESULT hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+		m_fenceValue[m_frameIndex]++;
+		HRESULT hr = m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]);
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 			return false;
 		}
 
@@ -826,10 +833,10 @@ namespace EngineCore
 		dsvHeapDesc.NumDescriptors = 1;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		hr = device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&dsDescriptorHeap));
+		hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsDescriptorHeap));
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
@@ -843,19 +850,19 @@ namespace EngineCore
 		depthOptimizedClearValue.DepthStencil.Stencil = 0;
 
 		auto defaultHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		auto tex2D = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, Width, Height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-		device->CreateCommittedResource(
+		auto tex2D = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+		m_device->CreateCommittedResource(
 			&defaultHeap,
 			D3D12_HEAP_FLAG_NONE,
 			&tex2D,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&depthOptimizedClearValue,
-			IID_PPV_ARGS(&depthStencilBuffer)
+			IID_PPV_ARGS(&m_depthStencilBuffer)
 		);
 		
-		dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
+		m_dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
 
-		device->CreateDepthStencilView(depthStencilBuffer, &depthStencilDesc, dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &depthStencilDesc, m_dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 
 		return true;
@@ -882,10 +889,10 @@ namespace EngineCore
 		CD3DX12_HEAP_PROPERTIES uploadProperties(D3D12_HEAP_TYPE_UPLOAD);
 		CD3DX12_RESOURCE_DESC uploadResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(1024 * 64);
 
-		for (int i = 0; i < frameBufferCount; ++i)
+		for (int i = 0; i < m_frameBufferCount; ++i)
 		{
 			// create resource for cube 1
-			hr = device->CreateCommittedResource(
+			hr = m_device->CreateCommittedResource(
 				&uploadProperties, // this heap will be used to upload the constant buffer data
 				D3D12_HEAP_FLAG_NONE, // no flags
 				&uploadResourceDesc, // size of the resource heap. Must be a multiple of 64KB for single-textures and constant buffers
@@ -920,10 +927,10 @@ namespace EngineCore
 		heapDesc.NumDescriptors = 1;
 		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mainDescriptorHeap));
+		hr = m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mainDescriptorHeap));
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 
 		// Load the image from file
@@ -934,13 +941,13 @@ namespace EngineCore
 		// make sure we have data
 		if (imageSize <= 0)
 		{
-			Running = false;
+			m_running = false;
 			return false;
 		}
 
 		auto defaultHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		// create a default heap where the upload heap will copy its contents into (contents being the texture)
-		hr = device->CreateCommittedResource(
+		hr = m_device->CreateCommittedResource(
 			&defaultHeapProp, // a default heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&textureDesc, // the description of our texture
@@ -949,7 +956,7 @@ namespace EngineCore
 			IID_PPV_ARGS(&textureBuffer));
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 			return false;
 		}
 		textureBuffer->SetName(L"Texture Buffer Resource Heap");
@@ -959,12 +966,12 @@ namespace EngineCore
 		// each row must be 256 byte aligned except for the last row, which can just be the size in bytes of the row
 		// eg. textureUploadBufferSize = ((((width * numBytesPerPixel) + 255) & ~255) * (height - 1)) + (width * numBytesPerPixel);
 		//textureUploadBufferSize = (((imageBytesPerRow + 255) & ~255) * (textureDesc.Height - 1)) + imageBytesPerRow;
-		device->GetCopyableFootprints(&textureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &textureUploadBufferSize);
+		m_device->GetCopyableFootprints(&textureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &textureUploadBufferSize);
 
 		auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize);
 		// now we create an upload heap to upload our texture to the GPU
-		hr = device->CreateCommittedResource(
+		hr = m_device->CreateCommittedResource(
 			&uploadHeapProp, // upload heap
 			D3D12_HEAP_FLAG_NONE, // no flags
 			&uploadHeapDesc, // resource description for a buffer (storing the image data in this heap just to copy to the default heap)
@@ -973,7 +980,7 @@ namespace EngineCore
 			IID_PPV_ARGS(&textureBufferUploadHeap));
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 			return false;
 		}
 		textureBufferUploadHeap->SetName(L"Texture Buffer Upload Resource Heap");
@@ -985,11 +992,11 @@ namespace EngineCore
 		textureData.SlicePitch = imageBytesPerRow * textureDesc.Height; // also the size of our triangle vertex data
 
 		// Now we copy the upload buffer contents to the default heap
-		UpdateSubresources(commandList, textureBuffer, textureBufferUploadHeap, 0, 0, 1, &textureData);
+		UpdateSubresources(m_commandList.Get(), textureBuffer, textureBufferUploadHeap, 0, 0, 1, &textureData);
 
 		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textureBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		// transition the texture default heap to a pixel shader resource (we will be sampling from this heap in the pixel shader to get the color of pixels)
-		commandList->ResourceBarrier(1, &barrier );
+		m_commandList->ResourceBarrier(1, &barrier );
 
 		// now we create a shader resource view (descriptor that points to the texture and describes it)
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -997,7 +1004,7 @@ namespace EngineCore
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
-		device->CreateShaderResourceView(textureBuffer, &srvDesc, mainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		m_device->CreateShaderResourceView(textureBuffer, &srvDesc, mainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 		return true;
 	}
@@ -1035,7 +1042,7 @@ namespace EngineCore
 		if (!SetCommandQueueFence()) return false;
 
 		// build projection and view matrix
-		XMMATRIX tmpMat = XMMatrixPerspectiveFovLH(45.0f * (3.14f / 180.0f), (float)Width / (float)Height, 0.1f, 1000.0f);
+		XMMATRIX tmpMat = XMMatrixPerspectiveFovLH(45.0f * (3.14f / 180.0f), (float)m_width / (float)m_height, 0.1f, 1000.0f);
 		XMStoreFloat4x4(&cameraProjMat, tmpMat);
 
 		// set starting camera state
@@ -1105,7 +1112,7 @@ namespace EngineCore
 		XMStoreFloat4x4(&cbPerObject.wvpMat, transposed); // store transposed wvp matrix in constant buffer
 
 		// copy our ConstantBuffer instance to the mapped constant buffer resource
-		memcpy(cbvGPUAddress[frameIndex], &cbPerObject, sizeof(cbPerObject));
+		memcpy(cbvGPUAddress[m_frameIndex], &cbPerObject, sizeof(cbPerObject));
 
 		// now do cube2's world matrix
 		// create rotation matrices for cube2
@@ -1135,7 +1142,7 @@ namespace EngineCore
 		XMStoreFloat4x4(&cbPerObject.wvpMat, transposed); // store transposed wvp matrix in constant buffer
 
 		// copy our ConstantBuffer instance to the mapped constant buffer resource
-		memcpy(cbvGPUAddress[frameIndex] + ConstantBufferPerObjectAlignedSize, &cbPerObject, sizeof(cbPerObject));
+		memcpy(cbvGPUAddress[m_frameIndex] + ConstantBufferPerObjectAlignedSize, &cbPerObject, sizeof(cbPerObject));
 
 		// store cube2's world matrix
 		XMStoreFloat4x4(&cube2WorldMat, worldMat);
@@ -1150,10 +1157,10 @@ namespace EngineCore
 
 		// we can only reset an allocator once the gpu is done with it
 		// resetting an allocator frees the memory that the command list was stored in
-		hr = commandAllocator[frameIndex]->Reset();
+		hr = m_commandAllocator[m_frameIndex]->Reset();
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 
 		// reset the command list. by resetting the command list we are putting it into
@@ -1166,85 +1173,85 @@ namespace EngineCore
 		// but in this tutorial we are only clearing the rtv, and do not actually need
 		// anything but an initial default pipeline, which is what we get by setting
 		// the second parameter to NULL
-		hr = commandList->Reset(commandAllocator[frameIndex], pipelineStateObject);
+		hr = m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineStateObject.Get());
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 
 		// here we start recording commands into the commandList (which all the commands will be stored in the commandAllocator)
 
 		// transition the "frameIndex" render target from the present state to the render target state so the command list draws to it starting from here
 		D3D12_RESOURCE_BARRIER present_to_rtv = CD3DX12_RESOURCE_BARRIER::Transition(
-			renderTargets[frameIndex],
+			m_renderTargets[m_frameIndex].Get(),
 			D3D12_RESOURCE_STATE_PRESENT,
 			D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
-		commandList->ResourceBarrier(1, &present_to_rtv);
+		m_commandList->ResourceBarrier(1, &present_to_rtv);
 
 		// here we again get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 
 		// get a handle to the depth/stencil buffer
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 		// set the render target for the output merger stage (the output of the pipeline)
-		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 		// Clear the render target by using the ClearRenderTargetView command
 		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
 		// clear the depth/stencil buffer
-		commandList->ClearDepthStencilView(dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		m_commandList->ClearDepthStencilView(m_dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		// draw triangle
-		commandList->SetGraphicsRootSignature(rootSignature); // set the root signature
+		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get()); // set the root signature
 
 		// set the descriptor heap
 		ID3D12DescriptorHeap* descriptorHeaps[] = { mainDescriptorHeap };
-		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+		m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 		// set the descriptor table to the descriptor heap (parameter 1, as constant buffer root descriptor is parameter index 0)
-		commandList->SetGraphicsRootDescriptorTable(1, mainDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		m_commandList->SetGraphicsRootDescriptorTable(1, mainDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
-		commandList->RSSetViewports(1, &viewport); // set the viewports
-		commandList->RSSetScissorRects(1, &scissorRect); // set the scissor rects
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
-		commandList->IASetVertexBuffers(0, 1, &vertexBufferView); // set the vertex buffer (using the vertex buffer view)
-		commandList->IASetIndexBuffer(&indexBufferView);
+		m_commandList->RSSetViewports(1, &viewport); // set the viewports
+		m_commandList->RSSetScissorRects(1, &scissorRect); // set the scissor rects
+		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
+		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView); // set the vertex buffer (using the vertex buffer view)
+		m_commandList->IASetIndexBuffer(&m_indexBufferView);
 		
 		// first cube
 
 		// set cube1's constant buffer
-		commandList->SetGraphicsRootConstantBufferView(0, constantBufferUploadHeaps[frameIndex]->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(0, constantBufferUploadHeaps[m_frameIndex]->GetGPUVirtualAddress());
 
 		// draw first cube
-		commandList->DrawIndexedInstanced(numCubeIndices, 1, 0, 0, 0);
+		m_commandList->DrawIndexedInstanced(numCubeIndices, 1, 0, 0, 0);
 
 		// second cube
 
 		// set cube2's constant buffer. You can see we are adding the size of ConstantBufferPerObject to the constant buffer
 		// resource heaps address. This is because cube1's constant buffer is stored at the beginning of the resource heap, while
 		// cube2's constant buffer data is stored after (256 bits from the start of the heap).
-		commandList->SetGraphicsRootConstantBufferView(0, constantBufferUploadHeaps[frameIndex]->GetGPUVirtualAddress() + ConstantBufferPerObjectAlignedSize);
+		m_commandList->SetGraphicsRootConstantBufferView(0, constantBufferUploadHeaps[m_frameIndex]->GetGPUVirtualAddress() + ConstantBufferPerObjectAlignedSize);
 
 		// draw second cube
-		commandList->DrawIndexedInstanced(numCubeIndices, 1, 0, 0, 0);
+		m_commandList->DrawIndexedInstanced(numCubeIndices, 1, 0, 0, 0);
 
 		// transition the "frameIndex" render target from the render target state to the present state. If the debug layer is enabled, you will receive a
 		// warning if present is called on the render target when it's not in the present state
 		D3D12_RESOURCE_BARRIER rtv_to_present = CD3DX12_RESOURCE_BARRIER::Transition(
-			renderTargets[frameIndex],
+			m_renderTargets[m_frameIndex].Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PRESENT
 		);
-		commandList->ResourceBarrier(1, &rtv_to_present);
+		m_commandList->ResourceBarrier(1, &rtv_to_present);
 
-		hr = commandList->Close();
+		hr = m_commandList->Close();
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 	}
 
@@ -1255,67 +1262,42 @@ namespace EngineCore
 		UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
 
 		// create an array of command lists (only one command list here)
-		ID3D12CommandList* ppCommandLists[] = { commandList };
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get()};
 
 		// execute the array of command lists
-		commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 		// this command goes in at the end of our command queue. we will know when our command queue 
 		// has finished because the fence value will be set to "fenceValue" from the GPU since the command
 		// queue is being executed on the GPU
-		hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+		hr = m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]);
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 
 		// present the current backbuffer
-		hr = swapChain->Present(0, 0);
+		hr = m_swapChain->Present(0, 0);
 		if (FAILED(hr))
 		{
-			Running = false;
+			m_running = false;
 		}
 	}
 
 	void AppBase::Cleanup()
 	{
 		// wait for the gpu to finish all frames
-		for (int i = 0; i < frameBufferCount; ++i)
+		for (int i = 0; i < m_frameBufferCount; ++i)
 		{
-			frameIndex = i;
+			m_frameIndex = i;
 			WaitForPreviousFrame();
 		}
 
 		// get swapchain out of full screen before exiting
 		BOOL fs = false;
-		if (swapChain->GetFullscreenState(&fs, NULL))
-			swapChain->SetFullscreenState(false, NULL);
+		if (m_swapChain->GetFullscreenState(&fs, NULL))
+			m_swapChain->SetFullscreenState(false, NULL);
 
-		SAFE_RELEASE(device);
-		SAFE_RELEASE(swapChain);
-		SAFE_RELEASE(commandQueue);
-		SAFE_RELEASE(rtvDescriptorHeap);
-		SAFE_RELEASE(commandList);
-
-		for (int i = 0; i < frameBufferCount; ++i)
-		{
-			SAFE_RELEASE(renderTargets[i]);
-			SAFE_RELEASE(commandAllocator[i]);
-			SAFE_RELEASE(fence[i]);
-		};
-
-		SAFE_RELEASE(pipelineStateObject);
-		SAFE_RELEASE(rootSignature);
-		SAFE_RELEASE(vertexBuffer);
-		SAFE_RELEASE(indexBuffer);
-
-		SAFE_RELEASE(depthStencilBuffer);
-		SAFE_RELEASE(dsDescriptorHeap);
-
-		for (int i = 0; i < frameBufferCount; ++i)
-		{
-			SAFE_RELEASE(constantBufferUploadHeaps[i]);
-		};
 	}
 
 	void AppBase::WaitForPreviousFrame()
@@ -1323,48 +1305,26 @@ namespace EngineCore
 		HRESULT hr;
 
 		// swap the current rtv buffer index so we draw on the correct buffer
-		frameIndex = swapChain->GetCurrentBackBufferIndex();
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 		// if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
 		// the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
-		if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
+		if (m_fence[m_frameIndex]->GetCompletedValue() < m_fenceValue[m_frameIndex])
 		{
 			// we have the fence create an event which is signaled once the fence's current value is "fenceValue"
-			hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
+			hr = m_fence[m_frameIndex]->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent);
 			if (FAILED(hr))
 			{
-				Running = false;
+				m_running = false;
 			}
 
 			// We will wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
 			// has reached "fenceValue", we know the command queue has finished executing
-			WaitForSingleObject(fenceEvent, INFINITE);
+			WaitForSingleObject(m_fenceEvent, INFINITE);
 		}
 
 		// increment fenceValue for next frame
-		fenceValue[frameIndex]++;
-	}
-
-	void AppBase::mainloop()
-	{
-		MSG msg;
-		ZeroMemory(&msg, sizeof(MSG));
-
-		while (Running)
-		{
-			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-			{
-				if (msg.message == WM_QUIT)
-					break;
-
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			else {
-				Update();
-				Render();
-			}
-		}
+		m_fenceValue[m_frameIndex]++;
 	}
 
 	LRESULT AppBase::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

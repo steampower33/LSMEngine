@@ -2,31 +2,32 @@
 
 #include "stdafx.h"
 
-
 #include <shlobj.h>
 #include <strsafe.h>
 
 namespace EngineCore
 {
+
 	class AppBase
 	{
 
 	public:
 		AppBase();
-		~AppBase();
-
+		virtual ~AppBase();
 		
-		bool RunApplication(HINSTANCE hInstance, int nShowCmd);
-		
-		// initializeWindow
-		bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen);
+		bool Run();
 
-		// callback function for windows messages
+		// 콜백 함수
 		LRESULT MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 		std::wstring GetLatestWinPixGpuCapturerPath();
 
-		void mainloop();
+		virtual bool Initialize();
+		virtual void UpdateGUI() = 0;
+		virtual void Update() = 0;
+		virtual void Render() = 0;
+
+		bool InitializeWindow();
 		bool InitD3D();
 		void Cleanup();
 		void WaitForPreviousFrame();
@@ -49,9 +50,7 @@ namespace EngineCore
 		void SetViewport();
 		void SetScissorRect();
 
-		void Update();
 		void UpdatePipeline();
-		void Render();
 
 	private:
 		struct Vertex {
@@ -60,73 +59,62 @@ namespace EngineCore
 			XMFLOAT2 texCoord;
 		};
 
-		// Handle to the window
-		HWND hwnd = NULL;
+		HWND m_hwnd = NULL;
+		LPCTSTR m_windowName;
+		LPCTSTR m_windowTitle;
 
-		// name of the window (not the title)
-		LPCTSTR WindowName;
+		int m_width;
+		int m_height;
+		bool m_fullScreen;
+		bool m_running;
 
-		// title of the window
-		LPCTSTR WindowTitle;
+		static const int m_frameBufferCount = 3; // number of buffers we want, 2 for double buffering, 3 for tripple buffering
 
-		// width and height of the window
-		int Width;
-		int Height;
+		ComPtr<IDXGIFactory4> m_dxgiFactory;
+		ComPtr<IDXGIAdapter1> m_adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
+		ComPtr<ID3D12Device> m_device; // direct3d device
 
-		// is window full screen?
-		bool FullScreen;
+		DXGI_MODE_DESC m_backBufferDesc = {}; // this is to describe our display mode
+		DXGI_SAMPLE_DESC m_sampleDesc = {}; // describe our multi-sampling. We are not multi-sampling, so we set the count to 1 (we need at least one sample of course)
+		DXGI_SWAP_CHAIN_DESC m_swapChainDesc = {};
+		ComPtr<IDXGISwapChain> m_tempSwapChain;
+		ComPtr<IDXGISwapChain3> m_swapChain; // swapchain used to switch between render targets
 
-		// we will exit the program when this becomes false
-		bool Running;
+		ComPtr<ID3D12CommandQueue> m_commandQueue; // container for command lists
+		ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap; // a descriptor heap to hold resources like the render targets
+		ComPtr<ID3D12Resource> m_renderTargets[m_frameBufferCount]; // number of render targets equal to buffer count
+		ComPtr<ID3D12CommandAllocator> m_commandAllocator[m_frameBufferCount]; // we want enough allocators for each buffer * number of threads (we only have one thread)
+		ComPtr<ID3D12GraphicsCommandList> m_commandList; // a command list we can record commands into, then execute them to render the frame
+		ComPtr<ID3D12Fence> m_fence[m_frameBufferCount]; // an object that is locked while our command list is being executed by the gpu. We need as many 
+		// as we have allocators (more if we want to know when the gpu is finished with an asset)
 
-		// direct3d stuff
-		static const int frameBufferCount = 3; // number of buffers we want, 2 for double buffering, 3 for tripple buffering
+		HANDLE m_fenceEvent; // a handle to an event when our fence is unlocked by the gpu
+		UINT64 m_fenceValue[m_frameBufferCount]; // this value is incremented each frame. each fence will have its own value
 
-		IDXGIFactory4* dxgiFactory;
-		IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
-		ID3D12Device* device; // direct3d device
+		int m_frameIndex; // current rtv we are on
+		int m_rtvDescriptorSize; // size of the rtv descriptor on the device (all front and back buffers will be the same size)
 
-		DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our display mode
-		DXGI_SAMPLE_DESC sampleDesc = {}; // describe our multi-sampling. We are not multi-sampling, so we set the count to 1 (we need at least one sample of course)
-		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-		IDXGISwapChain* tempSwapChain;
-		IDXGISwapChain3* swapChain; // swapchain used to switch between render targets
-		
-		ID3D12CommandQueue* commandQueue; // container for command lists
-		ID3D12DescriptorHeap* rtvDescriptorHeap; // a descriptor heap to hold resources like the render targets
-		ID3D12Resource* renderTargets[frameBufferCount]; // number of render targets equal to buffer count
-		ID3D12CommandAllocator* commandAllocator[frameBufferCount]; // we want enough allocators for each buffer * number of threads (we only have one thread)
-		ID3D12GraphicsCommandList* commandList; // a command list we can record commands into, then execute them to render the frame
-		ID3D12Fence* fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu. We need as many 
-		//as we have allocators (more if we want to know when the gpu is finished with an asset)
+		ComPtr<ID3D12RootSignature> m_rootSignature; // root signature defines data shaders will access
 
-		HANDLE fenceEvent; // a handle to an event when our fence is unlocked by the gpu
-		UINT64 fenceValue[frameBufferCount]; // this value is incremented each frame. each fence will have its own value
-		
-		int frameIndex; // current rtv we are on
-		int rtvDescriptorSize; // size of the rtv descriptor on the device (all front and back buffers will be the same size)
-		
-		ID3D12RootSignature* rootSignature; // root signature defines data shaders will access
+		ComPtr<ID3DBlob> m_errorBuff; // a buffer holding the error data if any
 
-		ID3DBlob* errorBuff; // a buffer holding the error data if any
+		ComPtr<ID3DBlob> m_vertexShader; // d3d blob for holding vertex shader bytecode
+		D3D12_SHADER_BYTECODE m_vertexShaderBytecode = {};
 
-		ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
-		D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
+		ComPtr<ID3DBlob> m_pixelShader;
+		D3D12_SHADER_BYTECODE m_pixelShaderBytecode = {};
 
-		ID3DBlob* pixelShader;
-		D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
+		ComPtr<ID3D12PipelineState> m_pipelineStateObject; // pso containing a pipeline state
 
-		ID3D12PipelineState* pipelineStateObject; // pso containing a pipeline state
-		
-		ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
-		D3D12_VERTEX_BUFFER_VIEW vertexBufferView; // a structure containing a pointer to the vertex data in gpu memory
+		ComPtr<ID3D12Resource> m_vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
+		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView; // a structure containing a pointer to the vertex data in gpu memory
 		// the total size of the buffer, and the size of each element (vertex)
 
-		ID3D12Resource* indexBuffer; // a default buffer in GPU memory that we will load index data for our triangle into
-		D3D12_INDEX_BUFFER_VIEW indexBufferView; // a structure holding information about the index buffer
+		ComPtr<ID3D12Resource> m_indexBuffer; // a default buffer in GPU memory that we will load index data for our triangle into
+		D3D12_INDEX_BUFFER_VIEW m_indexBufferView; // a structure holding information about the index buffer
 
-		ID3D12Resource* depthStencilBuffer; // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
-		ID3D12DescriptorHeap* dsDescriptorHeap; // This is a heap for our depth/stencil buffer descriptor
+		ComPtr<ID3D12Resource> m_depthStencilBuffer; // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
+		ComPtr<ID3D12DescriptorHeap> m_dsDescriptorHeap; // This is a heap for our depth/stencil buffer descriptor
 
 		D3D12_VIEWPORT viewport; // area that output from rasterizer will be stretched to.
 
@@ -151,9 +139,9 @@ namespace EngineCore
 		ConstantBufferPerObject cbPerObject; // this is the constant buffer data we will send to the gpu 
 		// (which will be placed in the resource we created above)
 
-		ID3D12Resource* constantBufferUploadHeaps[frameBufferCount]; // this is the memory on the gpu where constant buffers for each frame will be placed
+		ID3D12Resource* constantBufferUploadHeaps[m_frameBufferCount]; // this is the memory on the gpu where constant buffers for each frame will be placed
 
-		UINT8* cbvGPUAddress[frameBufferCount]; // this is a pointer to each of the constant buffer resource heaps
+		UINT8* cbvGPUAddress[m_frameBufferCount]; // this is a pointer to each of the constant buffer resource heaps
 
 		XMFLOAT4X4 cameraProjMat; // this will store our projection matrix
 		XMFLOAT4X4 cameraViewMat; // this will store our view matrix

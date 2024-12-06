@@ -132,12 +132,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EngineCore.cpp" />
+    <ClCompile Include="AppBase.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="RenderApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="EngineCore.h" />
+    <ClInclude Include="AppBase.h" />
+    <ClInclude Include="RenderApp.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
