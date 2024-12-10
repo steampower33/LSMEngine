@@ -132,15 +132,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AppBase.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="RenderApp.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="AppBase.h" />
-    <ClInclude Include="RenderApp.h" />
-    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
