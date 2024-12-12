@@ -1,13 +1,22 @@
 #pragma once
 
-#include "windows.h"
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+
+#include <windows.h>
+#include "EngineBase.h"
+
+using namespace EngineCore;
+
+class EngineBase;
 
 namespace WindowApplication
 {
 	class WinApp
 	{
 	public:
-		static int Run(HINSTANCE hInstance, int nShowCmd);
+		static int Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd);
 
 	private:
 		// 윈도우 프로시저 선언

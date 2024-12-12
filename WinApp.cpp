@@ -2,7 +2,7 @@
 
 namespace WindowApplication
 {
-    int WinApp::Run(HINSTANCE hInstance, int nShowCmd)
+    int WinApp::Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd)
     {
         // 윈도우 클래스 정의
         const wchar_t CLASS_NAME[] = L"SampleWindowClass";

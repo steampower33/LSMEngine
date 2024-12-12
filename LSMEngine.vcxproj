@@ -19,10 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EngineBase.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="WinApp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="EngineBase.h" />
+    <ClInclude Include="stdafx.h" />
     <ClInclude Include="WinApp.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

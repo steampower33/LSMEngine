@@ -1,6 +1,5 @@
+#include "EngineBase.h"
 #include "WinApp.h"
-
-using namespace WindowApplication;
 
 int wWinMain(
     _In_ HINSTANCE hInstance,
@@ -8,6 +7,8 @@ int wWinMain(
     _In_ LPWSTR lpCmdLine,
     _In_ int nShowCmd
 ) {
-    return WinApp::Run(hInstance, nShowCmd);
+    EngineCore::EngineBase engine;
+
+    return WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);
 }
 

@@ -17,9 +17,21 @@
     <ClCompile Include="WinApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EngineBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinApp.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EngineBase.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
