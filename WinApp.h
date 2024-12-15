@@ -9,19 +9,18 @@
 
 using namespace EngineCore;
 
-class EngineBase;
-
 namespace WindowApplication
 {
 	class WinApp
 	{
 	public:
 		static int Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd);
+		static HWND m_hwnd;
 
 	private:
 		// 윈도우 프로시저 선언
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	
+
 	};
 }

@@ -2,6 +2,8 @@
 
 namespace WindowApplication
 {
+    HWND WinApp::m_hwnd = nullptr;
+
     int WinApp::Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd)
     {
         // 윈도우 클래스 정의
@@ -15,7 +17,7 @@ namespace WindowApplication
         RegisterClass(&wc);
 
         // 윈도우 생성
-        HWND hwnd = CreateWindowEx(
+        m_hwnd = CreateWindowEx(
             0,                              // 확장 스타일
             CLASS_NAME,                     // 클래스 이름
             L"LSMEngine",                   // 윈도우 제목
@@ -28,16 +30,29 @@ namespace WindowApplication
             nullptr                         // 추가 매개변수
         );
 
-        if (!hwnd) return 0;
+        if (!m_hwnd) return 0;
 
-        ShowWindow(hwnd, nShowCmd);
+        pEngineBase->Init();
+
+        ShowWindow(m_hwnd, nShowCmd);
 
         // 메시지 루프
         MSG msg = {};
-        while (GetMessage(&msg, nullptr, 0, 0)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        while (msg.message != WM_QUIT)
+        {
+            // Process any messages in the queue.
+            if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            else
+            {
+                pEngineBase->Update();
+                pEngineBase->Render();
+            }
         }
+        pEngineBase->Destroy();
 
         return static_cast<int>(msg.wParam);
     }
