@@ -8,33 +8,31 @@ class WinApp;
 
 namespace EngineCore
 {
+	ExampleDescriptorHeapAllocator EngineBase::m_srvAlloc;
+
 	EngineBase::EngineBase(UINT width, UINT height, std::wstring name) :
 		m_frameIndex(0),
 		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 		m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 		m_rtvDescriptorSize(0),
+		m_pCbvDataBegin(nullptr),
 		m_width(width), m_height(height),
 		m_assetsPath(GetAssetsPath()),
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_useWarpDevice(false)
 	{
-		// Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
-		// This may happen if the application is launched through the PIX UI. 
-		if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
-		{
-			LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
-		}
+		
 	}
 
 	EngineBase::~EngineBase()
 	{
-
 	}
 
 	void EngineBase::Init()
 	{
 		LoadPipeline();
 		LoadAssets();
+		LoadGUI();
 	}
 
 	void EngineBase::LoadPipeline()
@@ -98,6 +96,7 @@ namespace EngineCore
 		ThrowIfFailed(swapChain.As(&m_swapChain));
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
+		// Create descriptor heaps.
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 			rtvHeapDesc.NumDescriptors = FrameCount;
@@ -106,6 +105,23 @@ namespace EngineCore
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+			// Describe and create a constant buffer view (CBV) descriptor heap.
+			// Flags indicate that this descriptor heap can be bound to the pipeline
+			// and that descriptors contained in it can be referenced by a root table.
+			D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+			cbvHeapDesc.NumDescriptors = 1;
+			cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
+
+			// Create SRV
+			D3D12_DESCRIPTOR_HEAP_DESC imguiSrvHeapDesc = {};
+			imguiSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			imguiSrvHeapDesc.NumDescriptors = 64;
+			imguiSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiSrvHeapDesc, IID_PPV_ARGS(&m_imguiSrvHeap)));
+			m_srvAlloc.Create(m_device.Get(), m_imguiSrvHeap.Get());
 		}
 
 		{
@@ -127,12 +143,35 @@ namespace EngineCore
 	{
 		// Create an empty root signature
 		{
-			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+			if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+			{
+				featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+			}
+
+			CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+			CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+
+			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+			// Allow input layout and deny uneccessary access to certain pipeline stages.
+			D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+			rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
 
 			ComPtr<ID3DBlob> signature;
 			ComPtr<ID3DBlob> error;
-			ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+			ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
 			ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		}
 
@@ -208,6 +247,30 @@ namespace EngineCore
 			m_vertexBufferView.SizeInBytes = vertexBufferSize;
 		}
 
+		{
+			const UINT constantBufferSize = sizeof(SceneConstantBuffer);
+
+			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&uploadHeapProp,
+				D3D12_HEAP_FLAG_NONE,
+				&buffer,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_constantBuffer)));
+
+			// Describe and create a constant buffer view.
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+			cbvDesc.SizeInBytes = constantBufferSize;
+			m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
+			memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		}
+
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
 		{
 			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -224,9 +287,45 @@ namespace EngineCore
 		}
 	}
 
+	void EngineBase::LoadGUI()
+	{
+		// Setup Dear ImGui context
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+		
+		// ImGui 설정 (메뉴 바 고려)
+		RECT clientRect;
+		GetClientRect(WindowApplication::WinApp::m_hwnd, &clientRect);
+		io.DisplaySize = ImVec2((float)(clientRect.right - clientRect.left), (float)(clientRect.bottom - clientRect.top));
+
+		// Setup Dear ImGui style
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsLight();
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplWin32_Init(WindowApplication::WinApp::m_hwnd);
+
+		ImGui_ImplDX12_InitInfo init_info = {};
+		init_info.Device = m_device.Get();
+		init_info.CommandQueue = m_commandQueue.Get();
+		init_info.NumFramesInFlight = FrameCount;
+		init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
+		// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
+		init_info.SrvDescriptorHeap = m_imguiSrvHeap.Get();
+		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
+		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
+		ImGui_ImplDX12_Init(&init_info);
+	}
+
 	void EngineBase::Update()
 	{
 
+		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 
 	void EngineBase::Render()
@@ -249,30 +348,55 @@ namespace EngineCore
 		WaitForPreviousFrame();
 
 		CloseHandle(m_fenceEvent);
+
+		// Cleanup
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+	}
+
+	void EngineBase::UpdateGUI()
+	{
+		ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+		if (ImGui::TreeNode("General")) {
+			ImGui::SliderFloat("Strength", &m_constantBufferData.offset.x, -5.0f, 5.0f);
+			ImGui::TreePop();
+		}
 	}
 
 	void EngineBase::PopulateCommandList()
 	{
+		// Reset CommandList
 		ThrowIfFailed(m_commandAllocator->Reset());
-
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+
+		// Set Viewports, Rects
+		m_commandList->RSSetViewports(1, &m_viewport);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+		// Set DescriptorHeap
+		ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 		// Set necessary State.
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		m_commandList->RSSetViewports(1, &m_viewport);
-		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+		m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
 
 		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_commandList->ResourceBarrier(1, &presentToRT);
 
+		// Clear & Render
+		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
-		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		m_commandList->DrawInstanced(3, 1, 0, 0);
+
+		m_commandList->SetDescriptorHeaps(1, m_imguiSrvHeap.GetAddressOf());
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
 		auto RTToPresent = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		m_commandList->ResourceBarrier(1, &RTToPresent);
@@ -301,49 +425,6 @@ namespace EngineCore
 	std::wstring EngineBase::GetAssetFullPath(LPCWSTR assetName)
 	{
 		return m_assetsPath + assetName;
-	}
-
-	std::wstring EngineBase::GetLatestWinPixGpuCapturerPath()
-	{
-		LPWSTR programFilesPath = nullptr;
-		SHGetKnownFolderPath(FOLDERID_ProgramFiles, KF_FLAG_DEFAULT, NULL, &programFilesPath);
-
-		std::wstring pixSearchPath = programFilesPath + std::wstring(L"\\Microsoft PIX\\*");
-
-		WIN32_FIND_DATA findData;
-		bool foundPixInstallation = false;
-		wchar_t newestVersionFound[MAX_PATH];
-
-		HANDLE hFind = FindFirstFile(pixSearchPath.c_str(), &findData);
-		if (hFind != INVALID_HANDLE_VALUE)
-		{
-			do
-			{
-				if (((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) &&
-					(findData.cFileName[0] != '.'))
-				{
-					if (!foundPixInstallation || wcscmp(newestVersionFound, findData.cFileName) <= 0)
-					{
-						foundPixInstallation = true;
-						StringCchCopy(newestVersionFound, _countof(newestVersionFound), findData.cFileName);
-					}
-				}
-			} while (FindNextFile(hFind, &findData) != 0);
-		}
-
-		FindClose(hFind);
-
-		if (!foundPixInstallation)
-		{
-			// TODO: Error, no PIX installation found
-		}
-
-		wchar_t output[MAX_PATH];
-		StringCchCopy(output, pixSearchPath.length(), pixSearchPath.data());
-		StringCchCat(output, MAX_PATH, &newestVersionFound[0]);
-		StringCchCat(output, MAX_PATH, L"\\WinPixGpuCapturer.dll");
-
-		return &output[0];
 	}
 
 	// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.

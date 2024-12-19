@@ -2,8 +2,9 @@
 
 #include <iostream>
 
-#include <shlobj.h>
-#include <strsafe.h>
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -22,6 +23,51 @@ using Microsoft::WRL::ComPtr;
 
 namespace EngineCore
 {
+	// Simple free list based allocator
+	struct ExampleDescriptorHeapAllocator
+	{
+		ID3D12DescriptorHeap* Heap = nullptr;
+		D3D12_DESCRIPTOR_HEAP_TYPE  HeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+		D3D12_CPU_DESCRIPTOR_HANDLE HeapStartCpu;
+		D3D12_GPU_DESCRIPTOR_HANDLE HeapStartGpu;
+		UINT                        HeapHandleIncrement;
+		ImVector<int>               FreeIndices;
+
+		void Create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
+		{
+			IM_ASSERT(Heap == nullptr && FreeIndices.empty());
+			Heap = heap;
+			D3D12_DESCRIPTOR_HEAP_DESC desc = heap->GetDesc();
+			HeapType = desc.Type;
+			HeapStartCpu = Heap->GetCPUDescriptorHandleForHeapStart();
+			HeapStartGpu = Heap->GetGPUDescriptorHandleForHeapStart();
+			HeapHandleIncrement = device->GetDescriptorHandleIncrementSize(HeapType);
+			FreeIndices.reserve((int)desc.NumDescriptors);
+			for (int n = desc.NumDescriptors; n > 0; n--)
+				FreeIndices.push_back(n);
+		}
+		void Destroy()
+		{
+			Heap = nullptr;
+			FreeIndices.clear();
+		}
+		void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+		{
+			IM_ASSERT(FreeIndices.Size > 0);
+			int idx = FreeIndices.back();
+			FreeIndices.pop_back();
+			out_cpu_desc_handle->ptr = HeapStartCpu.ptr + (idx * HeapHandleIncrement);
+			out_gpu_desc_handle->ptr = HeapStartGpu.ptr + (idx * HeapHandleIncrement);
+		}
+		void Free(D3D12_CPU_DESCRIPTOR_HANDLE out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE out_gpu_desc_handle)
+		{
+			int cpu_idx = (int)((out_cpu_desc_handle.ptr - HeapStartCpu.ptr) / HeapHandleIncrement);
+			int gpu_idx = (int)((out_gpu_desc_handle.ptr - HeapStartGpu.ptr) / HeapHandleIncrement);
+			IM_ASSERT(cpu_idx == gpu_idx);
+			FreeIndices.push_back(cpu_idx);
+		}
+	};
+
 	class EngineBase
 	{
 	public:
@@ -33,8 +79,9 @@ namespace EngineCore
 		virtual void Render();
 		virtual void Destroy();
 
-		static std::wstring GetLatestWinPixGpuCapturerPath();
+		void UpdateGUI();
 
+		static ExampleDescriptorHeapAllocator m_srvAlloc;
 	private:
 		std::wstring m_assetsPath;
 		float m_aspectRatio;
@@ -45,6 +92,14 @@ namespace EngineCore
 			XMFLOAT3 position;
 			XMFLOAT4 color;
 		};
+
+		struct SceneConstantBuffer
+		{
+			XMFLOAT4 offset;
+			float padding[60];
+		};
+
+		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
 
 		// width, height
 		UINT m_width;
@@ -57,6 +112,8 @@ namespace EngineCore
 		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+		ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
+		ComPtr<ID3D12DescriptorHeap> m_imguiSrvHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
@@ -67,6 +124,9 @@ namespace EngineCore
 		// App resources.
 		ComPtr<ID3D12Resource> m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+		ComPtr<ID3D12Resource> m_constantBuffer;
+		SceneConstantBuffer m_constantBufferData;
+		UINT8* m_pCbvDataBegin;
 
 		// Synchronization objects.
 		UINT m_frameIndex;
@@ -78,6 +138,7 @@ namespace EngineCore
 
 		void LoadPipeline();
 		void LoadAssets();
+		void LoadGUI();
 		void PopulateCommandList();
 		void WaitForPreviousFrame();
 
@@ -89,5 +150,7 @@ namespace EngineCore
 
 		// Adapter info.
 		bool m_useWarpDevice;
+
 	};
+
 }

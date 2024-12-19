@@ -7,6 +7,13 @@
 #include <windows.h>
 #include "EngineBase.h"
 
+#include <shlobj.h>
+#include <strsafe.h>
+
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
+
 using namespace EngineCore;
 
 namespace WindowApplication
@@ -19,8 +26,9 @@ namespace WindowApplication
 
 	private:
 		// 윈도우 프로시저 선언
-		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+		static LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+		static std::wstring GetLatestWinPixGpuCapturerPath();
 
 	};
 }
