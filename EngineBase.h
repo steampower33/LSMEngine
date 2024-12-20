@@ -86,11 +86,14 @@ namespace EngineCore
 		std::wstring m_assetsPath;
 		float m_aspectRatio;
 		static const UINT FrameCount = 3;
+		static const UINT TextureWidth = 256;
+		static const UINT TextureHeight = 256;
+		static const UINT TexturePixelSize = 4;
 
 		struct Vertex
 		{
 			XMFLOAT3 position;
-			XMFLOAT4 color;
+			XMFLOAT2 texcoord;
 		};
 
 		struct SceneConstantBuffer
@@ -112,7 +115,7 @@ namespace EngineCore
 		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
+		ComPtr<ID3D12DescriptorHeap> m_heap;
 		ComPtr<ID3D12DescriptorHeap> m_imguiSrvHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
@@ -127,6 +130,8 @@ namespace EngineCore
 		ComPtr<ID3D12Resource> m_constantBuffer;
 		SceneConstantBuffer m_constantBufferData;
 		UINT8* m_pCbvDataBegin;
+		ComPtr<ID3D12Resource> m_texture;
+		ComPtr<ID3D12Resource> textureUploadHeap;
 
 		// Synchronization objects.
 		UINT m_frameIndex;
@@ -151,6 +156,7 @@ namespace EngineCore
 		// Adapter info.
 		bool m_useWarpDevice;
 
+		std::vector<UINT8> GenerateTextureData();
 	};
 
 }

@@ -39,6 +39,21 @@ namespace EngineCore
 	{
 		UINT dxgiFactoryFlags = 0;
 
+#if defined(_DEBUG)
+		// Enable the debug layer (requires the Graphics Tools "optional feature").
+		// NOTE: Enabling the debug layer after device creation will invalidate the active device.
+		{
+			ComPtr<ID3D12Debug> debugController;
+			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+			{
+				debugController->EnableDebugLayer();
+
+				// Enable additional debug layers.
+				dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+			}
+		}
+#endif
+
 		ComPtr<IDXGIFactory4> factory;
 		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
@@ -106,22 +121,20 @@ namespace EngineCore
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-			// Describe and create a constant buffer view (CBV) descriptor heap.
-			// Flags indicate that this descriptor heap can be bound to the pipeline
-			// and that descriptors contained in it can be referenced by a root table.
-			D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-			cbvHeapDesc.NumDescriptors = 1;
-			cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+			heapDesc.NumDescriptors = 2;
+			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_heap)));
 
-			// Create SRV
+			// Create ImGUI SRV
 			D3D12_DESCRIPTOR_HEAP_DESC imguiSrvHeapDesc = {};
-			imguiSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			imguiSrvHeapDesc.NumDescriptors = 64;
+			imguiSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			imguiSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiSrvHeapDesc, IID_PPV_ARGS(&m_imguiSrvHeap)));
 			m_srvAlloc.Create(m_device.Get(), m_imguiSrvHeap.Get());
+
 		}
 
 		{
@@ -152,22 +165,39 @@ namespace EngineCore
 				featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 			}
 
-			CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-			CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
-			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+			CD3DX12_DESCRIPTOR_RANGE1 cbvRange;
+			cbvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
 
-			// Allow input layout and deny uneccessary access to certain pipeline stages.
-			D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+			CD3DX12_DESCRIPTOR_RANGE1 srvRange;
+			srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+			CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+			rootParameters[0].InitAsDescriptorTable(1, &cbvRange, D3D12_SHADER_VISIBILITY_VERTEX);
+			rootParameters[1].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+			D3D12_STATIC_SAMPLER_DESC sampler = {};
+			sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			sampler.MipLODBias = 0;
+			sampler.MaxAnisotropy = 0;
+			sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+			sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+			sampler.MinLOD = 0.0f;
+			sampler.MaxLOD = D3D12_FLOAT32_MAX;
+			sampler.ShaderRegister = 0;
+			sampler.RegisterSpace = 0;
+			sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+			rootSignatureDesc.Init_1_1(
+				_countof(rootParameters),
+				rootParameters, 
+				1, 
+				&sampler, 
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 			ComPtr<ID3DBlob> signature;
 			ComPtr<ID3DBlob> error;
@@ -180,13 +210,24 @@ namespace EngineCore
 			ComPtr<ID3DBlob> vertexShader;
 			ComPtr<ID3DBlob> pixelShader;
 
-			ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vertexShader, nullptr));
-			ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &pixelShader, nullptr));
+			// 컴파일 플래그 설정
+			UINT compileFlags = 0;
+#if defined(_DEBUG) || defined(DEBUG)
+			compileFlags |= D3DCOMPILE_DEBUG; // 디버그 정보를 포함
+			compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION; // 최적화 비활성화
+#endif
+
+			ThrowIfFailed(D3DCompileFromFile(
+				L"VertexShader.hlsl",
+				nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+			ThrowIfFailed(D3DCompileFromFile(
+				L"PixelShader.hlsl",
+				nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
 			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 			{
 				{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-				{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+				{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 			};
 
 			// Describe and create the graphcis pipeline state object (PSO).
@@ -210,18 +251,14 @@ namespace EngineCore
 		// Create the command list.
 		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
-		// Command lists are created in the recording state, but there is nothing
-		// to record yet. The main loop expects it to be closed, so close it now.
-		ThrowIfFailed(m_commandList->Close());
-
 		// Create the vertex buffer.
 		{
 			// Define the geometry for a triangle.
 			Vertex triangleVertices[] =
 			{
-				{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-				{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+				{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0.5f, 0.0f } },
+				{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 1.0f, 1.0f } },
+				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f } }
 			};
 
 			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -247,6 +284,8 @@ namespace EngineCore
 			m_vertexBufferView.SizeInBytes = vertexBufferSize;
 		}
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_heap->GetCPUDescriptorHandleForHeapStart());
+
 		{
 			const UINT constantBufferSize = sizeof(SceneConstantBuffer);
 
@@ -263,13 +302,78 @@ namespace EngineCore
 			// Describe and create a constant buffer view.
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-			cbvDesc.SizeInBytes = constantBufferSize;
-			m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+			cbvDesc.SizeInBytes = constantBufferSize; // 256-byte 정렬
+			m_device->CreateConstantBufferView(&cbvDesc, handle);
+
+			handle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 
 			CD3DX12_RANGE readRange(0, 0);
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
 			memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 		}
+
+		// Create the texture.
+		{
+			// Describe and create a Texture2D.
+			D3D12_RESOURCE_DESC textureDesc = {};
+			textureDesc.MipLevels = 1;
+			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			textureDesc.Width = TextureWidth;
+			textureDesc.Height = TextureHeight;
+			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			textureDesc.DepthOrArraySize = 1;
+			textureDesc.SampleDesc.Count = 1;
+			textureDesc.SampleDesc.Quality = 0;
+			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+			auto defaultHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&defaultHeapProp,
+				D3D12_HEAP_FLAG_NONE,
+				&textureDesc,
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(&m_texture)));
+
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+
+			// Create the GPU upload buffer.
+			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&uploadHeapProp,
+				D3D12_HEAP_FLAG_NONE,
+				&buffer,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&textureUploadHeap)));
+
+			// Copy data to the intermediate upload heap and then schedule a copy 
+			// from the upload heap to the Texture2D.
+			std::vector<UINT8> texture = GenerateTextureData();
+
+			D3D12_SUBRESOURCE_DATA textureData = {};
+			textureData.pData = &texture[0];
+			textureData.RowPitch = TextureWidth * TexturePixelSize;
+			textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+
+			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			m_commandList->ResourceBarrier(1, &barrier);
+
+			// Describe and create a SRV for the texture.
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.Format = textureDesc.Format;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = 1;
+			m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, handle);
+		}
+
+		ThrowIfFailed(m_commandList->Close());
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
 		{
@@ -285,6 +389,43 @@ namespace EngineCore
 
 			WaitForPreviousFrame();
 		}
+	}
+
+	// Generate a simple black and white checkerboard texture.
+	std::vector<UINT8> EngineBase::GenerateTextureData()
+	{
+		const UINT rowPitch = TextureWidth * TexturePixelSize;
+		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
+		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+		const UINT textureSize = rowPitch * TextureHeight;
+
+		std::vector<UINT8> data(textureSize);
+		UINT8* pData = &data[0];
+
+		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
+		{
+			UINT x = n % rowPitch;
+			UINT y = n / rowPitch;
+			UINT i = x / cellPitch;
+			UINT j = y / cellHeight;
+
+			if (i % 2 == j % 2)
+			{
+				pData[n] = 0x00;        // R
+				pData[n + 1] = 0x00;    // G
+				pData[n + 2] = 0x00;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+			else
+			{
+				pData[n] = 0xff;        // R
+				pData[n + 1] = 0xff;    // G
+				pData[n + 2] = 0xff;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+		}
+
+		return data;
 	}
 
 	void EngineBase::LoadGUI()
@@ -357,11 +498,7 @@ namespace EngineCore
 
 	void EngineBase::UpdateGUI()
 	{
-		ImGui::SetNextItemOpen(false, ImGuiCond_Once);
-		if (ImGui::TreeNode("General")) {
-			ImGui::SliderFloat("Strength", &m_constantBufferData.offset.x, -5.0f, 5.0f);
-			ImGui::TreePop();
-		}
+		ImGui::SliderFloat("Strength", &m_constantBufferData.offset.x, -5.0f, 5.0f);
 	}
 
 	void EngineBase::PopulateCommandList()
@@ -375,12 +512,18 @@ namespace EngineCore
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
 		// Set DescriptorHeap
-		ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+		ID3D12DescriptorHeap* ppHeaps[] = { m_heap.Get() };
 		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 		// Set necessary State.
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_heap->GetGPUDescriptorHandleForHeapStart());
+		m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
+
+		gpuHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+		m_commandList->SetGraphicsRootDescriptorTable(1, gpuHandle);
 
 		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_commandList->ResourceBarrier(1, &presentToRT);
