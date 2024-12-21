@@ -92,6 +92,7 @@ namespace EngineCore
 
 		struct Vertex
 		{
+			Vertex(float x, float y, float z, float u, float v) : position(x, y, z), texcoord(u, v) {}
 			XMFLOAT3 position;
 			XMFLOAT2 texcoord;
 		};
@@ -127,6 +128,8 @@ namespace EngineCore
 		// App resources.
 		ComPtr<ID3D12Resource> m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+		ComPtr<ID3D12Resource> m_indexBuffer;
+		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 		ComPtr<ID3D12Resource> m_constantBuffer;
 		SceneConstantBuffer m_constantBufferData;
 		UINT8* m_pCbvDataBegin;
