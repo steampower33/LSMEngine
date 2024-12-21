@@ -149,7 +149,29 @@ namespace EngineCore
 			}
 		}
 
-		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+		{
+
+			for (UINT n = 0; n < FrameCount; n++)
+			{
+				ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
+			}
+
+			// Create the command list.
+			ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
+
+			for (UINT n = 0; n < FrameCount; n++)
+			{
+				ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence[n])));
+				m_fenceValue[n] = 0;
+			}
+
+			// Create an event handle to use for frame synchronization.
+			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (m_fenceEvent == nullptr)
+			{
+				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			}
+		}
 	}
 
 	void EngineBase::LoadAssets()
@@ -248,9 +270,6 @@ namespace EngineCore
 			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
 
-		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-
 		// Create the vertex buffer.
 		{
 			// Define the geometry for a triangle.
@@ -259,7 +278,7 @@ namespace EngineCore
 				{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0.5f, 0.0f } },
 				{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 1.0f, 1.0f } },
 				{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f } }
-			};
+			};	
 
 			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -375,20 +394,8 @@ namespace EngineCore
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		// Create synchronization objects and wait until assets have been uploaded to the GPU.
-		{
-			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-			m_fenceValue = 1;
-
-			// Create an event handle to use for frame synchronization.
-			m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-			if (m_fenceEvent == nullptr)
-			{
-				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-			}
-
-			WaitForPreviousFrame();
-		}
+		m_fenceValue[m_frameIndex] = 1;
+		WaitForPreviousFrame();
 	}
 
 	// Generate a simple black and white checkerboard texture.
@@ -504,8 +511,8 @@ namespace EngineCore
 	void EngineBase::PopulateCommandList()
 	{
 		// Reset CommandList
-		ThrowIfFailed(m_commandAllocator->Reset());
-		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
 
 		// Set Viewports, Rects
 		m_commandList->RSSetViewports(1, &m_viewport);
@@ -550,14 +557,14 @@ namespace EngineCore
 	void EngineBase::WaitForPreviousFrame()
 	{
 		// Signal and increment the fence value.
-		const UINT64 fence = m_fenceValue;
-		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-		m_fenceValue++;
+		const UINT64 fence = m_fenceValue[m_frameIndex];
+		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), fence));
+		m_fenceValue[m_frameIndex]++;
 
 		// Wait until the previous frame is finished.
-		if (m_fence->GetCompletedValue() < fence)
+		if (m_fence[m_frameIndex]->GetCompletedValue() < fence)
 		{
-			ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+			ThrowIfFailed(m_fence[m_frameIndex]->SetEventOnCompletion(fence, m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITE);
 		}
 

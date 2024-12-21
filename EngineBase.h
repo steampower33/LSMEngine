@@ -119,7 +119,7 @@ namespace EngineCore
 		ComPtr<ID3D12DescriptorHeap> m_imguiSrvHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+		ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 		ComPtr<ID3D12RootSignature> m_rootSignature;
 		ComPtr<ID3D12PipelineState> m_pipelineState;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
@@ -136,8 +136,8 @@ namespace EngineCore
 		// Synchronization objects.
 		UINT m_frameIndex;
 		HANDLE m_fenceEvent;
-		ComPtr<ID3D12Fence> m_fence;
-		UINT64 m_fenceValue;
+		ComPtr<ID3D12Fence> m_fence[FrameCount];
+		UINT64 m_fenceValue[FrameCount];
 
 		std::wstring GetAssetFullPath(LPCWSTR assetName);
 

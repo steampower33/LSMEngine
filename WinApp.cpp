@@ -53,7 +53,6 @@ namespace WindowApplication
 			}
 			else
 			{
-
 				ImGui_ImplDX12_NewFrame();
 				ImGui_ImplWin32_NewFrame();
 				ImGui::NewFrame();
