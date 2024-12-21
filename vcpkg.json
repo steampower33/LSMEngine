@@ -1,0 +1,7 @@
+{
+  "name": "graphic-engine",
+  "version": "1.0.0",
+  "dependencies": [
+    "directxmath"
+  ]
+}
