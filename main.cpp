@@ -7,7 +7,7 @@ int wWinMain(
     _In_ LPWSTR lpCmdLine,
     _In_ int nShowCmd
 ) {
-    EngineCore::EngineBase engine(1280, 800, L"LSMEngine");
+    EngineCore::EngineBase engine(1280, 720, L"LSMEngine");
 
     return WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);;
 }

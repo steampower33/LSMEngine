@@ -8,15 +8,31 @@ class WinApp;
 
 namespace EngineCore
 {
+	const EngineBase::Resolution EngineBase::m_resolutionOptions[] =
+	{
+		{ 800u, 600u },
+		{ 1200u, 900u },
+		{ 1280u, 720u },
+		{ 1920u, 1080u },
+		{ 1920u, 1200u },
+		{ 2560u, 1440u },
+		{ 3440u, 1440u },
+		{ 3840u, 2160u }
+	};
+
+	UINT EngineBase::m_resolutionIndex = 2;
+
 	ExampleDescriptorHeapAllocator EngineBase::m_srvAlloc;
 
 	EngineBase::EngineBase(UINT width, UINT height, std::wstring name) :
+		m_width(width), m_height(height),
 		m_frameIndex(0),
 		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-		m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(width), static_cast<LONG>(height)),
 		m_rtvDescriptorSize(0),
+		m_windowVisible(true),
+		m_windowedMode(true),
 		m_pCbvDataBegin(nullptr),
-		m_width(width), m_height(height),
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_useWarpDevice(false)
 	{
@@ -516,6 +532,93 @@ namespace EngineCore
 
 		// COM «ÿ¡¶
 		CoUninitialize();
+	}
+
+	void EngineBase::SizeChanged(UINT width, UINT height, bool minimized)
+	{
+		if ((width != m_width || height != m_height) && !minimized)
+		{
+			// Flush all current GPU commands.
+			WaitForPreviousFrame();
+
+			// Release the resources holding references to the swap chain (requirement of
+			// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
+			// current fence value.
+			for (UINT n = 0; n < FrameCount; n++)
+			{
+				m_renderTargets[n].Reset();
+				m_fenceValue[n] = m_fenceValue[m_frameIndex];
+			}
+
+			// Resize the swap chain to the desired dimensions.
+			DXGI_SWAP_CHAIN_DESC desc = {};
+			m_swapChain->GetDesc(&desc);
+			ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, desc.BufferDesc.Format, desc.Flags));
+
+			BOOL fullscreenState;
+			ThrowIfFailed(m_swapChain->GetFullscreenState(&fullscreenState, nullptr));
+			m_windowedMode = !fullscreenState;
+
+			// Reset the frame index to the current back buffer index.
+			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+			// Update the width, height, and aspect ratio member variables.
+			UpdateForSizeChange(width, height);
+
+			LoadSizeDependentResources();
+		}
+
+		m_windowVisible = !minimized;
+	}
+
+	void EngineBase::LoadSizeDependentResources()
+	{
+		float viewWidthRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Width) / m_width;
+		float viewHeightRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Height) / m_height;
+
+		float x = 1.0f;
+		float y = 1.0f;
+
+		if (viewWidthRatio < viewHeightRatio)
+		{
+			// The scaled image's height will fit to the viewport's height and 
+			// its width will be smaller than the viewport's width.
+			x = viewWidthRatio / viewHeightRatio;
+		}
+		else
+		{
+			// The scaled image's width will fit to the viewport's width and 
+			// its height may be smaller than the viewport's height.
+			y = viewHeightRatio / viewWidthRatio;
+		}
+
+		m_viewport.TopLeftX = m_width * (1.0f - x) / 2.0f;
+		m_viewport.TopLeftY = m_height * (1.0f - y) / 2.0f;
+		m_viewport.Width = x * m_width;
+		m_viewport.Height = y * m_height;
+
+		// Create frame resources.
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+			// Create a RTV for each frame.
+			for (UINT n = 0; n < FrameCount; n++)
+			{
+				ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+				m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+				rtvHandle.Offset(1, m_rtvDescriptorSize);
+			}
+		}
+
+		// This is where you would create/resize intermediate render targets, depth stencils, or other resources
+		// dependent on the window size.
+	}
+
+	void EngineBase::UpdateForSizeChange(UINT clientWidth, UINT clientHeight)
+	{
+		m_width = clientWidth;
+		m_height = clientHeight;
+		m_aspectRatio = static_cast<float>(clientWidth) / static_cast<float>(clientHeight);
 	}
 
 	void EngineBase::UpdateGUI()

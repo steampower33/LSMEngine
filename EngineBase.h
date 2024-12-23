@@ -79,16 +79,29 @@ namespace EngineCore
 		virtual void Update();
 		virtual void Render();
 		virtual void Destroy();
+		virtual void SizeChanged(UINT newWidth, UINT newHeight, bool minimized);
 
 		void UpdateGUI();
 
 		static ExampleDescriptorHeapAllocator m_srvAlloc;
+
+		UINT m_width;
+		UINT m_height;
+
 	private:
+		struct Resolution
+		{
+			UINT Width;
+			UINT Height;
+		};
+
 		float m_aspectRatio;
 		static const UINT FrameCount = 3;
 		static const UINT TextureWidth = 256;
 		static const UINT TextureHeight = 256;
 		static const UINT TexturePixelSize = 4;
+		static const Resolution m_resolutionOptions[];
+		static UINT m_resolutionIndex; // Index of the current scene rendering resolution from m_resolutionOptions.
 
 		struct Vertex
 		{
@@ -104,10 +117,6 @@ namespace EngineCore
 		};
 
 		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
-
-		// width, height
-		UINT m_width;
-		UINT m_height;
 
 		// Pipeline objects.
 		CD3DX12_VIEWPORT m_viewport;
@@ -141,11 +150,16 @@ namespace EngineCore
 		ComPtr<ID3D12Fence> m_fence[FrameCount];
 		UINT64 m_fenceValue[FrameCount];
 
+		bool m_windowVisible;
+		bool m_windowedMode;
+
 		void LoadPipeline();
 		void LoadAssets();
 		void LoadGUI();
 		void PopulateCommandList();
 		void WaitForPreviousFrame();
+		void UpdateForSizeChange(UINT clientWidth, UINT clientHeight);
+		void LoadSizeDependentResources();
 
 		// Get Adapter
 		void GetHardwareAdapter(

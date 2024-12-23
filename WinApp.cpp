@@ -17,21 +17,25 @@ namespace WindowApplication
 			LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
 		}
 
-		WNDCLASSEX wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"LSMEngine", NULL };
+		WNDCLASSEX wc = { 
+			sizeof(wc), 
+			CS_CLASSDC, 
+			WndProc, 
+			0L, 0L, 
+			GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"LSMEngine", NULL };
 
 		if (!RegisterClassEx(&wc)) return false;
 
-		RECT wr = { 0, 0, 1280, 800 };
-		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
+		RECT windowRect = { 0, 0, pEngineBase->m_width, pEngineBase->m_height };
+		AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
+
 		m_hwnd = CreateWindow(wc.lpszClassName, L"LSMEngineWindow",
 			WS_OVERLAPPEDWINDOW,
 			100, // 윈도우 좌측 상단의 x 좌표
 			100, // 윈도우 좌측 상단의 y 좌표
-			wr.right - wr.left, // 윈도우 가로 방향 해상도
-			wr.bottom - wr.top, // 윈도우 세로 방향 해상도
-			NULL, NULL, wc.hInstance, NULL);
-
-		if (!m_hwnd) return false;
+			windowRect.right - windowRect.left, // 윈도우 가로 방향 해상도
+			windowRect.bottom - windowRect.top, // 윈도우 세로 방향 해상도
+			NULL, NULL, hInstance, pEngineBase);
 
 		pEngineBase->Init();
 
@@ -67,9 +71,6 @@ namespace WindowApplication
 			}
 		}
 		pEngineBase->Destroy();
-		
-		if (m_hwnd)
-			DestroyWindow(m_hwnd);
 
 		return static_cast<int>(msg.wParam);
 	}
@@ -77,15 +78,16 @@ namespace WindowApplication
 	// 윈도우 프로시저
 	LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
-			return true;
+		EngineBase* pEngineBase = reinterpret_cast<EngineBase*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		switch (uMsg) {
-
-		case WM_DESTROY: // 윈도우가 닫힐 때
-			PostQuitMessage(0);
-			return 0;
-
+		case WM_CREATE:
+		{
+			// Save the DXSample* passed in to CreateWindow.
+			LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+		}
+		return 0;
 		case WM_PAINT: // 화면 그릴 때
 		{
 			PAINTSTRUCT ps;
@@ -93,8 +95,25 @@ namespace WindowApplication
 			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			EndPaint(hwnd, &ps);
 		}
+		case WM_SIZE: {
+			if (pEngineBase)
+			{
+				RECT clientRect = {};
+				GetClientRect(hwnd, &clientRect);
+
+				pEngineBase->SizeChanged(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
+			}
+			break;
+		}
+		case WM_DESTROY: // 윈도우가 닫힐 때
+			PostQuitMessage(0);
+			return 0;
+
 		return 0;
 		}
+
+		if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+			return true;
 
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
