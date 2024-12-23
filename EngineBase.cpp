@@ -447,9 +447,8 @@ namespace EngineCore
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		m_fenceValue[m_frameIndex]++;
-		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]));
-
+		m_fenceValue[m_frameIndex] = 1;
+		WaitForPreviousFrame();
 	}
 
 	void EngineBase::LoadGUI()
@@ -497,21 +496,16 @@ namespace EngineCore
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]));
-
 		// Present the frame.
 		ThrowIfFailed(m_swapChain->Present(0, 0));
+
+		WaitForPreviousFrame();
 	}
 
 	void EngineBase::Destroy()
 	{
-		WaitForPreviousFrame();
 
-		for (int i = 0; i < FrameCount; i++)
-		{
-			m_frameIndex = i;
-			WaitForPreviousFrame();
-		}
+		WaitForPreviousFrame();
 
 		CloseHandle(m_fenceEvent);
 
@@ -531,8 +525,6 @@ namespace EngineCore
 
 	void EngineBase::PopulateCommandList()
 	{
-		WaitForPreviousFrame();
-
 		// Reset CommandList
 		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
@@ -576,23 +568,24 @@ namespace EngineCore
 
 	void EngineBase::WaitForPreviousFrame()
 	{
-		// swap the current rtv buffer index so we draw on the correct buffer
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+		// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
+		// This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
+		// sample illustrates how to use fences for efficient resource usage and to
+		// maximize GPU utilization.
 
-		// if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
-		// the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
-		if (m_fence[m_frameIndex]->GetCompletedValue() < m_fenceValue[m_frameIndex])
+		// Signal and increment the fence value.
+		const UINT64 fence = m_fenceValue[m_frameIndex];
+		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), fence));
+		m_fenceValue[m_frameIndex]++;
+
+		// Wait until the previous frame is finished.
+		if (m_fence[m_frameIndex]->GetCompletedValue() < fence)
 		{
-			// we have the fence create an event which is signaled once the fence's current value is "fenceValue"
-			ThrowIfFailed(m_fence[m_frameIndex]->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
-
-			// We will wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
-			// has reached "fenceValue", we know the command queue has finished executing
+			ThrowIfFailed(m_fence[m_frameIndex]->SetEventOnCompletion(fence, m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITE);
 		}
 
-		// increment fenceValue for next frame
-		m_fenceValue[m_frameIndex]++;
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 
 	// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
