@@ -30,22 +30,3 @@ inline void ThrowIfFailed(HRESULT hr)
         throw HrException(hr);
     }
 }
-
-inline std::wstring GetAssetsPath()
-{
-    WCHAR path[512];
-    DWORD size = GetModuleFileName(nullptr, path, _countof(path));
-    if (size == 0 || size >= _countof(path))
-    {
-        throw std::runtime_error("Failed to get module file name.");
-    }
-
-    std::wstring assetsPath(path);
-    size_t lastSlashPos = assetsPath.find_last_of(L'\\');
-    if (lastSlashPos != std::wstring::npos)
-    {
-        assetsPath = assetsPath.substr(0, lastSlashPos + 1);
-    }
-
-    return assetsPath;
-}

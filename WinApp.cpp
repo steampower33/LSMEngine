@@ -11,7 +11,7 @@ namespace WindowApplication
 	int WinApp::Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd)
 	{
 		// Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
-		// This may happen if the application is launched through the PIX UI. 
+		// This may happen if the application is launched through the PIX UI.
 		if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
 		{
 			LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
@@ -36,10 +36,6 @@ namespace WindowApplication
 		pEngineBase->Init();
 
 		ShowWindow(m_hwnd, nShowCmd);
-
-		bool show_demo_window = true;
-		bool show_another_window = false;
-		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 		// 메시지 루프
 		MSG msg = {};
@@ -71,6 +67,9 @@ namespace WindowApplication
 			}
 		}
 		pEngineBase->Destroy();
+		
+		if (m_hwnd)
+			DestroyWindow(m_hwnd);
 
 		return static_cast<int>(msg.wParam);
 	}

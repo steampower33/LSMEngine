@@ -1,9 +1,9 @@
 
-cbuffer SceneConstantBuffer : register(b0)
-{
-    float4 offset;
-    float4 padding[15];
-}
+//cbuffer SceneConstantBuffer : register(b0)
+//{
+//    float4 offset;
+//    float4 padding[15];
+//}
 
 struct VertexShaderInput
 {
@@ -21,7 +21,7 @@ PSInput main(VertexShaderInput input)
 {
     PSInput result;
 
-    result.position = input.position + offset;
+    result.position = input.position;
     result.texcoord = input.texcoord;
 
     return result;

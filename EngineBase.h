@@ -11,6 +11,7 @@
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include "d3dx12.h"
+#include "DirectXTex.h"
 
 #include <string>
 #include <wrl.h>
@@ -83,7 +84,6 @@ namespace EngineCore
 
 		static ExampleDescriptorHeapAllocator m_srvAlloc;
 	private:
-		std::wstring m_assetsPath;
 		float m_aspectRatio;
 		static const UINT FrameCount = 3;
 		static const UINT TextureWidth = 256;
@@ -116,8 +116,8 @@ namespace EngineCore
 		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		ComPtr<ID3D12DescriptorHeap> m_heap;
-		ComPtr<ID3D12DescriptorHeap> m_imguiSrvHeap;
+		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
+		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
@@ -134,15 +134,12 @@ namespace EngineCore
 		SceneConstantBuffer m_constantBufferData;
 		UINT8* m_pCbvDataBegin;
 		ComPtr<ID3D12Resource> m_texture;
-		ComPtr<ID3D12Resource> textureUploadHeap;
 
 		// Synchronization objects.
 		UINT m_frameIndex;
 		HANDLE m_fenceEvent;
 		ComPtr<ID3D12Fence> m_fence[FrameCount];
 		UINT64 m_fenceValue[FrameCount];
-
-		std::wstring GetAssetFullPath(LPCWSTR assetName);
 
 		void LoadPipeline();
 		void LoadAssets();
@@ -158,8 +155,6 @@ namespace EngineCore
 
 		// Adapter info.
 		bool m_useWarpDevice;
-
-		std::vector<UINT8> GenerateTextureData();
 	};
 
 }

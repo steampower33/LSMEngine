@@ -17,11 +17,10 @@ namespace EngineCore
 		m_rtvDescriptorSize(0),
 		m_pCbvDataBegin(nullptr),
 		m_width(width), m_height(height),
-		m_assetsPath(GetAssetsPath()),
 		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 		m_useWarpDevice(false)
 	{
-		
+
 	}
 
 	EngineBase::~EngineBase()
@@ -37,6 +36,8 @@ namespace EngineCore
 
 	void EngineBase::LoadPipeline()
 	{
+		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+
 		UINT dxgiFactoryFlags = 0;
 
 #if defined(_DEBUG)
@@ -121,19 +122,18 @@ namespace EngineCore
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			heapDesc.NumDescriptors = 2;
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_heap)));
+			D3D12_DESCRIPTOR_HEAP_DESC normalHeapDesc = {};
+			normalHeapDesc.NumDescriptors = 1;
+			normalHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			normalHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&normalHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
 
-			// Create ImGUI SRV
-			D3D12_DESCRIPTOR_HEAP_DESC imguiSrvHeapDesc = {};
-			imguiSrvHeapDesc.NumDescriptors = 64;
-			imguiSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			imguiSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiSrvHeapDesc, IID_PPV_ARGS(&m_imguiSrvHeap)));
-			m_srvAlloc.Create(m_device.Get(), m_imguiSrvHeap.Get());
+			D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
+			imguiHeapDesc.NumDescriptors = 128;
+			imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
+			m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
 
 		}
 
@@ -187,22 +187,17 @@ namespace EngineCore
 				featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 			}
 
+			CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-			CD3DX12_DESCRIPTOR_RANGE1 cbvRange;
-			cbvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-
-			CD3DX12_DESCRIPTOR_RANGE1 srvRange;
-			srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-			CD3DX12_ROOT_PARAMETER1 rootParameters[2];
-			rootParameters[0].InitAsDescriptorTable(1, &cbvRange, D3D12_SHADER_VISIBILITY_VERTEX);
-			rootParameters[1].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+			CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
 			D3D12_STATIC_SAMPLER_DESC sampler = {};
-			sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-			sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-			sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			sampler.MipLODBias = 0;
 			sampler.MaxAnisotropy = 0;
 			sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
@@ -214,12 +209,7 @@ namespace EngineCore
 			sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init_1_1(
-				_countof(rootParameters),
-				rootParameters, 
-				1, 
-				&sampler, 
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 			ComPtr<ID3DBlob> signature;
 			ComPtr<ID3DBlob> error;
@@ -271,6 +261,7 @@ namespace EngineCore
 		}
 
 		// Create the vertex buffer.
+		ComPtr<ID3D12Resource> vertexUploadHeap;
 		{
 			Vertex vertexList[] =
 			{
@@ -278,15 +269,15 @@ namespace EngineCore
 				{  0.5f, -0.5f, 0.0f, 1.0f, 1.0f },
 				{ -0.5f, -0.5f, 0.0f, 0.0f, 1.0f },
 				{  0.5f,  0.5f, 0.0f, 1.0f, 0.0f },
-			};	
+			};
 
 			int vertexBufferSize = sizeof(vertexList);
 
 			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
 
-			auto defaultHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&defaultHeapProp,
+				&defaultHeapProps,
 				D3D12_HEAP_FLAG_NONE,
 				&buffer,
 				D3D12_RESOURCE_STATE_COPY_DEST,
@@ -295,24 +286,23 @@ namespace EngineCore
 
 			m_vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
-			ID3D12Resource* uploadHeap;
-			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&uploadHeapProp,
+				&uploadHeapProps,
 				D3D12_HEAP_FLAG_NONE, // no flags
 				&buffer,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&uploadHeap)));
+				IID_PPV_ARGS(&vertexUploadHeap)));
 
-			uploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
+			vertexUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
 			D3D12_SUBRESOURCE_DATA vertexData = {};
 			vertexData.pData = reinterpret_cast<BYTE*>(vertexList);
 			vertexData.RowPitch = vertexBufferSize;
 			vertexData.SlicePitch = vertexBufferSize;
 
-			UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), uploadHeap, 0, 0, 1, &vertexData);
+			UpdateSubresources(m_commandList.Get(), m_vertexBuffer.Get(), vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
 
 			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 				m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
@@ -324,6 +314,7 @@ namespace EngineCore
 		}
 
 		// Create Index Buffer
+		ComPtr<ID3D12Resource> indexUploadHeap;
 		{
 			DWORD indexList[] = {
 				0, 1, 2,
@@ -332,10 +323,10 @@ namespace EngineCore
 
 			int indexBufferSize = sizeof(indexList);
 
-			auto defaultHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&defaultHeapProp,
+				&defaultHeapProps,
 				D3D12_HEAP_FLAG_NONE, // no flags
 				&buffer,
 				D3D12_RESOURCE_STATE_COPY_DEST,
@@ -344,27 +335,26 @@ namespace EngineCore
 
 			m_indexBuffer->SetName(L"Index Buffer Resource Heap");
 
-			ID3D12Resource* uploadHeap;
-			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&uploadHeapProp,
+				&uploadHeapProps,
 				D3D12_HEAP_FLAG_NONE,
 				&buffer,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&uploadHeap)));
+				IID_PPV_ARGS(&indexUploadHeap)));
 
-			uploadHeap->SetName(L"Index Buffer Upload Resource Heap");
+			indexUploadHeap->SetName(L"Index Buffer Upload Resource Heap");
 
 			D3D12_SUBRESOURCE_DATA indexData = {};
 			indexData.pData = reinterpret_cast<BYTE*>(indexList);
 			indexData.RowPitch = indexBufferSize;
 			indexData.SlicePitch = indexBufferSize;
 
-			UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), uploadHeap, 0, 0, 1, &indexData);
+			UpdateSubresources(m_commandList.Get(), m_indexBuffer.Get(), indexUploadHeap.Get(), 0, 0, 1, &indexData);
 
 			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+				m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 			m_commandList->ResourceBarrier(1, &barrier);
 
 			m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
@@ -372,136 +362,94 @@ namespace EngineCore
 			m_indexBufferView.SizeInBytes = indexBufferSize;
 		}
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_heap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_basicHeap->GetCPUDescriptorHandleForHeapStart());
 
+		/*
 		{
 			const UINT constantBufferSize = sizeof(SceneConstantBuffer);
 
-			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&uploadHeapProp,
+				&uploadHeapProps,
 				D3D12_HEAP_FLAG_NONE,
 				&buffer,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				IID_PPV_ARGS(&m_constantBuffer)));
 
-			// Describe and create a constant buffer view.
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-			cbvDesc.SizeInBytes = constantBufferSize; // 256-byte 정렬
-			m_device->CreateConstantBufferView(&cbvDesc, handle);
-
-			handle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
 			CD3DX12_RANGE readRange(0, 0);
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
 			memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+			// Describe and create a constant buffer view.
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
+			cbvDesc.SizeInBytes = (constantBufferSize + 255) & ~255; // 256-byte 정렬
+			m_device->CreateConstantBufferView(&cbvDesc, handle);
+
+			handle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 		}
+		*/
 
 		// Create the texture.
+		ComPtr<ID3D12Resource> textureUploadHeap;
+		auto image = std::make_unique<ScratchImage>();
 		{
-			// Describe and create a Texture2D.
-			D3D12_RESOURCE_DESC textureDesc = {};
-			textureDesc.MipLevels = 1;
-			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			textureDesc.Width = TextureWidth;
-			textureDesc.Height = TextureHeight;
-			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-			textureDesc.DepthOrArraySize = 1;
-			textureDesc.SampleDesc.Count = 1;
-			textureDesc.SampleDesc.Quality = 0;
-			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			ThrowIfFailed(DirectX::LoadFromWICFile(L"wall.jpg", DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
-			auto defaultHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-			ThrowIfFailed(m_device->CreateCommittedResource(
-				&defaultHeapProp,
-				D3D12_HEAP_FLAG_NONE,
-				&textureDesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&m_texture)));
+			DirectX::TexMetadata metaData = image.get()->GetMetadata();
+			ThrowIfFailed(CreateTexture(m_device.Get(), metaData, &m_texture));
 
-			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+			std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+			ThrowIfFailed(PrepareUpload(m_device.Get(), image.get()->GetImages(), image.get()->GetImageCount(), metaData, subresources));
 
-			// Create the GPU upload buffer.
-			auto uploadHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			// upload is implemented by application developer. Here's one solution using <d3dx12.h>
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, static_cast<unsigned int>(subresources.size()));
+
+			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
 			ThrowIfFailed(m_device->CreateCommittedResource(
-				&uploadHeapProp,
+				&uploadHeapProps,
 				D3D12_HEAP_FLAG_NONE,
 				&buffer,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				IID_PPV_ARGS(&textureUploadHeap)));
 
-			// Copy data to the intermediate upload heap and then schedule a copy 
-			// from the upload heap to the Texture2D.
-			std::vector<UINT8> texture = GenerateTextureData();
+			UpdateSubresources(
+				m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(),
+				0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
-			D3D12_SUBRESOURCE_DATA textureData = {};
-			textureData.pData = &texture[0];
-			textureData.RowPitch = TextureWidth * TexturePixelSize;
-			textureData.SlicePitch = textureData.RowPitch * TextureHeight;
-
-			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+				m_texture.Get(), // 텍스처 리소스
+				D3D12_RESOURCE_STATE_COPY_DEST, // 이전 상태
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE // 새로운 상태
+			);
 			m_commandList->ResourceBarrier(1, &barrier);
 
-			// Describe and create a SRV for the texture.
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srvDesc.Format = textureDesc.Format;
+			srvDesc.Format = metaData.format; // 텍스처의 포맷
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = 1;
-			m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, handle);
-		}
+			srvDesc.Texture2D.MipLevels = static_cast<UINT>(metaData.mipLevels);
 
+			m_device->CreateShaderResourceView(
+				m_texture.Get(), // 텍스처 리소스
+				&srvDesc, // SRV 설명
+				m_basicHeap->GetCPUDescriptorHandleForHeapStart() // 디스크립터 힙의 핸들
+			);
+
+		}
+		
 		ThrowIfFailed(m_commandList->Close());
+
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		m_fenceValue[m_frameIndex] = 1;
-		WaitForPreviousFrame();
-	}
+		m_fenceValue[m_frameIndex]++;
+		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]));
 
-	// Generate a simple black and white checkerboard texture.
-	std::vector<UINT8> EngineBase::GenerateTextureData()
-	{
-		const UINT rowPitch = TextureWidth * TexturePixelSize;
-		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
-		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
-		const UINT textureSize = rowPitch * TextureHeight;
-
-		std::vector<UINT8> data(textureSize);
-		UINT8* pData = &data[0];
-
-		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
-		{
-			UINT x = n % rowPitch;
-			UINT y = n / rowPitch;
-			UINT i = x / cellPitch;
-			UINT j = y / cellHeight;
-
-			if (i % 2 == j % 2)
-			{
-				pData[n] = 0x00;        // R
-				pData[n + 1] = 0x00;    // G
-				pData[n + 2] = 0x00;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-			else
-			{
-				pData[n] = 0xff;        // R
-				pData[n + 1] = 0xff;    // G
-				pData[n + 2] = 0xff;    // B
-				pData[n + 3] = 0xff;    // A
-			}
-		}
-
-		return data;
 	}
 
 	void EngineBase::LoadGUI()
@@ -512,11 +460,6 @@ namespace EngineCore
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-		
-		// ImGui 설정 (메뉴 바 고려)
-		RECT clientRect;
-		GetClientRect(WindowApplication::WinApp::m_hwnd, &clientRect);
-		io.DisplaySize = ImVec2((float)(clientRect.right - clientRect.left), (float)(clientRect.bottom - clientRect.top));
 
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
@@ -533,7 +476,7 @@ namespace EngineCore
 		init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
 		// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 		// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-		init_info.SrvDescriptorHeap = m_imguiSrvHeap.Get();
+		init_info.SrvDescriptorHeap = m_imguiHeap.Get();
 		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
 		ImGui_ImplDX12_Init(&init_info);
@@ -542,7 +485,7 @@ namespace EngineCore
 	void EngineBase::Update()
 	{
 
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		//memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 
 	void EngineBase::Render()
@@ -554,15 +497,21 @@ namespace EngineCore
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		// Present the frame.
-		ThrowIfFailed(m_swapChain->Present(1, 0));
+		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), m_fenceValue[m_frameIndex]));
 
-		WaitForPreviousFrame();
+		// Present the frame.
+		ThrowIfFailed(m_swapChain->Present(0, 0));
 	}
 
 	void EngineBase::Destroy()
 	{
 		WaitForPreviousFrame();
+
+		for (int i = 0; i < FrameCount; i++)
+		{
+			m_frameIndex = i;
+			WaitForPreviousFrame();
+		}
 
 		CloseHandle(m_fenceEvent);
 
@@ -570,55 +519,56 @@ namespace EngineCore
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
+
+		// COM 해제
+		CoUninitialize();
 	}
 
 	void EngineBase::UpdateGUI()
 	{
-		ImGui::SliderFloat("Strength", &m_constantBufferData.offset.x, -5.0f, 5.0f);
+		//ImGui::SliderFloat("Strength", &m_constantBufferData.offset.x, -5.0f, 5.0f);
 	}
 
 	void EngineBase::PopulateCommandList()
 	{
+		WaitForPreviousFrame();
+
 		// Reset CommandList
 		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
 
-		// Set Viewports, Rects
-		m_commandList->RSSetViewports(1, &m_viewport);
-		m_commandList->RSSetScissorRects(1, &m_scissorRect);
-
-		// Set DescriptorHeap
-		ID3D12DescriptorHeap* ppHeaps[] = { m_heap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-		// Set necessary State.
-		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_heap->GetGPUDescriptorHandleForHeapStart());
-		m_commandList->SetGraphicsRootDescriptorTable(0, gpuHandle);
-
-		gpuHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-		m_commandList->SetGraphicsRootDescriptorTable(1, gpuHandle);
-
-		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_renderTargets[m_frameIndex].Get(),
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_commandList->ResourceBarrier(1, &presentToRT);
 
-		// Clear & Render
-		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
+		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+		// Set DescriptorHeap
+		ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		m_commandList->SetGraphicsRootDescriptorTable(0, m_basicHeap->GetGPUDescriptorHandleForHeapStart());
+
+		m_commandList->RSSetViewports(1, &m_viewport);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		m_commandList->IASetIndexBuffer(&m_indexBufferView);
 		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-		m_commandList->SetDescriptorHeaps(1, m_imguiSrvHeap.GetAddressOf());
+		// Imgui 렌더링
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
-		auto RTToPresent = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		auto RTToPresent = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_renderTargets[m_frameIndex].Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		m_commandList->ResourceBarrier(1, &RTToPresent);
 
 		ThrowIfFailed(m_commandList->Close());
@@ -626,25 +576,23 @@ namespace EngineCore
 
 	void EngineBase::WaitForPreviousFrame()
 	{
-		// Signal and increment the fence value.
-		const UINT64 fence = m_fenceValue[m_frameIndex];
-		ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), fence));
-		m_fenceValue[m_frameIndex]++;
+		// swap the current rtv buffer index so we draw on the correct buffer
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-		// Wait until the previous frame is finished.
-		if (m_fence[m_frameIndex]->GetCompletedValue() < fence)
+		// if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
+		// the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
+		if (m_fence[m_frameIndex]->GetCompletedValue() < m_fenceValue[m_frameIndex])
 		{
-			ThrowIfFailed(m_fence[m_frameIndex]->SetEventOnCompletion(fence, m_fenceEvent));
+			// we have the fence create an event which is signaled once the fence's current value is "fenceValue"
+			ThrowIfFailed(m_fence[m_frameIndex]->SetEventOnCompletion(m_fenceValue[m_frameIndex], m_fenceEvent));
+
+			// We will wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
+			// has reached "fenceValue", we know the command queue has finished executing
 			WaitForSingleObject(m_fenceEvent, INFINITE);
 		}
 
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-	}
-
-	// Helper function for resolving the full path of assets.
-	std::wstring EngineBase::GetAssetFullPath(LPCWSTR assetName)
-	{
-		return m_assetsPath + assetName;
+		// increment fenceValue for next frame
+		m_fenceValue[m_frameIndex]++;
 	}
 
 	// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
