@@ -36,7 +36,6 @@ namespace EngineCore
 		virtual void Update();
 		virtual void Render();
 		virtual void Destroy();
-		virtual void SizeChanged(UINT newWidth, UINT newHeight, bool minimized);
 
 		void UpdateGUI();
 
@@ -57,8 +56,8 @@ namespace EngineCore
 		static const UINT TextureWidth = 256;
 		static const UINT TextureHeight = 256;
 		static const UINT TexturePixelSize = 4;
-		static const Resolution m_resolutionOptions[];
-		static UINT m_resolutionIndex; // Index of the current scene rendering resolution from m_resolutionOptions.
+
+		ImVec2 m_sceneSize;
 
 		struct Vertex
 		{
@@ -118,9 +117,8 @@ namespace EngineCore
 		void LoadGUI();
 		void PopulateCommandList();
 		void WaitForPreviousFrame();
-		void UpdateForSizeChange(UINT clientWidth, UINT clientHeight);
-		void LoadSizeDependentResources();
 		void RenderScene();
+		void UpdateSceneViewer();
 
 		// Get Adapter
 		void GetHardwareAdapter(

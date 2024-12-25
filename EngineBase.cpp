@@ -8,32 +8,19 @@ class WinApp;
 
 namespace EngineCore
 {
-	const EngineBase::Resolution EngineBase::m_resolutionOptions[] =
-	{
-		{ 800u, 600u },
-		{ 1200u, 900u },
-		{ 1280u, 720u },
-		{ 1920u, 1080u },
-		{ 1920u, 1200u },
-		{ 2560u, 1440u },
-		{ 3440u, 1440u },
-		{ 3840u, 2160u }
-	};
-
-	UINT EngineBase::m_resolutionIndex = 2;
-
 	HeapAllocator EngineBase::m_srvAlloc;
 
 	EngineBase::EngineBase(UINT width, UINT height, std::wstring name) :
 		m_width(width), m_height(height),
 		m_frameIndex(0),
-		m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
+		m_sceneSize(800, 600),
+		m_viewport(0.0f, 0.0f, static_cast<float>(m_sceneSize.x), static_cast<float>(m_sceneSize.y)),
 		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(width), static_cast<LONG>(height)),
 		m_rtvDescriptorSize(0),
 		m_windowVisible(true),
 		m_windowedMode(true),
 		m_pCbvDataBegin(nullptr),
-		m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
+		m_aspectRatio(static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y)),
 		m_useWarpDevice(false)
 	{
 
@@ -473,12 +460,12 @@ namespace EngineCore
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart());
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_viewSRVHeap->GetCPUDescriptorHandleForHeapStart());
 		{
-			for (int i = 0; i < FrameCount; i++)
+			for (int n = 0; n < FrameCount; n++)
 			{
 				D3D12_RESOURCE_DESC renderTargetDesc = {};
 				renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
-				renderTargetDesc.Width = 800;  // 텍스처의 너비
-				renderTargetDesc.Height = 600; // 텍스처의 높이
+				renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
+				renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
 				renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
 				renderTargetDesc.MipLevels = 1; // MipMap 수준
 				renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
@@ -501,11 +488,11 @@ namespace EngineCore
 					&renderTargetDesc,
 					D3D12_RESOURCE_STATE_RENDER_TARGET,
 					&clearValue,
-					IID_PPV_ARGS(&m_viewRenderTargets[i])
+					IID_PPV_ARGS(&m_viewRenderTargets[n])
 				));
 
 				// RTV 생성
-				m_device->CreateRenderTargetView(m_viewRenderTargets[i].Get(), nullptr, rtvHandle);
+				m_device->CreateRenderTargetView(m_viewRenderTargets[n].Get(), nullptr, rtvHandle);
 				rtvHandle.Offset(1, m_rtvDescriptorSize);
 
 				// SRV 생성
@@ -515,7 +502,7 @@ namespace EngineCore
 				srvDesc.Texture2D.MipLevels = 1;
 				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-				m_device->CreateShaderResourceView(m_viewRenderTargets[i].Get(), &srvDesc, srvHandle);
+				m_device->CreateShaderResourceView(m_viewRenderTargets[n].Get(), &srvDesc, srvHandle);
 				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 			}
 		}
@@ -596,93 +583,6 @@ namespace EngineCore
 		CoUninitialize();
 	}
 
-	void EngineBase::SizeChanged(UINT width, UINT height, bool minimized)
-	{
-		if ((width != m_width || height != m_height) && !minimized)
-		{
-			// Flush all current GPU commands.
-			WaitForPreviousFrame();
-
-			// Release the resources holding references to the swap chain (requirement of
-			// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
-			// current fence value.
-			for (UINT n = 0; n < FrameCount; n++)
-			{
-				m_renderTargets[n].Reset();
-				m_fenceValue[n] = m_fenceValue[m_frameIndex];
-			}
-
-			// Resize the swap chain to the desired dimensions.
-			DXGI_SWAP_CHAIN_DESC desc = {};
-			m_swapChain->GetDesc(&desc);
-			ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, desc.BufferDesc.Format, desc.Flags));
-
-			BOOL fullscreenState;
-			ThrowIfFailed(m_swapChain->GetFullscreenState(&fullscreenState, nullptr));
-			m_windowedMode = !fullscreenState;
-
-			// Reset the frame index to the current back buffer index.
-			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-			// Update the width, height, and aspect ratio member variables.
-			UpdateForSizeChange(width, height);
-
-			LoadSizeDependentResources();
-		}
-
-		m_windowVisible = !minimized;
-	}
-
-	void EngineBase::LoadSizeDependentResources()
-	{
-		float viewWidthRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Width) / m_width;
-		float viewHeightRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Height) / m_height;
-
-		float x = 1.0f;
-		float y = 1.0f;
-
-		if (viewWidthRatio < viewHeightRatio)
-		{
-			// The scaled image's height will fit to the viewport's height and 
-			// its width will be smaller than the viewport's width.
-			x = viewWidthRatio / viewHeightRatio;
-		}
-		else
-		{
-			// The scaled image's width will fit to the viewport's width and 
-			// its height may be smaller than the viewport's height.
-			y = viewHeightRatio / viewWidthRatio;
-		}
-
-		m_viewport.TopLeftX = m_width * (1.0f - x) / 2.0f;
-		m_viewport.TopLeftY = m_height * (1.0f - y) / 2.0f;
-		m_viewport.Width = x * m_width;
-		m_viewport.Height = y * m_height;
-
-		// Create frame resources.
-		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-
-			// Create a RTV for each frame.
-			for (UINT n = 0; n < FrameCount; n++)
-			{
-				ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-				m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, m_rtvDescriptorSize);
-			}
-		}
-
-		// This is where you would create/resize intermediate render targets, depth stencils, or other resources
-		// dependent on the window size.
-	}
-
-	void EngineBase::UpdateForSizeChange(UINT clientWidth, UINT clientHeight)
-	{
-		m_width = clientWidth;
-		m_height = clientHeight;
-		m_aspectRatio = static_cast<float>(clientWidth) / static_cast<float>(clientHeight);
-	}
-
 	void EngineBase::UpdateGUI()
 	{
 		ImGui_ImplDX12_NewFrame();
@@ -690,24 +590,101 @@ namespace EngineCore
 
 		ImGui::NewFrame();
 
+		ImGui::SetNextWindowPos(ImVec2(0, 0)); // (x, y)는 화면의 절대 좌표
 		ImGui::Begin("Scene Control");
 		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		ImGui::End();
-		
+
+		UpdateSceneViewer();
+
+		// Rendering
+		ImGui::Render();
+
+	}
+
+	void EngineBase::UpdateSceneViewer()
+	{
+		ImGui::SetNextWindowPos(ImVec2(300, 0)); // (x, y)는 화면의 절대 좌표
 		ImGui::Begin("Scene 1");
 
+		ImVec2 currentSize = ImGui::GetWindowSize();
+		// 크기 변경 여부 확인
+		if (currentSize.x != m_sceneSize.x || currentSize.y != m_sceneSize.y) {
+			m_sceneSize = currentSize; // 업데이트
+			m_aspectRatio = static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y);
+
+			WaitForPreviousFrame();
+
+			for (UINT n = 0; n < FrameCount; n++)
+			{
+				m_viewRenderTargets[n].Reset();
+				m_fenceValue[n] = m_fenceValue[m_frameIndex];
+			}
+
+			// Reset the frame index to the current back buffer index.
+			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+			m_viewport.Width = m_sceneSize.x;
+			m_viewport.Height = m_sceneSize.y;
+
+			// Create frame resources.
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_viewSRVHeap->GetCPUDescriptorHandleForHeapStart());
+			for (int n = 0; n < FrameCount; n++)
+			{
+				D3D12_RESOURCE_DESC renderTargetDesc = {};
+				renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
+				renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
+				renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
+				renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
+				renderTargetDesc.MipLevels = 1; // MipMap 수준
+				renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
+				renderTargetDesc.SampleDesc.Count = 1; // 멀티샘플링 비활성화
+				renderTargetDesc.SampleDesc.Quality = 0;
+				renderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+				renderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟 플래그
+
+				D3D12_CLEAR_VALUE clearValue = {};
+				clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				clearValue.Color[0] = 0.0f;
+				clearValue.Color[1] = 0.0f;
+				clearValue.Color[2] = 0.0f;
+				clearValue.Color[3] = 1.0f;
+
+				auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+				ThrowIfFailed(m_device->CreateCommittedResource(
+					&defaultHeapProps,
+					D3D12_HEAP_FLAG_NONE,
+					&renderTargetDesc,
+					D3D12_RESOURCE_STATE_RENDER_TARGET,
+					&clearValue,
+					IID_PPV_ARGS(&m_viewRenderTargets[n])
+				));
+
+				// RTV 생성
+				m_device->CreateRenderTargetView(m_viewRenderTargets[n].Get(), nullptr, rtvHandle);
+				rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+				// SRV 생성
+				D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+				srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srvDesc.Texture2D.MipLevels = 1;
+				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+				m_device->CreateShaderResourceView(m_viewRenderTargets[n].Get(), &srvDesc, srvHandle);
+				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			}
+		}
 
 		UINT srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_viewSRVHeap->GetGPUDescriptorHandleForHeapStart();
 		srvHandle.ptr += m_frameIndex * srvDescriptorSize;
-		ImGui::Image(srvHandle.ptr, ImVec2(800, 600));
+		ImVec2 contentSize = ImGui::GetContentRegionAvail(); // 창 내부 가용 공간 확인
+		ImGui::Image(srvHandle.ptr, contentSize);
 
 		ImGui::End();
-
-		// Rendering
-		ImGui::Render();
-		
 	}
 
 	void EngineBase::PopulateCommandList()
@@ -727,16 +704,12 @@ namespace EngineCore
 			m_renderTargets[m_frameIndex].Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		m_commandList->ResourceBarrier(1, &RTToPresent);
-		
+
 		ThrowIfFailed(m_commandList->Close());
 	}
 
 	void EngineBase::RenderScene()
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-
-		const float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
@@ -747,6 +720,8 @@ namespace EngineCore
 		m_commandList->SetGraphicsRootDescriptorTable(0, m_basicHeap->GetGPUDescriptorHandleForHeapStart());
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		const float whiteColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
 		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
 		m_commandList->RSSetViewports(1, &m_viewport);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -762,6 +737,10 @@ namespace EngineCore
 		);
 		m_commandList->ResourceBarrier(1, &viewRTToSR);
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+
+		const float blackColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		m_commandList->ClearRenderTargetView(rtvHandle, blackColor, 0, nullptr);
 		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());

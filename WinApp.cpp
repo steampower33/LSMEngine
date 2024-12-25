@@ -85,13 +85,6 @@ namespace WindowApplication
 			EndPaint(hwnd, &ps);
 		}
 		case WM_SIZE: {
-			if (pEngineBase)
-			{
-				RECT clientRect = {};
-				GetClientRect(hwnd, &clientRect);
-
-				pEngineBase->SizeChanged(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
-			}
 			break;
 		}
 		case WM_DESTROY: // À©µµ¿ì°¡ ´ÝÈú ¶§
