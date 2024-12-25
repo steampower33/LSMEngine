@@ -590,7 +590,7 @@ namespace EngineCore
 
 		ImGui::NewFrame();
 
-		ImGui::SetNextWindowPos(ImVec2(0, 0)); // (x, y)는 화면의 절대 좌표
+		ImGui::SetNextWindowPos(ImVec2(5, 5)); // (x, y)는 화면의 절대 좌표
 		ImGui::Begin("Scene Control");
 		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -605,7 +605,7 @@ namespace EngineCore
 
 	void EngineBase::UpdateSceneViewer()
 	{
-		ImGui::SetNextWindowPos(ImVec2(300, 0)); // (x, y)는 화면의 절대 좌표
+		ImGui::SetNextWindowPos(ImVec2(300, 5)); // (x, y)는 화면의 절대 좌표
 		ImGui::Begin("Scene 1");
 
 		ImVec2 currentSize = ImGui::GetWindowSize();
