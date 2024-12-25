@@ -14,13 +14,13 @@ namespace EngineCore
 		m_width(width), m_height(height),
 		m_frameIndex(0),
 		m_sceneSize(800, 600),
-		m_viewport(0.0f, 0.0f, static_cast<float>(m_sceneSize.x), static_cast<float>(m_sceneSize.y)),
+		m_viewport(0.0f, 0.0f, 0.0f, 0.0f),
 		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(width), static_cast<LONG>(height)),
 		m_rtvDescriptorSize(0),
 		m_windowVisible(true),
 		m_windowedMode(true),
 		m_pCbvDataBegin(nullptr),
-		m_aspectRatio(static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y)),
+		m_aspectRatio(0.0f),
 		m_useWarpDevice(false)
 	{
 
@@ -125,20 +125,20 @@ namespace EngineCore
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-			D3D12_DESCRIPTOR_HEAP_DESC m_viewRTVHeapDesc = {};
-			m_viewRTVHeapDesc.NumDescriptors = FrameCount;
-			m_viewRTVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			m_viewRTVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewRTVHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
+			D3D12_DESCRIPTOR_HEAP_DESC m_sceneRTVHeapDesc = {};
+			m_sceneRTVHeapDesc.NumDescriptors = FrameCount;
+			m_sceneRTVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			m_sceneRTVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_sceneRTVHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
 
-			D3D12_DESCRIPTOR_HEAP_DESC m_viewSRVHeapDesc = {};
-			m_viewSRVHeapDesc.NumDescriptors = FrameCount;
-			m_viewSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			m_viewSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewSRVHeapDesc, IID_PPV_ARGS(&m_sceneSRVHeap)));
+			D3D12_DESCRIPTOR_HEAP_DESC m_sceneSRVHeapDesc = {};
+			m_sceneSRVHeapDesc.NumDescriptors = FrameCount;
+			m_sceneSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			m_sceneSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_sceneSRVHeapDesc, IID_PPV_ARGS(&m_sceneSRVHeap)));
 
 			D3D12_DESCRIPTOR_HEAP_DESC basicHeapDesc = {};
-			basicHeapDesc.NumDescriptors = 1;
+			basicHeapDesc.NumDescriptors = 2;
 			basicHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			basicHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&basicHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
@@ -201,11 +201,13 @@ namespace EngineCore
 				featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 			}
 
-			CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+			CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
+			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+			ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-			CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+			CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+			rootParameters[1].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL);
 
 			D3D12_STATIC_SAMPLER_DESC sampler = {};
 			sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -450,7 +452,7 @@ namespace EngineCore
 			m_device->CreateShaderResourceView(
 				m_texture.Get(), // 텍스처 리소스
 				&srvDesc, // SRV 설명
-				m_basicHeap->GetCPUDescriptorHandleForHeapStart() // 디스크립터 힙의 핸들
+				handle // 디스크립터 힙의 핸들
 			);
 
 		}
@@ -547,7 +549,7 @@ namespace EngineCore
 	void EngineBase::Update()
 	{
 
-		//memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 
 	void EngineBase::Render()
@@ -591,6 +593,7 @@ namespace EngineCore
 		ImGui::SetNextWindowPos(ImVec2(5, 5)); // (x, y)는 화면의 절대 좌표
 		ImGui::Begin("Scene Control");
 		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::SliderFloat("x pos", &m_constantBufferData.offset.x, -m_aspectRatio, m_aspectRatio);
 
 		ImGui::End();
 
@@ -715,7 +718,16 @@ namespace EngineCore
 		ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
 		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		m_commandList->SetGraphicsRootDescriptorTable(0, m_basicHeap->GetGPUDescriptorHandleForHeapStart());
+		D3D12_GPU_DESCRIPTOR_HANDLE cbvGPUHandle(m_basicHeap->GetGPUDescriptorHandleForHeapStart());
+		m_commandList->SetGraphicsRootDescriptorTable(0, cbvGPUHandle);
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(
+			m_basicHeap->GetGPUDescriptorHandleForHeapStart(),
+			1, // 1번 인덱스 (CBV 이후)
+			m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+		);
+		m_commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
+
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 		const float whiteColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
