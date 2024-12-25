@@ -53,18 +53,7 @@ namespace WindowApplication
 			}
 			else
 			{
-				ImGui_ImplDX12_NewFrame();
-				ImGui_ImplWin32_NewFrame();
-				ImGui::NewFrame();
-
-				ImGui::Begin("Scene Control");
-				ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		
 				pEngineBase->UpdateGUI();
-				ImGui::End();
-
-				// Rendering
-				ImGui::Render();
 
 				pEngineBase->Update();
 				pEngineBase->Render();
