@@ -129,20 +129,19 @@ namespace EngineCore
 			m_viewRTVHeapDesc.NumDescriptors = FrameCount;
 			m_viewRTVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			m_viewRTVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewRTVHeapDesc, IID_PPV_ARGS(&m_viewRTVHeap)));
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewRTVHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
 
 			D3D12_DESCRIPTOR_HEAP_DESC m_viewSRVHeapDesc = {};
 			m_viewSRVHeapDesc.NumDescriptors = FrameCount;
 			m_viewSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			m_viewSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewSRVHeapDesc, IID_PPV_ARGS(&m_viewSRVHeap)));
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_viewSRVHeapDesc, IID_PPV_ARGS(&m_sceneSRVHeap)));
 
-			D3D12_DESCRIPTOR_HEAP_DESC normalHeapDesc = {};
-			normalHeapDesc.NumDescriptors = 1;
-			normalHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			normalHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&normalHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
-
+			D3D12_DESCRIPTOR_HEAP_DESC basicHeapDesc = {};
+			basicHeapDesc.NumDescriptors = 1;
+			basicHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			basicHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&basicHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
 
 			D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
 			imguiHeapDesc.NumDescriptors = 32;
@@ -379,7 +378,6 @@ namespace EngineCore
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_basicHeap->GetCPUDescriptorHandleForHeapStart());
 
-		/*
 		{
 			const UINT constantBufferSize = sizeof(SceneConstantBuffer);
 
@@ -405,7 +403,7 @@ namespace EngineCore
 
 			handle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 		}
-		*/
+		
 
 		// Create the texture.
 		ComPtr<ID3D12Resource> textureUploadHeap;
@@ -457,8 +455,8 @@ namespace EngineCore
 
 		}
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart());
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_viewSRVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
 		{
 			for (int n = 0; n < FrameCount; n++)
 			{
@@ -488,11 +486,11 @@ namespace EngineCore
 					&renderTargetDesc,
 					D3D12_RESOURCE_STATE_RENDER_TARGET,
 					&clearValue,
-					IID_PPV_ARGS(&m_viewRenderTargets[n])
+					IID_PPV_ARGS(&m_sceneRenderTargets[n])
 				));
 
 				// RTV 생성
-				m_device->CreateRenderTargetView(m_viewRenderTargets[n].Get(), nullptr, rtvHandle);
+				m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
 				rtvHandle.Offset(1, m_rtvDescriptorSize);
 
 				// SRV 생성
@@ -502,7 +500,7 @@ namespace EngineCore
 				srvDesc.Texture2D.MipLevels = 1;
 				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-				m_device->CreateShaderResourceView(m_viewRenderTargets[n].Get(), &srvDesc, srvHandle);
+				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
 				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 			}
 		}
@@ -618,7 +616,7 @@ namespace EngineCore
 
 			for (UINT n = 0; n < FrameCount; n++)
 			{
-				m_viewRenderTargets[n].Reset();
+				m_sceneRenderTargets[n].Reset();
 				m_fenceValue[n] = m_fenceValue[m_frameIndex];
 			}
 
@@ -629,8 +627,8 @@ namespace EngineCore
 			m_viewport.Height = m_sceneSize.y;
 
 			// Create frame resources.
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_viewSRVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
 			for (int n = 0; n < FrameCount; n++)
 			{
 				D3D12_RESOURCE_DESC renderTargetDesc = {};
@@ -659,11 +657,11 @@ namespace EngineCore
 					&renderTargetDesc,
 					D3D12_RESOURCE_STATE_RENDER_TARGET,
 					&clearValue,
-					IID_PPV_ARGS(&m_viewRenderTargets[n])
+					IID_PPV_ARGS(&m_sceneRenderTargets[n])
 				));
 
 				// RTV 생성
-				m_device->CreateRenderTargetView(m_viewRenderTargets[n].Get(), nullptr, rtvHandle);
+				m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
 				rtvHandle.Offset(1, m_rtvDescriptorSize);
 
 				// SRV 생성
@@ -673,13 +671,13 @@ namespace EngineCore
 				srvDesc.Texture2D.MipLevels = 1;
 				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-				m_device->CreateShaderResourceView(m_viewRenderTargets[n].Get(), &srvDesc, srvHandle);
+				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
 				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 			}
 		}
 
 		UINT srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_viewSRVHeap->GetGPUDescriptorHandleForHeapStart();
+		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_sceneSRVHeap->GetGPUDescriptorHandleForHeapStart();
 		srvHandle.ptr += m_frameIndex * srvDescriptorSize;
 		ImVec2 contentSize = ImGui::GetContentRegionAvail(); // 창 내부 가용 공간 확인
 		ImGui::Image(srvHandle.ptr, contentSize);
@@ -719,7 +717,7 @@ namespace EngineCore
 
 		m_commandList->SetGraphicsRootDescriptorTable(0, m_basicHeap->GetGPUDescriptorHandleForHeapStart());
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_viewRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 		const float whiteColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
 		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
@@ -731,7 +729,7 @@ namespace EngineCore
 		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 		CD3DX12_RESOURCE_BARRIER viewRTToSR = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_viewRenderTargets[m_frameIndex].Get(),
+			m_sceneRenderTargets[m_frameIndex].Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,        // 이전 상태
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE // 이후 상태
 		);
@@ -746,7 +744,7 @@ namespace EngineCore
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
 		CD3DX12_RESOURCE_BARRIER viewSRToRT = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_viewRenderTargets[m_frameIndex].Get(),
+			m_sceneRenderTargets[m_frameIndex].Get(),
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_RENDER_TARGET
 		);

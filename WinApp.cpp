@@ -84,6 +84,12 @@ namespace WindowApplication
 			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			EndPaint(hwnd, &ps);
 		}
+		case WM_KEYDOWN: // 키가 눌렸을 때
+			if (wParam == VK_ESCAPE) // ESC 키 확인
+			{
+				PostQuitMessage(0); // 메시지 큐에 종료 메시지 추가
+			}
+			break;
 		case WM_SIZE: {
 			break;
 		}

@@ -81,13 +81,13 @@ namespace EngineCore
 		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		ComPtr<ID3D12DescriptorHeap> m_viewRTVHeap;
-		ComPtr<ID3D12DescriptorHeap> m_viewSRVHeap;
+		ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
+		ComPtr<ID3D12DescriptorHeap> m_sceneSRVHeap;
 		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
 		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-		ComPtr<ID3D12Resource> m_viewRenderTargets[FrameCount];
+		ComPtr<ID3D12Resource> m_sceneRenderTargets[FrameCount];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 		ComPtr<ID3D12RootSignature> m_rootSignature;
 		ComPtr<ID3D12PipelineState> m_pipelineState;
