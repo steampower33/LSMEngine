@@ -5,7 +5,6 @@
 #endif
 
 #include <windows.h>
-#include "EngineBase.h"
 
 #include <shlobj.h>
 #include <strsafe.h>
@@ -14,14 +13,16 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
-using namespace EngineCore;
+#include "EngineBase.h"
+
+class EngineBase;
 
 namespace WindowApplication
 {
 	class WinApp
 	{
 	public:
-		static int Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd);
+		static int Run(EngineCore::EngineBase* pMainEngine, HINSTANCE hInstance, int nShowCmd);
 		static HWND m_hwnd;
 
 	private:

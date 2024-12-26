@@ -8,7 +8,7 @@ namespace WindowApplication
 
 	HWND WinApp::m_hwnd = nullptr;
 
-	int WinApp::Run(EngineCore::EngineBase* pEngineBase, HINSTANCE hInstance, int nShowCmd)
+	int WinApp::Run(EngineCore::EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 	{
 		// Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
 		// This may happen if the application is launched through the PIX UI.
@@ -26,7 +26,7 @@ namespace WindowApplication
 
 		if (!RegisterClassEx(&wc)) return false;
 
-		RECT windowRect = { 0, 0, pEngineBase->m_width, pEngineBase->m_height };
+		RECT windowRect = { 0, 0, pEngine->m_width, pEngine->m_height };
 		AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
 
 		m_hwnd = CreateWindow(wc.lpszClassName, L"LSMEngineWindow",
@@ -35,9 +35,9 @@ namespace WindowApplication
 			100, // 윈도우 좌측 상단의 y 좌표
 			windowRect.right - windowRect.left, // 윈도우 가로 방향 해상도
 			windowRect.bottom - windowRect.top, // 윈도우 세로 방향 해상도
-			NULL, NULL, hInstance, pEngineBase);
+			NULL, NULL, hInstance, pEngine);
 
-		pEngineBase->Init();
+		pEngine->Initialize();
 
 		ShowWindow(m_hwnd, nShowCmd);
 
@@ -53,13 +53,12 @@ namespace WindowApplication
 			}
 			else
 			{
-				pEngineBase->UpdateGUI();
+				pEngine->UpdateGUI();
 
-				pEngineBase->Update();
-				pEngineBase->Render();
+				pEngine->Update();
+				pEngine->Render();
 			}
 		}
-		pEngineBase->Destroy();
 
 		return static_cast<int>(msg.wParam);
 	}
@@ -67,7 +66,7 @@ namespace WindowApplication
 	// 윈도우 프로시저
 	LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		EngineBase* pEngineBase = reinterpret_cast<EngineBase*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+		EngineBase* pEngine = reinterpret_cast<EngineBase*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		switch (uMsg) {
 		case WM_CREATE:

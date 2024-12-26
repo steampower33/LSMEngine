@@ -1,4 +1,5 @@
 #include "EngineBase.h"
+#include "MainEngine.h"
 #include "WinApp.h"
 
 int wWinMain(
@@ -7,7 +8,7 @@ int wWinMain(
     _In_ LPWSTR lpCmdLine,
     _In_ int nShowCmd
 ) {
-    EngineCore::EngineBase engine(1280, 720, L"LSMEngine");
+    EngineCore::MainEngine engine;
 
     return WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);;
 }

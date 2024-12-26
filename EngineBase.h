@@ -20,36 +20,28 @@
 #include "Helpers.h"
 
 #include "DescriptorHeapAllocator.h"
-
-using namespace DirectX;
-using Microsoft::WRL::ComPtr;
+#include "Camera.h"
 
 namespace EngineCore
 {
+	using namespace DirectX;
+	using Microsoft::WRL::ComPtr;
+
 	class EngineBase
 	{
 	public:
-		EngineBase(UINT width, UINT height, std::wstring name);
+		EngineBase();
 		virtual ~EngineBase();
 
-		virtual void Init();
-		virtual void Update();
-		virtual void Render();
-		virtual void Destroy();
-
-		void UpdateGUI();
+		virtual void Initialize();
+		virtual void Update() = 0;
+		virtual void Render() = 0;
+		virtual void UpdateGUI() = 0;
 
 		static HeapAllocator m_srvAlloc;
 
 		UINT m_width;
 		UINT m_height;
-
-	private:
-		struct Resolution
-		{
-			UINT Width;
-			UINT Height;
-		};
 
 		float m_aspectRatio;
 		static const UINT FrameCount = 3;
@@ -58,6 +50,8 @@ namespace EngineCore
 		static const UINT TexturePixelSize = 4;
 
 		ImVec2 m_sceneSize;
+
+		Camera camera;
 
 		struct Vertex
 		{
@@ -69,7 +63,10 @@ namespace EngineCore
 		struct SceneConstantBuffer
 		{
 			XMFLOAT4 offset;
-			float padding[60];
+			XMFLOAT4X4 world;
+			XMFLOAT4X4 view;
+			XMFLOAT4X4 proj;
+			float padding[12];
 		};
 
 		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
@@ -103,6 +100,13 @@ namespace EngineCore
 		UINT8* m_pCbvDataBegin;
 		ComPtr<ID3D12Resource> m_texture;
 
+
+	protected:
+		void LoadPipeline();
+		void LoadAssets();
+		void LoadGUI();
+		void WaitForPreviousFrame();
+		
 		// Synchronization objects.
 		UINT m_frameIndex;
 		HANDLE m_fenceEvent;
@@ -111,14 +115,6 @@ namespace EngineCore
 
 		bool m_windowVisible;
 		bool m_windowedMode;
-
-		void LoadPipeline();
-		void LoadAssets();
-		void LoadGUI();
-		void PopulateCommandList();
-		void WaitForPreviousFrame();
-		void RenderScene();
-		void UpdateSceneViewer();
 
 		// Get Adapter
 		void GetHardwareAdapter(

@@ -10,17 +10,17 @@ namespace EngineCore
 {
 	HeapAllocator EngineBase::m_srvAlloc;
 
-	EngineBase::EngineBase(UINT width, UINT height, std::wstring name) :
-		m_width(width), m_height(height),
+	EngineBase::EngineBase() :
+		m_width(1280), m_height(800),
 		m_frameIndex(0),
 		m_sceneSize(800, 600),
-		m_viewport(0.0f, 0.0f, 0.0f, 0.0f),
-		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(width), static_cast<LONG>(height)),
+		m_viewport(0.0f, 0.0f, 800.0f, 600.0f),
+		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(1280), static_cast<LONG>(800)),
 		m_rtvDescriptorSize(0),
 		m_windowVisible(true),
 		m_windowedMode(true),
 		m_pCbvDataBegin(nullptr),
-		m_aspectRatio(0.0f),
+		m_aspectRatio(800.0f / 600.0f),
 		m_useWarpDevice(false)
 	{
 
@@ -28,9 +28,20 @@ namespace EngineCore
 
 	EngineBase::~EngineBase()
 	{
+		WaitForPreviousFrame();
+
+		CloseHandle(m_fenceEvent);
+
+		// Cleanup
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+
+		// COM 해제
+		CoUninitialize();
 	}
 
-	void EngineBase::Init()
+	void EngineBase::Initialize()
 	{
 		LoadPipeline();
 		LoadAssets();
@@ -281,10 +292,10 @@ namespace EngineCore
 		{
 			Vertex vertexList[] =
 			{
-				{ -0.5f,  0.5f, 0.0f, 0.0f, 0.0f },
-				{  0.5f, -0.5f, 0.0f, 1.0f, 1.0f },
-				{ -0.5f, -0.5f, 0.0f, 0.0f, 1.0f },
-				{  0.5f,  0.5f, 0.0f, 1.0f, 0.0f },
+				{ -0.5f,  0.5f, 1.0f, 0.0f, 0.0f },
+				{  0.5f, -0.5f, 1.0f, 1.0f, 1.0f },
+				{ -0.5f, -0.5f, 1.0f, 0.0f, 1.0f },
+				{  0.5f,  0.5f, 1.0f, 1.0f, 0.0f },
 			};
 
 			int vertexBufferSize = sizeof(vertexList);
@@ -507,6 +518,17 @@ namespace EngineCore
 			}
 		}
 
+		XMStoreFloat4x4(&m_constantBufferData.proj, 
+			XMMatrixTranspose(camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
+
+		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(camera.GetViewMatrix()));
+
+		XMFLOAT4 cube1Position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // set cube 1's position
+		XMVECTOR posVec = XMLoadFloat4(&cube1Position); // create xmvector for cube1's position
+
+		XMStoreFloat4x4(&m_constantBufferData.world, 
+			XMMatrixTranspose(XMMatrixTranslationFromVector(posVec))); // store cube1's world matrix
+
 		ThrowIfFailed(m_commandList->Close());
 
 		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -544,223 +566,6 @@ namespace EngineCore
 		init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 		init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
 		ImGui_ImplDX12_Init(&init_info);
-	}
-
-	void EngineBase::Update()
-	{
-
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
-	}
-
-	void EngineBase::Render()
-	{
-		// Record all the commands we need to render the scene into the command list.
-		PopulateCommandList();
-
-		// Execute the command list.
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-		// Present the frame.
-		ThrowIfFailed(m_swapChain->Present(0, 0));
-
-		WaitForPreviousFrame();
-	}
-
-	void EngineBase::Destroy()
-	{
-
-		WaitForPreviousFrame();
-
-		CloseHandle(m_fenceEvent);
-
-		// Cleanup
-		ImGui_ImplDX12_Shutdown();
-		ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-
-		// COM 해제
-		CoUninitialize();
-	}
-
-	void EngineBase::UpdateGUI()
-	{
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-
-		ImGui::NewFrame();
-
-		ImGui::SetNextWindowPos(ImVec2(5, 5)); // (x, y)는 화면의 절대 좌표
-		ImGui::Begin("Scene Control");
-		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::SliderFloat("x pos", &m_constantBufferData.offset.x, -m_aspectRatio, m_aspectRatio);
-
-		ImGui::End();
-
-		UpdateSceneViewer();
-
-		// Rendering
-		ImGui::Render();
-
-	}
-
-	void EngineBase::UpdateSceneViewer()
-	{
-		ImGui::SetNextWindowPos(ImVec2(300, 5)); // (x, y)는 화면의 절대 좌표
-		ImGui::Begin("Scene 1");
-
-		ImVec2 currentSize = ImGui::GetWindowSize();
-		// 크기 변경 여부 확인
-		if (currentSize.x != m_sceneSize.x || currentSize.y != m_sceneSize.y) {
-			m_sceneSize = currentSize; // 업데이트
-			m_aspectRatio = static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y);
-
-			WaitForPreviousFrame();
-
-			for (UINT n = 0; n < FrameCount; n++)
-			{
-				m_sceneRenderTargets[n].Reset();
-				m_fenceValue[n] = m_fenceValue[m_frameIndex];
-			}
-
-			// Reset the frame index to the current back buffer index.
-			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-			m_viewport.Width = m_sceneSize.x;
-			m_viewport.Height = m_sceneSize.y;
-
-			// Create frame resources.
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
-			for (int n = 0; n < FrameCount; n++)
-			{
-				D3D12_RESOURCE_DESC renderTargetDesc = {};
-				renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
-				renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
-				renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
-				renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
-				renderTargetDesc.MipLevels = 1; // MipMap 수준
-				renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
-				renderTargetDesc.SampleDesc.Count = 1; // 멀티샘플링 비활성화
-				renderTargetDesc.SampleDesc.Quality = 0;
-				renderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-				renderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟 플래그
-
-				D3D12_CLEAR_VALUE clearValue = {};
-				clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				clearValue.Color[0] = 0.0f;
-				clearValue.Color[1] = 0.0f;
-				clearValue.Color[2] = 0.0f;
-				clearValue.Color[3] = 1.0f;
-
-				auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-				ThrowIfFailed(m_device->CreateCommittedResource(
-					&defaultHeapProps,
-					D3D12_HEAP_FLAG_NONE,
-					&renderTargetDesc,
-					D3D12_RESOURCE_STATE_RENDER_TARGET,
-					&clearValue,
-					IID_PPV_ARGS(&m_sceneRenderTargets[n])
-				));
-
-				// RTV 생성
-				m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, m_rtvDescriptorSize);
-
-				// SRV 생성
-				D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-				srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				srvDesc.Texture2D.MipLevels = 1;
-				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
-				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-			}
-		}
-
-		UINT srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_sceneSRVHeap->GetGPUDescriptorHandleForHeapStart();
-		srvHandle.ptr += m_frameIndex * srvDescriptorSize;
-		ImVec2 contentSize = ImGui::GetContentRegionAvail(); // 창 내부 가용 공간 확인
-		ImGui::Image(srvHandle.ptr, contentSize);
-
-		ImGui::End();
-	}
-
-	void EngineBase::PopulateCommandList()
-	{
-		// Reset CommandList
-		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
-		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
-
-		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_renderTargets[m_frameIndex].Get(),
-			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		m_commandList->ResourceBarrier(1, &presentToRT);
-
-		RenderScene();
-
-		auto RTToPresent = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_renderTargets[m_frameIndex].Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		m_commandList->ResourceBarrier(1, &RTToPresent);
-
-		ThrowIfFailed(m_commandList->Close());
-	}
-
-	void EngineBase::RenderScene()
-	{
-
-		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
-		// Set DescriptorHeap
-		ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-		D3D12_GPU_DESCRIPTOR_HANDLE cbvGPUHandle(m_basicHeap->GetGPUDescriptorHandleForHeapStart());
-		m_commandList->SetGraphicsRootDescriptorTable(0, cbvGPUHandle);
-
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(
-			m_basicHeap->GetGPUDescriptorHandleForHeapStart(),
-			1, // 1번 인덱스 (CBV 이후)
-			m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
-		m_commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
-
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-		const float whiteColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
-		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
-		m_commandList->RSSetViewports(1, &m_viewport);
-		m_commandList->RSSetScissorRects(1, &m_scissorRect);
-		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-		m_commandList->IASetIndexBuffer(&m_indexBufferView);
-		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-
-		CD3DX12_RESOURCE_BARRIER viewRTToSR = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_sceneRenderTargets[m_frameIndex].Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET,        // 이전 상태
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE // 이후 상태
-		);
-		m_commandList->ResourceBarrier(1, &viewRTToSR);
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-
-		const float blackColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		m_commandList->ClearRenderTargetView(rtvHandle, blackColor, 0, nullptr);
-		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-
-		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
-
-		CD3DX12_RESOURCE_BARRIER viewSRToRT = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_sceneRenderTargets[m_frameIndex].Get(),
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_RENDER_TARGET
-		);
-		m_commandList->ResourceBarrier(1, &viewSRToRT);
 	}
 
 	void EngineBase::WaitForPreviousFrame()
