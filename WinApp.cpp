@@ -88,14 +88,18 @@ namespace WindowApplication
 			{
 				PostQuitMessage(0);
 			}
-			pEngine->KeyDown(static_cast<UINT8>(wParam));
+			if (wParam == 'F')
+			{
+				pEngine->m_camera.m_useFirstPersonView = !pEngine->m_camera.m_useFirstPersonView;
+			}
+			pEngine->m_camera.KeyDown(wParam);
 			break;
 		case WM_KEYUP:
 			if (wParam == VK_ESCAPE)
 			{
 				PostQuitMessage(0);
 			}
-			pEngine->KeyUp(static_cast<UINT8>(wParam));
+			pEngine->m_camera.KeyUp(wParam);
 			break;
 		case WM_SIZE: {
 			break;

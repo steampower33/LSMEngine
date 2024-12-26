@@ -27,9 +27,6 @@ namespace EngineCore
 		virtual void Render() = 0;
 		virtual void UpdateGUI() = 0;
 
-		virtual void KeyDown(UINT8 key) = 0;
-		virtual void KeyUp(UINT8 key) = 0;
-
 		static HeapAllocator m_srvAlloc;
 
 		UINT m_width;

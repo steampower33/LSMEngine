@@ -69,17 +69,6 @@ namespace EngineCore
 		ImGui::Render();
 	}
 
-	void MainEngine::KeyDown(UINT8 key)
-	{
-		m_camera.KeyDown(key);
-
-	}
-
-	void MainEngine::KeyUp(UINT8 key)
-	{
-		m_camera.KeyUp(key);
-	}
-
 	void MainEngine::UpdateSceneViewer()
 	{
 		ImGuiIO& io = ImGui::GetIO(); (void)io;

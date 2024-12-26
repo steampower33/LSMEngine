@@ -24,6 +24,8 @@ namespace EngineCore
 		void MoveRight(float dt);
 		void MoveUp(float dt);
 
+		bool m_useFirstPersonView;
+
 	private:
 		struct KeysPressed
 		{
@@ -48,13 +50,13 @@ namespace EngineCore
 		XMFLOAT3 m_rightDir;
 
 		// 마우스 커서 위치 저장 (Picking에 사용)
-		float m_cursorNdcX = 0.0f;
-		float m_cursorNdcY = 0.0f;
+		float m_cursorNdcX;
+		float m_cursorNdcY;
 
 		// roll, pitch, yaw
 		// https://en.wikipedia.org/wiki/Aircraft_principal_axes
-		float m_yaw = 0.0f;
-		float m_pitch = 0.0f;
+		float m_yaw;
+		float m_pitch;
 
 		float m_speed;
 

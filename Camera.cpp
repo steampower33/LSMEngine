@@ -5,30 +5,37 @@ namespace EngineCore
 	using namespace std;
 
 	Camera::Camera() :
-		m_initPos(0, 0, -2),
+		m_initPos(0.0f, 0.0f, -2.0f),
 		m_pos(m_initPos),
-		m_lookDir(0, 0, 1),
-		m_upDir(0, 1, 0),
-		m_rightDir(1, 0, 0),
-		m_speed(3.0f)
+		m_lookDir(0.0f, 0.0f, 1.0f),
+		m_upDir(0.0f, 1.0f, 0.0f),
+		m_rightDir(1.0f, 0.0f, 0.0f),
+		m_cursorNdcX(0.0f),
+		m_cursorNdcY(0.0f),
+		m_yaw(0.0f),
+		m_pitch(0.0f),
+		m_speed(3.0f),
+		m_useFirstPersonView(false)
 	{
 
 	}
 
 	void Camera::Update(float dt)
 	{
-		if (m_keysPressed.w)
-			MoveForward(dt);
-		if (m_keysPressed.s)
-			MoveForward(-dt);
-		if (m_keysPressed.a)
-			MoveRight(-dt);
-		if (m_keysPressed.d)
-			MoveRight(dt);
-		if (m_keysPressed.q)
-			MoveUp(dt);
-		if (m_keysPressed.e)
-			MoveUp(-dt);
+		if (m_useFirstPersonView) {
+			if (m_keysPressed.w)
+				MoveForward(dt);
+			if (m_keysPressed.s)
+				MoveForward(-dt);
+			if (m_keysPressed.a)
+				MoveRight(-dt);
+			if (m_keysPressed.d)
+				MoveRight(dt);
+			if (m_keysPressed.q)
+				MoveUp(dt);
+			if (m_keysPressed.e)
+				MoveUp(-dt);
+		}
 	}
 
 	void Camera::MoveForward(float dt) {
@@ -41,24 +48,26 @@ namespace EngineCore
 		XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_upDir) * m_speed * dt);
 	}
 
-	void Camera::MoveRight(float dt) { 
+	void Camera::MoveRight(float dt) {
 		XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_rightDir) * m_speed * dt);
 	}
 
 
 	void Camera::UpdateMouse(float mouseX, float mouseY, float m_screenWidth, float m_screenHeight)
 	{
-		m_cursorNdcX = mouseX * 2.0f / m_screenWidth - 1.0f;
-		m_cursorNdcY = -mouseY * 2.0f / m_screenHeight + 1.0f;
+		if (m_useFirstPersonView) {
+			m_cursorNdcX = mouseX * 2.0f / m_screenWidth - 1.0f;
+			m_cursorNdcY = -mouseY * 2.0f / m_screenHeight + 1.0f;
 
-		m_cursorNdcX = std::clamp(m_cursorNdcX, -1.0f, 1.0f);
-		m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
+			m_cursorNdcX = std::clamp(m_cursorNdcX, -1.0f, 1.0f);
+			m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
 
-		m_yaw = m_cursorNdcX * DirectX::XM_2PI;     // 좌우 360도
-		m_pitch = m_cursorNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
+			m_yaw = m_cursorNdcX * DirectX::XM_2PI;     // 좌우 360도
+			m_pitch = m_cursorNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
 
-		XMStoreFloat3(&m_lookDir, XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 1.0f }, XMMatrixRotationY(m_yaw)));
-		XMStoreFloat3(&m_rightDir, XMVector3Cross(XMLoadFloat3(&m_upDir), XMLoadFloat3(&m_lookDir)));
+			XMStoreFloat3(&m_lookDir, XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 1.0f }, XMMatrixRotationY(m_yaw)));
+			XMStoreFloat3(&m_rightDir, XMVector3Cross(XMLoadFloat3(&m_upDir), XMLoadFloat3(&m_lookDir)));
+		}
 	}
 
 	XMMATRIX Camera::GetViewMatrix()
