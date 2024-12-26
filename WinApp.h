@@ -15,7 +15,7 @@
 
 #include "EngineBase.h"
 
-class EngineBase;
+class EngineCore::EngineBase;
 
 namespace WindowApplication
 {

@@ -519,9 +519,9 @@ namespace EngineCore
 		}
 
 		XMStoreFloat4x4(&m_constantBufferData.proj, 
-			XMMatrixTranspose(camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
+			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
 
-		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(camera.GetViewMatrix()));
+		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
 
 		XMFLOAT4 cube1Position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // set cube 1's position
 		XMVECTOR posVec = XMLoadFloat4(&cube1Position); // create xmvector for cube1's position

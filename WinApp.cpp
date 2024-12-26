@@ -66,7 +66,7 @@ namespace WindowApplication
 	// 윈도우 프로시저
 	LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		EngineBase* pEngine = reinterpret_cast<EngineBase*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+		EngineCore::EngineBase* pEngine = reinterpret_cast<EngineCore::EngineBase*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		switch (uMsg) {
 		case WM_CREATE:
@@ -76,23 +76,31 @@ namespace WindowApplication
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
 		}
 		return 0;
-		case WM_PAINT: // 화면 그릴 때
+		case WM_PAINT:
 		{
 			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hwnd, &ps);
 			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			EndPaint(hwnd, &ps);
 		}
-		case WM_KEYDOWN: // 키가 눌렸을 때
-			if (wParam == VK_ESCAPE) // ESC 키 확인
+		case WM_KEYDOWN:
+			if (wParam == VK_ESCAPE)
 			{
-				PostQuitMessage(0); // 메시지 큐에 종료 메시지 추가
+				PostQuitMessage(0);
 			}
+			pEngine->KeyDown(static_cast<UINT8>(wParam));
+			break;
+		case WM_KEYUP:
+			if (wParam == VK_ESCAPE)
+			{
+				PostQuitMessage(0);
+			}
+			pEngine->KeyUp(static_cast<UINT8>(wParam));
 			break;
 		case WM_SIZE: {
 			break;
 		}
-		case WM_DESTROY: // 윈도우가 닫힐 때
+		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
 

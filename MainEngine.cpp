@@ -13,6 +13,10 @@ namespace EngineCore
 
 	void MainEngine::Update()
 	{
+		m_camera.Update(ImGui::GetIO().DeltaTime);
+
+		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+
 		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 
@@ -63,6 +67,17 @@ namespace EngineCore
 
 		// Rendering
 		ImGui::Render();
+	}
+
+	void MainEngine::KeyDown(UINT8 key)
+	{
+		m_camera.KeyDown(key);
+
+	}
+
+	void MainEngine::KeyUp(UINT8 key)
+	{
+		m_camera.KeyUp(key);
 	}
 
 	void MainEngine::UpdateSceneViewer()
