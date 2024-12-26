@@ -6,17 +6,6 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
-#include <d3d12.h>
-#include <dxgi1_6.h>
-#include <D3Dcompiler.h>
-#include <DirectXMath.h>
-#include "d3dx12.h"
-#include "DirectXTex.h"
-
-#include <string>
-#include <wrl.h>
-#include <shellapi.h>
-
 #include "Helpers.h"
 
 #include "DescriptorHeapAllocator.h"
@@ -52,9 +41,12 @@ namespace EngineCore
 		static const UINT TextureHeight = 256;
 		static const UINT TexturePixelSize = 4;
 
-		ImVec2 m_sceneSize;
 
 		Camera m_camera;
+
+		ImVec2 m_scenePos = ImVec2(300, 5);
+		ImVec2 m_sceneSize;
+		ImVec2 m_lastMousePos;
 
 		struct Vertex
 		{

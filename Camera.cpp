@@ -2,11 +2,14 @@
 
 namespace EngineCore
 {
+	using namespace std;
+
 	Camera::Camera() :
-		m_initialPosition(0, 0, -2),
-		m_position(m_initialPosition),
-		m_lookDirection(0, 0, 1),
-		m_upDirection(0, 1, 0),
+		m_initPos(0, 0, -2),
+		m_pos(m_initPos),
+		m_lookDir(0, 0, 1),
+		m_upDir(0, 1, 0),
+		m_rightDir(1, 0, 0),
 		m_speed(3.0f)
 	{
 
@@ -14,21 +17,60 @@ namespace EngineCore
 
 	void Camera::Update(float dt)
 	{
-		XMFLOAT3 move(0, 0, 0);
+		if (m_keysPressed.w)
+			MoveForward(dt);
+		if (m_keysPressed.s)
+			MoveForward(-dt);
+		if (m_keysPressed.a)
+			MoveRight(-dt);
+		if (m_keysPressed.d)
+			MoveRight(dt);
+		if (m_keysPressed.q)
+			MoveUp(dt);
+		if (m_keysPressed.e)
+			MoveUp(-dt);
+	}
 
-		if (m_keysPressed.w) move.z += 1.0f;
-		if (m_keysPressed.s) move.z -= 1.0f;
-		if (m_keysPressed.a) move.x -= 1.0f;
-		if (m_keysPressed.d) move.x += 1.0f;
-		if (m_keysPressed.q) move.y += 1.0f;
-		if (m_keysPressed.e) move.y -= 1.0f;
+	void Camera::MoveForward(float dt) {
+		// 이동후의_위치 = 현재_위치 + 이동방향 * 속도 * 시간차이;
+		XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_lookDir) * m_speed * dt);
+	}
 
-		if (move.x != 0.0f || move.y != 0.0f || move.z != 0.0f)
-		{
-			XMVECTOR v = XMVector3Normalize(XMLoadFloat3(&move)) * m_speed * dt;
+	void Camera::MoveUp(float dt) {
+		// 이동후의_위치 = 현재_위치 + 이동방향 * 속도 * 시간차이;
+		XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_upDir) * m_speed * dt);
+	}
 
-			XMStoreFloat3(&m_position, XMLoadFloat3(&m_position) + v);
-		}
+	void Camera::MoveRight(float dt) { 
+		XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_rightDir) * m_speed * dt);
+	}
+
+
+	void Camera::UpdateMouse(float mouseX, float mouseY, float m_screenWidth, float m_screenHeight)
+	{
+		m_cursorNdcX = mouseX * 2.0f / m_screenWidth - 1.0f;
+		m_cursorNdcY = -mouseY * 2.0f / m_screenHeight + 1.0f;
+
+		m_cursorNdcX = std::clamp(m_cursorNdcX, -1.0f, 1.0f);
+		m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
+
+		m_yaw = m_cursorNdcX * DirectX::XM_2PI;     // 좌우 360도
+		m_pitch = m_cursorNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
+
+		XMStoreFloat3(&m_lookDir, XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 1.0f }, XMMatrixRotationY(m_yaw)));
+		XMStoreFloat3(&m_rightDir, XMVector3Cross(XMLoadFloat3(&m_upDir), XMLoadFloat3(&m_lookDir)));
+	}
+
+	XMMATRIX Camera::GetViewMatrix()
+	{
+		XMVECTOR pos = XMLoadFloat3(&m_pos);
+
+		return XMMatrixTranslationFromVector(-pos) * XMMatrixRotationY(-m_yaw) * XMMatrixRotationX(m_pitch);
+	}
+
+	XMMATRIX Camera::GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
+	{
+		return XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
 	}
 
 	void Camera::KeyDown(WPARAM key)
@@ -52,18 +94,6 @@ namespace EngineCore
 			break;
 		case 'E':
 			m_keysPressed.e = true;
-			break;
-		case VK_LEFT:
-			m_keysPressed.left = true;
-			break;
-		case VK_RIGHT:
-			m_keysPressed.right = true;
-			break;
-		case VK_UP:
-			m_keysPressed.up = true;
-			break;
-		case VK_DOWN:
-			m_keysPressed.down = true;
 			break;
 		}
 	}
@@ -90,28 +120,7 @@ namespace EngineCore
 		case 'E':
 			m_keysPressed.e = false;
 			break;
-		case VK_LEFT:
-			m_keysPressed.left = false;
-			break;
-		case VK_RIGHT:
-			m_keysPressed.right = false;
-			break;
-		case VK_UP:
-			m_keysPressed.up = false;
-			break;
-		case VK_DOWN:
-			m_keysPressed.down = false;
-			break;
 		}
 	}
 
-	XMMATRIX Camera::GetViewMatrix()
-	{
-		return XMMatrixLookToLH(XMLoadFloat3(&m_position), XMLoadFloat3(&m_lookDirection), XMLoadFloat3(&m_upDirection));
-	}
-
-	XMMATRIX Camera::GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
-	{
-		return XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
-	}
 }

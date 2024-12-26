@@ -6,9 +6,9 @@ namespace EngineCore
 
 	void MainEngine::Initialize()
 	{
-		EngineBase::Initialize();
-
-
+		LoadPipeline();
+		LoadAssets();
+		LoadGUI();
 	}
 
 	void MainEngine::Update()
@@ -82,86 +82,108 @@ namespace EngineCore
 
 	void MainEngine::UpdateSceneViewer()
 	{
-		ImGui::SetNextWindowPos(ImVec2(300, 5)); // (x, y)는 화면의 절대 좌표
-		ImGui::Begin("Scene 1");
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-		ImVec2 currentSize = ImGui::GetWindowSize();
-		// 크기 변경 여부 확인
-		if (currentSize.x != m_sceneSize.x || currentSize.y != m_sceneSize.y) {
-			m_sceneSize = currentSize; // 업데이트
-			m_aspectRatio = static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y);
-
-			WaitForPreviousFrame();
-
-			for (UINT n = 0; n < FrameCount; n++)
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGui::SetNextWindowPos(m_scenePos); // (x, y)는 화면의 절대 좌표
+		if (ImGui::Begin("Scene"))
+		{
+			ImVec2 currentSize = ImGui::GetWindowSize();
+			if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) 
 			{
-				m_sceneRenderTargets[n].Reset();
-				m_fenceValue[n] = m_fenceValue[m_frameIndex];
+				ImVec2 currentMousePos = ImGui::GetMousePos();
+
+				// 마우스 이동 감지
+				if (currentMousePos.x != m_lastMousePos.x || currentMousePos.y != m_lastMousePos.y) 
+				{
+					ImVec2 sceneStartPos = ImGui::GetCursorScreenPos();
+
+					m_camera.UpdateMouse(
+						currentMousePos.x - sceneStartPos.x, currentMousePos.y - sceneStartPos.y,
+						m_sceneSize.x, m_sceneSize.y);
+
+					// 위치 갱신
+					m_lastMousePos = currentMousePos;
+				}
 			}
 
-			// Reset the frame index to the current back buffer index.
-			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+			// 크기 변경 여부 확인
+			if (currentSize.x != m_sceneSize.x || currentSize.y != m_sceneSize.y) {
+				m_sceneSize = currentSize; // 업데이트
+				m_aspectRatio = static_cast<float>(m_sceneSize.x) / static_cast<float>(m_sceneSize.y);
 
-			m_viewport.Width = m_sceneSize.x;
-			m_viewport.Height = m_sceneSize.y;
+				WaitForPreviousFrame();
 
-			// Create frame resources.
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
-			for (int n = 0; n < FrameCount; n++)
-			{
-				D3D12_RESOURCE_DESC renderTargetDesc = {};
-				renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
-				renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
-				renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
-				renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
-				renderTargetDesc.MipLevels = 1; // MipMap 수준
-				renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
-				renderTargetDesc.SampleDesc.Count = 1; // 멀티샘플링 비활성화
-				renderTargetDesc.SampleDesc.Quality = 0;
-				renderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-				renderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟 플래그
+				for (UINT n = 0; n < FrameCount; n++)
+				{
+					m_sceneRenderTargets[n].Reset();
+					m_fenceValue[n] = m_fenceValue[m_frameIndex];
+				}
 
-				D3D12_CLEAR_VALUE clearValue = {};
-				clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				clearValue.Color[0] = 0.0f;
-				clearValue.Color[1] = 0.0f;
-				clearValue.Color[2] = 0.0f;
-				clearValue.Color[3] = 1.0f;
+				// Reset the frame index to the current back buffer index.
+				m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-				auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-				ThrowIfFailed(m_device->CreateCommittedResource(
-					&defaultHeapProps,
-					D3D12_HEAP_FLAG_NONE,
-					&renderTargetDesc,
-					D3D12_RESOURCE_STATE_RENDER_TARGET,
-					&clearValue,
-					IID_PPV_ARGS(&m_sceneRenderTargets[n])
-				));
+				m_viewport.Width = m_sceneSize.x;
+				m_viewport.Height = m_sceneSize.y;
 
-				// RTV 생성
-				m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, m_rtvDescriptorSize);
+				// Create frame resources.
+				CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
+				CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
+				for (int n = 0; n < FrameCount; n++)
+				{
+					D3D12_RESOURCE_DESC renderTargetDesc = {};
+					renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
+					renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
+					renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
+					renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
+					renderTargetDesc.MipLevels = 1; // MipMap 수준
+					renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
+					renderTargetDesc.SampleDesc.Count = 1; // 멀티샘플링 비활성화
+					renderTargetDesc.SampleDesc.Quality = 0;
+					renderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+					renderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟 플래그
 
-				// SRV 생성
-				D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-				srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				srvDesc.Texture2D.MipLevels = 1;
-				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+					D3D12_CLEAR_VALUE clearValue = {};
+					clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					clearValue.Color[0] = 0.0f;
+					clearValue.Color[1] = 0.0f;
+					clearValue.Color[2] = 0.0f;
+					clearValue.Color[3] = 1.0f;
 
-				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
-				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+					auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+					ThrowIfFailed(m_device->CreateCommittedResource(
+						&defaultHeapProps,
+						D3D12_HEAP_FLAG_NONE,
+						&renderTargetDesc,
+						D3D12_RESOURCE_STATE_RENDER_TARGET,
+						&clearValue,
+						IID_PPV_ARGS(&m_sceneRenderTargets[n])
+					));
+
+					// RTV 생성
+					m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
+					rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+					// SRV 생성
+					D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+					srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+					srvDesc.Texture2D.MipLevels = 1;
+					srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+					m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
+					srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				}
 			}
+
+			UINT srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_sceneSRVHeap->GetGPUDescriptorHandleForHeapStart();
+			srvHandle.ptr += m_frameIndex * srvDescriptorSize;
+			ImGui::Image(srvHandle.ptr, ImGui::GetContentRegionAvail());
 		}
 
-		UINT srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = m_sceneSRVHeap->GetGPUDescriptorHandleForHeapStart();
-		srvHandle.ptr += m_frameIndex * srvDescriptorSize;
-		ImVec2 contentSize = ImGui::GetContentRegionAvail(); // 창 내부 가용 공간 확인
-		ImGui::Image(srvHandle.ptr, contentSize);
-
 		ImGui::End();
+		ImGui::PopStyleVar();
 	}
 
 	void MainEngine::RenderScene()

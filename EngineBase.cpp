@@ -21,7 +21,8 @@ namespace EngineCore
 		m_windowedMode(true),
 		m_pCbvDataBegin(nullptr),
 		m_aspectRatio(800.0f / 600.0f),
-		m_useWarpDevice(false)
+		m_useWarpDevice(false),
+		m_lastMousePos(0, 0)
 	{
 
 	}
@@ -269,13 +270,27 @@ namespace EngineCore
 				{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 			};
 
+			// Default rasterizer states
+			D3D12_RASTERIZER_DESC RasterizerDefault;
+			RasterizerDefault.FillMode = D3D12_FILL_MODE_SOLID;
+			RasterizerDefault.CullMode = D3D12_CULL_MODE_BACK;
+			RasterizerDefault.FrontCounterClockwise = FALSE;
+			RasterizerDefault.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+			RasterizerDefault.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+			RasterizerDefault.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+			RasterizerDefault.DepthClipEnable = TRUE;
+			RasterizerDefault.MultisampleEnable = FALSE;
+			RasterizerDefault.AntialiasedLineEnable = FALSE;
+			RasterizerDefault.ForcedSampleCount = 0;
+			RasterizerDefault.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
 			// Describe and create the graphcis pipeline state object (PSO).
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 			psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 			psoDesc.pRootSignature = m_rootSignature.Get();
 			psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
 			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-			psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+			psoDesc.RasterizerState = RasterizerDefault;
 			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 			psoDesc.DepthStencilState.DepthEnable = FALSE;
 			psoDesc.DepthStencilState.StencilEnable = FALSE;
@@ -292,10 +307,12 @@ namespace EngineCore
 		{
 			Vertex vertexList[] =
 			{
+				// front
 				{ -0.5f,  0.5f, 1.0f, 0.0f, 0.0f },
+				{  0.5f,  0.5f, 1.0f, 1.0f, 0.0f },
 				{  0.5f, -0.5f, 1.0f, 1.0f, 1.0f },
 				{ -0.5f, -0.5f, 1.0f, 0.0f, 1.0f },
-				{  0.5f,  0.5f, 1.0f, 1.0f, 0.0f },
+
 			};
 
 			int vertexBufferSize = sizeof(vertexList);
@@ -345,7 +362,7 @@ namespace EngineCore
 		{
 			DWORD indexList[] = {
 				0, 1, 2,
-				0, 3, 1,
+				0, 2, 3,
 			};
 
 			int indexBufferSize = sizeof(indexList);
@@ -518,23 +535,25 @@ namespace EngineCore
 			}
 		}
 
-		XMStoreFloat4x4(&m_constantBufferData.proj, 
-			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
+		{
+			XMStoreFloat4x4(&m_constantBufferData.proj, 
+				XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
 
-		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+			XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
 
-		XMFLOAT4 cube1Position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // set cube 1's position
-		XMVECTOR posVec = XMLoadFloat4(&cube1Position); // create xmvector for cube1's position
+			XMFLOAT4 cube1Position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // set cube 1's position
+			XMVECTOR posVec = XMLoadFloat4(&cube1Position); // create xmvector for cube1's position
 
-		XMStoreFloat4x4(&m_constantBufferData.world, 
-			XMMatrixTranspose(XMMatrixTranslationFromVector(posVec))); // store cube1's world matrix
+			XMStoreFloat4x4(&m_constantBufferData.world, 
+				XMMatrixTranspose(XMMatrixTranslationFromVector(posVec))); // store cube1's world matrix
 
-		ThrowIfFailed(m_commandList->Close());
+			ThrowIfFailed(m_commandList->Close());
 
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+			ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+			m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		m_fenceValue[m_frameIndex] = 1;
+			m_fenceValue[m_frameIndex] = 1;
+		}
 		WaitForPreviousFrame();
 	}
 

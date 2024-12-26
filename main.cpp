@@ -8,8 +8,17 @@ int wWinMain(
     _In_ LPWSTR lpCmdLine,
     _In_ int nShowCmd
 ) {
-    EngineCore::MainEngine engine;
 
-    return WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);;
+    AllocConsole(); // 货肺款 能贾 芒 积己
+    FILE* pStreamOut = nullptr;
+    freopen_s(&pStreamOut, "CONOUT$", "w", stdout);
+
+    EngineCore::MainEngine engine;
+    int result = WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);
+
+    fclose(pStreamOut);
+    FreeConsole();
+
+    return result;
 }
 
