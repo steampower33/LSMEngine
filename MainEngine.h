@@ -13,7 +13,7 @@ namespace EngineCore
 		MainEngine();
 
 		virtual void Initialize() override;
-		virtual void Update() override;
+		virtual void Update(float dt) override;
 		virtual void Render() override;
 		virtual void UpdateGUI() override;
 
@@ -22,5 +22,10 @@ namespace EngineCore
 		void RenderScene();
 
 		std::vector<Model> models;
+
+		bool m_isMouseOverScene;
+
+		float m_mouseDeltaX;
+		float m_mouseDeltaY;
 	};
 }

@@ -7,10 +7,15 @@
 #include "d3dx12.h"
 #include "DirectXTex.h"
 
+#include <iostream>
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
 #include <algorithm>
+
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
 
 #include <stdexcept>
 

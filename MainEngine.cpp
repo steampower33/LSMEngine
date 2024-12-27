@@ -2,7 +2,7 @@
 
 namespace EngineCore
 {
-	MainEngine::MainEngine() : EngineBase() {}
+	MainEngine::MainEngine() : EngineBase(), m_isMouseOverScene(false) {}
 
 	void MainEngine::Initialize()
 	{
@@ -23,9 +23,9 @@ namespace EngineCore
 		LoadGUI();
 	}
 
-	void MainEngine::Update()
+	void MainEngine::Update(float dt)
 	{
-		m_camera.Update(ImGui::GetIO().DeltaTime);
+		m_camera.Update(dt, m_isMouseOverScene, m_mouseDeltaX, m_mouseDeltaY);
 
 		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
 
@@ -101,11 +101,10 @@ namespace EngineCore
 				// 마우스 이동 감지
 				if (currentMousePos.x != m_lastMousePos.x || currentMousePos.y != m_lastMousePos.y) 
 				{
-					ImVec2 sceneStartPos = ImGui::GetCursorScreenPos();
+					m_isMouseOverScene = true;
 
-					m_camera.UpdateMouse(
-						currentMousePos.x - sceneStartPos.x, currentMousePos.y - sceneStartPos.y,
-						m_sceneSize.x, m_sceneSize.y);
+					m_mouseDeltaX = io.MouseDelta.x;
+					m_mouseDeltaY = io.MouseDelta.y;
 
 					// 위치 갱신
 					m_lastMousePos = currentMousePos;

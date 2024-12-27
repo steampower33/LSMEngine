@@ -55,7 +55,8 @@ namespace WindowApplication
 			{
 				pEngine->UpdateGUI();
 
-				pEngine->Update();
+				float deltaTime = ImGui::GetIO().DeltaTime;
+				pEngine->Update(deltaTime);
 				pEngine->Render();
 			}
 		}

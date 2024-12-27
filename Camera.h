@@ -15,8 +15,8 @@ namespace EngineCore
 		
 		void KeyDown(WPARAM key);
 		void KeyUp(WPARAM key);
-		void Update(float dt);
-		void UpdateMouse(float mouseX, float mouseY, float m_screenWidth, float m_screenHeight);
+		void Update(float dt, bool& isMouseOverScene, float m_mouseDeltaX, float m_mouseDeltaY);
+		void UpdateMouse(float deltaX, float deltaY, float deltaTime);
 		void MoveForward(float dt);
 		void MoveRight(float dt);
 		void MoveUp(float dt);

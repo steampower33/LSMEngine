@@ -14,13 +14,13 @@ namespace EngineCore
 		m_cursorNdcY(0.0f),
 		m_yaw(0.0f),
 		m_pitch(0.0f),
-		m_speed(3.0f),
+		m_speed(5.0f),
 		m_useFirstPersonView(false)
 	{
 
 	}
 
-	void Camera::Update(float dt)
+	void Camera::Update(float dt, bool &isMouseOverScene, float deltaX, float deltaY)
 	{
 		if (m_useFirstPersonView) {
 			if (m_keysPressed.w)
@@ -35,6 +35,12 @@ namespace EngineCore
 				MoveUp(-dt);
 			if (m_keysPressed.e)
 				MoveUp(dt);
+		}
+
+		if (isMouseOverScene)
+		{
+			isMouseOverScene = false;
+			UpdateMouse(deltaX, deltaY, dt);
 		}
 	}
 
@@ -53,20 +59,27 @@ namespace EngineCore
 	}
 
 
-	void Camera::UpdateMouse(float mouseX, float mouseY, float m_screenWidth, float m_screenHeight)
+	void Camera::UpdateMouse(float deltaX, float deltaY, float deltaTime)
 	{
 		if (m_useFirstPersonView) {
-			m_cursorNdcX = mouseX * 2.0f / m_screenWidth - 1.0f;
-			m_cursorNdcY = -mouseY * 2.0f / m_screenHeight + 1.0f;
+			// 마우스 이동량(Delta)에 속도와 deltaTime 적용
+			m_yaw += deltaX * m_speed * deltaTime;
+			m_pitch += -deltaY * m_speed * deltaTime;
 
-			m_cursorNdcX = std::clamp(m_cursorNdcX, -1.0f, 1.0f);
-			m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
+			// Pitch 제한 (카메라가 위/아래로 90도 이상 회전하지 않도록)
+			m_pitch = std::clamp(m_pitch, -DirectX::XM_PIDIV2, DirectX::XM_PIDIV2);
 
-			m_yaw = m_cursorNdcX * DirectX::XM_2PI;     // 좌우 360도
-			m_pitch = m_cursorNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
+			// 새로운 방향 벡터 계산
+			XMVECTOR forward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 카메라의 기본 전방 방향
+			XMMATRIX yawMatrix = XMMatrixRotationY(m_yaw);          // Yaw 회전 행렬
+			XMMATRIX pitchMatrix = XMMatrixRotationX(m_pitch);      // Pitch 회전 행렬
 
-			XMStoreFloat3(&m_lookDir, XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 1.0f }, XMMatrixRotationY(m_yaw)));
-			XMStoreFloat3(&m_rightDir, XMVector3Cross(XMLoadFloat3(&m_upDir), XMLoadFloat3(&m_lookDir)));
+			XMVECTOR lookDir = XMVector3TransformNormal(forward, pitchMatrix * yawMatrix);
+			XMStoreFloat3(&m_lookDir, lookDir);
+
+			// 카메라의 오른쪽 방향도 업데이트
+			XMVECTOR rightDir = XMVector3Cross(XMLoadFloat3(&m_upDir), lookDir);
+			XMStoreFloat3(&m_rightDir, rightDir);
 		}
 	}
 

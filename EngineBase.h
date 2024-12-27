@@ -1,11 +1,5 @@
 #pragma once
 
-#include <iostream>
-
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
-
 #include "Helpers.h"
 
 #include "DescriptorHeapAllocator.h"
@@ -23,7 +17,7 @@ namespace EngineCore
 		virtual ~EngineBase();
 
 		virtual void Initialize();
-		virtual void Update() = 0;
+		virtual void Update(float dt) = 0;
 		virtual void Render() = 0;
 		virtual void UpdateGUI() = 0;
 
