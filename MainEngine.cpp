@@ -8,6 +8,18 @@ namespace EngineCore
 	{
 		LoadPipeline();
 		LoadAssets();
+
+		Model m(m_device, m_commandList, m_basicHeap);
+		models.push_back(m);
+
+		ThrowIfFailed(m_commandList->Close());
+
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		m_fenceValue[m_frameIndex] = 1;
+		WaitForPreviousFrame();
+
 		LoadGUI();
 	}
 
@@ -17,7 +29,30 @@ namespace EngineCore
 
 		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
 
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		for (int i = 0; i < models.size(); i++)
+		{
+			models[i].Update(m_constantBufferData.world, m_constantBufferData.view, m_constantBufferData.proj);
+		}
+	}
+	
+	void MainEngine::UpdateGUI()
+	{
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+
+		ImGui::NewFrame();
+
+		ImGui::SetNextWindowPos(ImVec2(5, 5)); // (x, y)는 화면의 절대 좌표
+		ImGui::Begin("Scene Control");
+		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::SliderFloat("x pos", &m_constantBufferData.offset.x, -m_aspectRatio, m_aspectRatio);
+
+		ImGui::End();
+
+		UpdateSceneViewer();
+
+		// Rendering
+		ImGui::Render();
 	}
 
 	void MainEngine::Render()
@@ -49,25 +84,6 @@ namespace EngineCore
 		WaitForPreviousFrame();
 	}
 
-	void MainEngine::UpdateGUI()
-	{
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-
-		ImGui::NewFrame();
-
-		ImGui::SetNextWindowPos(ImVec2(5, 5)); // (x, y)는 화면의 절대 좌표
-		ImGui::Begin("Scene Control");
-		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::SliderFloat("x pos", &m_constantBufferData.offset.x, -m_aspectRatio, m_aspectRatio);
-
-		ImGui::End();
-
-		UpdateSceneViewer();
-
-		// Rendering
-		ImGui::Render();
-	}
 
 	void MainEngine::UpdateSceneViewer()
 	{
@@ -177,34 +193,21 @@ namespace EngineCore
 
 	void MainEngine::RenderScene()
 	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
+
+		const float whiteColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
-		// Set DescriptorHeap
-		ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-		D3D12_GPU_DESCRIPTOR_HANDLE cbvGPUHandle(m_basicHeap->GetGPUDescriptorHandleForHeapStart());
-		m_commandList->SetGraphicsRootDescriptorTable(0, cbvGPUHandle);
-
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(
-			m_basicHeap->GetGPUDescriptorHandleForHeapStart(),
-			1, // 1번 인덱스 (CBV 이후)
-			m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
-		m_commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
-
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-		const float whiteColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
-		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
 		m_commandList->RSSetViewports(1, &m_viewport);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
-		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-		m_commandList->IASetIndexBuffer(&m_indexBufferView);
-		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);\
+
+		for (int i = 0; i < models.size(); i++)
+		{
+			models[i].Render(m_device, m_commandList, m_basicHeap);
+		}
 
 		CD3DX12_RESOURCE_BARRIER viewRTToSR = CD3DX12_RESOURCE_BARRIER::Transition(
 			m_sceneRenderTargets[m_frameIndex].Get(),

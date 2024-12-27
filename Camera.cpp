@@ -5,7 +5,7 @@ namespace EngineCore
 	using namespace std;
 
 	Camera::Camera() :
-		m_initPos(0.0f, 0.0f, -2.0f),
+		m_initPos(0.0f, 0.0f, -5.0f),
 		m_pos(m_initPos),
 		m_lookDir(0.0f, 0.0f, 1.0f),
 		m_upDir(0.0f, 1.0f, 0.0f),
@@ -32,9 +32,9 @@ namespace EngineCore
 			if (m_keysPressed.d)
 				MoveRight(dt);
 			if (m_keysPressed.q)
-				MoveUp(dt);
-			if (m_keysPressed.e)
 				MoveUp(-dt);
+			if (m_keysPressed.e)
+				MoveUp(dt);
 		}
 	}
 

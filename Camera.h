@@ -1,9 +1,6 @@
 #pragma once
 
-#include <iostream>
-#include <algorithm>
-#include <d3d12.h>
-#include <DirectXMath.h>
+#include "Helpers.h"
 
 namespace EngineCore
 {

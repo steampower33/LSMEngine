@@ -1,9 +1,12 @@
 #pragma once
 
 #include "EngineBase.h"
+#include "Model.h"
 
 namespace EngineCore
 {
+	using namespace Renderer;
+
 	class MainEngine : public EngineBase
 	{
 	public:
@@ -17,5 +20,7 @@ namespace EngineCore
 	private:
 		void UpdateSceneViewer();
 		void RenderScene();
+
+		std::vector<Model> models;
 	};
 }

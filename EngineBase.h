@@ -45,13 +45,6 @@ namespace EngineCore
 		ImVec2 m_sceneSize;
 		ImVec2 m_lastMousePos;
 
-		struct Vertex
-		{
-			Vertex(float x, float y, float z, float u, float v) : position(x, y, z), texcoord(u, v) {}
-			XMFLOAT3 position;
-			XMFLOAT2 texcoord;
-		};
-
 		struct SceneConstantBuffer
 		{
 			XMFLOAT4 offset;
@@ -82,15 +75,7 @@ namespace EngineCore
 		ComPtr<ID3D12PipelineState> m_pipelineState;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-		// App resources.
-		ComPtr<ID3D12Resource> m_vertexBuffer;
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-		ComPtr<ID3D12Resource> m_indexBuffer;
-		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-		ComPtr<ID3D12Resource> m_constantBuffer;
 		SceneConstantBuffer m_constantBufferData;
-		UINT8* m_pCbvDataBegin;
-		ComPtr<ID3D12Resource> m_texture;
 
 
 	protected:
