@@ -1,11 +1,11 @@
 
 cbuffer SceneConstantBuffer : register(b0)
 {
-    float4 offset;
     float4x4 world;
     float4x4 view;
     float4x4 proj;
-    float padding[12];
+    float offset;
+    float padding[15];
 }
 
 struct VertexShaderInput
@@ -28,7 +28,7 @@ PSInput main(VertexShaderInput input)
     float4 viewPosition = mul(worldPosition, view);
     result.position = mul(viewPosition, proj);
     
-    result.position += offset;
+    result.position.x += offset;
     
     result.texcoord = input.texcoord;
 

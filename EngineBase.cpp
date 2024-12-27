@@ -154,6 +154,12 @@ namespace EngineCore
 			basicHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&basicHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
 
+			D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+			dsvHeapDesc.NumDescriptors = 1;
+			dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+			dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
+
 			D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
 			imguiHeapDesc.NumDescriptors = 32;
 			imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -272,7 +278,7 @@ namespace EngineCore
 			// Default rasterizer states
 			D3D12_RASTERIZER_DESC RasterizerDefault;
 			RasterizerDefault.FillMode = D3D12_FILL_MODE_SOLID;
-			RasterizerDefault.CullMode = D3D12_CULL_MODE_BACK;
+			RasterizerDefault.CullMode = D3D12_CULL_MODE_NONE;
 			RasterizerDefault.FrontCounterClockwise = FALSE;
 			RasterizerDefault.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
 			RasterizerDefault.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
@@ -282,6 +288,26 @@ namespace EngineCore
 			RasterizerDefault.AntialiasedLineEnable = FALSE;
 			RasterizerDefault.ForcedSampleCount = 0;
 			RasterizerDefault.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+			
+			D3D12_DEPTH_STENCIL_DESC depthStencilDesc = {};
+			depthStencilDesc.DepthEnable = TRUE; // Depth 테스트 활성화 여부
+			depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // Depth 쓰기 마스크
+			depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // Depth 비교 함수
+			depthStencilDesc.StencilEnable = FALSE; // 스텐실 테스트 활성화 여부
+			depthStencilDesc.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK; // 스텐실 읽기 마스크
+			depthStencilDesc.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK; // 스텐실 쓰기 마스크
+
+			// Front-facing 스텐실 작업 설정
+			depthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+			// Back-facing 스텐실 작업 설정
+			depthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+			depthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
 			// Describe and create the graphcis pipeline state object (PSO).
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -291,13 +317,15 @@ namespace EngineCore
 			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 			psoDesc.RasterizerState = RasterizerDefault;
 			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-			psoDesc.DepthStencilState.DepthEnable = FALSE;
-			psoDesc.DepthStencilState.StencilEnable = FALSE;
+			
+			psoDesc.DepthStencilState = depthStencilDesc;
+			psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			psoDesc.SampleDesc.Count = 1;
 			psoDesc.SampleMask = UINT_MAX;
+
 			psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			psoDesc.NumRenderTargets = 1;
 			psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-			psoDesc.SampleDesc.Count = 1;
 			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
 
@@ -350,6 +378,42 @@ namespace EngineCore
 				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
 				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 			}
+		}
+
+		{
+			// Depth Stencil 버퍼 생성
+			D3D12_RESOURCE_DESC depthStencilDesc = {};
+			depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			depthStencilDesc.Width = m_width; // 화면 너비
+			depthStencilDesc.Height = m_height; // 화면 높이
+			depthStencilDesc.DepthOrArraySize = 1;
+			depthStencilDesc.MipLevels = 1;
+			depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			depthStencilDesc.SampleDesc.Count = 1;
+			depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+			D3D12_CLEAR_VALUE clearValue = {};
+			clearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			clearValue.DepthStencil.Depth = 1.0f;
+			clearValue.DepthStencil.Stencil = 0;
+
+			auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&defaultHeapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&depthStencilDesc,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				&clearValue,
+				IID_PPV_ARGS(&m_depthStencilBuffer)
+			));
+
+			// DSV 핸들 생성
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+			dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+			m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
 		{

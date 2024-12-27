@@ -31,7 +31,7 @@ namespace EngineCore
 
 		for (int i = 0; i < models.size(); i++)
 		{
-			models[i].Update(m_constantBufferData.world, m_constantBufferData.view, m_constantBufferData.proj);
+			models[i].Update(m_constantBufferData.world, m_constantBufferData.view, m_constantBufferData.proj, m_constantBufferData.offset.x);
 		}
 	}
 	
@@ -194,15 +194,17 @@ namespace EngineCore
 	void MainEngine::RenderScene()
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE viewRTVHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, nullptr);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		m_commandList->OMSetRenderTargets(1, &viewRTVHandle, FALSE, &dsvHandle);
 
 		const float whiteColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		m_commandList->ClearRenderTargetView(viewRTVHandle, whiteColor, 0, nullptr);
+		m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		m_commandList->RSSetViewports(1, &m_viewport);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
-		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);\
+		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		for (int i = 0; i < models.size(); i++)
 		{

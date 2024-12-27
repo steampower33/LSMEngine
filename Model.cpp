@@ -30,6 +30,13 @@ namespace Renderer
 				{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f },
 				{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f },
 				{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f },
+
+				// back
+				{  1.0f, -1.0f, 1.0f, 0.0f, 1.0f },
+				{  1.0f,  1.0f, 1.0f, 0.0f, 0.0f },
+				{ -1.0f,  1.0f, 1.0f, 1.0f, 0.0f },
+				{ -1.0f, -1.0f, 1.0f, 1.0f, 1.0f },
+
 			};
 
 			int vertexBufferSize = sizeof(vertexList);
@@ -78,10 +85,12 @@ namespace Renderer
 		{
 			DWORD indexList[] = {
 				0, 1, 2,
-				0, 2, 3
+				0, 2, 3,
+				4, 5, 6,
+				4, 6, 7,
 			};
 
-			int indexBufferSize = sizeof(indexList);
+			indexBufferSize = sizeof(indexList);
 
 			auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
@@ -201,11 +210,12 @@ namespace Renderer
 		}
 	}
 
-	void Model::Update(const XMFLOAT4X4 &world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj)
+	void Model::Update(const XMFLOAT4X4 &world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset)
 	{
 		m_constantBufferData.world = world;
 		m_constantBufferData.view = view;
 		m_constantBufferData.proj = proj;
+		m_constantBufferData.offset = offset;
 		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 	}
 
@@ -230,6 +240,6 @@ namespace Renderer
 
 		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		commandList->IASetIndexBuffer(&m_indexBufferView);
-		commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		commandList->DrawIndexedInstanced(indexBufferSize, 1, 0, 0, 0);
 	}
 }

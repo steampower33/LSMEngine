@@ -22,22 +22,24 @@ namespace Renderer
 		
 		struct SceneConstantBuffer
 		{
-			XMFLOAT4 offset;
 			XMFLOAT4X4 world;
 			XMFLOAT4X4 view;
 			XMFLOAT4X4 proj;
-			float padding[12];
+			float offset;
+			float padding[15];
 		};
 
 		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
 
-		void Update(const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj);
+		void Update(const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset);
 
 	private:
 		void Initialize(
 			ComPtr<ID3D12Device> device, 
 			ComPtr<ID3D12GraphicsCommandList> commandList,
 			ComPtr<ID3D12DescriptorHeap> heap);
+
+		int indexBufferSize;
 
 		struct Vertex
 		{

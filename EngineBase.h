@@ -66,6 +66,7 @@ namespace EngineCore
 		ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
 		ComPtr<ID3D12DescriptorHeap> m_sceneSRVHeap;
 		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
+		ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
@@ -77,6 +78,7 @@ namespace EngineCore
 
 		SceneConstantBuffer m_constantBufferData;
 
+		ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 	protected:
 		void LoadPipeline();
