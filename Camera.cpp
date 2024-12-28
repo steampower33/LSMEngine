@@ -5,14 +5,14 @@ namespace EngineCore
 	using namespace std;
 
 	Camera::Camera() :
-		m_initPos(0.0f, 0.0f, -5.0f),
+		m_initPos(-5.0f, 0.0f, -5.0f),
 		m_pos(m_initPos),
 		m_lookDir(0.0f, 0.0f, 1.0f),
 		m_upDir(0.0f, 1.0f, 0.0f),
 		m_rightDir(1.0f, 0.0f, 0.0f),
 		m_cursorNdcX(0.0f),
 		m_cursorNdcY(0.0f),
-		m_yaw(0.0f),
+		m_yaw(0.7854f),
 		m_pitch(0.0f),
 		m_speed(5.0f),
 		m_useFirstPersonView(false)
@@ -64,7 +64,7 @@ namespace EngineCore
 		if (m_useFirstPersonView) {
 			// 마우스 이동량(Delta)에 속도와 deltaTime 적용
 			m_yaw += deltaX * m_speed * deltaTime;
-			m_pitch += -deltaY * m_speed * deltaTime;
+			m_pitch += deltaY * m_speed * deltaTime;
 
 			// Pitch 제한 (카메라가 위/아래로 90도 이상 회전하지 않도록)
 			m_pitch = std::clamp(m_pitch, -DirectX::XM_PIDIV2, DirectX::XM_PIDIV2);
@@ -87,7 +87,7 @@ namespace EngineCore
 	{
 		XMVECTOR pos = XMLoadFloat3(&m_pos);
 
-		return XMMatrixTranslationFromVector(-pos) * XMMatrixRotationY(-m_yaw) * XMMatrixRotationX(m_pitch);
+		return XMMatrixTranslationFromVector(-pos) * XMMatrixRotationY(-m_yaw) * XMMatrixRotationX(-m_pitch);
 	}
 
 	XMMATRIX Camera::GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
