@@ -84,7 +84,19 @@ namespace WindowApplication
 			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			EndPaint(hwnd, &ps);
 		}
+		case WM_MOUSEMOVE:
+		{
+			pEngine->m_isMouseMove = true;
+			float mousePosX = GET_X_LPARAM(lParam);
+			float mousePosY = GET_Y_LPARAM(lParam);
+			pEngine->m_mouseDeltaX = mousePosX - pEngine->m_mousePosX;
+			pEngine->m_mouseDeltaY = mousePosY - pEngine->m_mousePosY;
+			pEngine->m_mousePosX = mousePosX;
+			pEngine->m_mousePosY = mousePosY;
+			break;
+		}
 		case WM_KEYDOWN:
+		{
 			if (wParam == VK_ESCAPE)
 			{
 				PostQuitMessage(0);
@@ -95,13 +107,16 @@ namespace WindowApplication
 			}
 			pEngine->m_camera.KeyDown(wParam);
 			break;
+		}
 		case WM_KEYUP:
+		{
 			if (wParam == VK_ESCAPE)
 			{
 				PostQuitMessage(0);
 			}
 			pEngine->m_camera.KeyUp(wParam);
 			break;
+		}
 		case WM_SIZE: {
 			break;
 		}

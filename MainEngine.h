@@ -18,14 +18,8 @@ namespace EngineCore
 		virtual void UpdateGUI() override;
 
 	private:
-		void UpdateSceneViewer();
-		void RenderScene();
 
 		std::vector<Model> models;
 
-		bool m_isMouseOverScene;
-
-		float m_mouseDeltaX;
-		float m_mouseDeltaY;
 	};
 }

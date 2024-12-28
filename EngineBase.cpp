@@ -13,15 +13,16 @@ namespace EngineCore
 	EngineBase::EngineBase() :
 		m_width(1280), m_height(800),
 		m_frameIndex(0),
-		m_sceneSize(800, 600),
-		m_viewport(0.0f, 0.0f, 800.0f, 600.0f),
-		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(1280), static_cast<LONG>(800)),
+		m_viewport(0.0f, 0.0f, m_width, m_height),
+		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(m_width), static_cast<LONG>(m_height)),
 		m_rtvDescriptorSize(0),
-		m_windowVisible(true),
-		m_windowedMode(true),
-		m_aspectRatio(800.0f / 600.0f),
+		m_aspectRatio(16.0f / 9.0f),
 		m_useWarpDevice(false),
-		m_lastMousePos(0, 0)
+		m_isMouseMove(false),
+		m_mousePosX(m_width / 2),
+		m_mousePosY(m_height / 2),
+		m_mouseDeltaX(0.0f),
+		m_mouseDeltaY(0.0f)
 	{
 
 	}
@@ -135,18 +136,6 @@ namespace EngineCore
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-			D3D12_DESCRIPTOR_HEAP_DESC m_sceneRTVHeapDesc = {};
-			m_sceneRTVHeapDesc.NumDescriptors = FrameCount;
-			m_sceneRTVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			m_sceneRTVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_sceneRTVHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
-
-			D3D12_DESCRIPTOR_HEAP_DESC m_sceneSRVHeapDesc = {};
-			m_sceneSRVHeapDesc.NumDescriptors = FrameCount;
-			m_sceneSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			m_sceneSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			ThrowIfFailed(m_device->CreateDescriptorHeap(&m_sceneSRVHeapDesc, IID_PPV_ARGS(&m_sceneSRVHeap)));
 
 			D3D12_DESCRIPTOR_HEAP_DESC basicHeapDesc = {};
 			basicHeapDesc.NumDescriptors = 2;
@@ -327,57 +316,6 @@ namespace EngineCore
 			psoDesc.NumRenderTargets = 1;
 			psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		}
-
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_sceneSRVHeap->GetCPUDescriptorHandleForHeapStart());
-		{
-			for (int n = 0; n < FrameCount; n++)
-			{
-				D3D12_RESOURCE_DESC renderTargetDesc = {};
-				renderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2차원 텍스처
-				renderTargetDesc.Width = m_sceneSize.x;  // 텍스처의 너비
-				renderTargetDesc.Height = m_sceneSize.y; // 텍스처의 높이
-				renderTargetDesc.DepthOrArraySize = 1; // 단일 텍스처
-				renderTargetDesc.MipLevels = 1; // MipMap 수준
-				renderTargetDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 포맷
-				renderTargetDesc.SampleDesc.Count = 1; // 멀티샘플링 비활성화
-				renderTargetDesc.SampleDesc.Quality = 0;
-				renderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-				renderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟 플래그
-
-				D3D12_CLEAR_VALUE clearValue = {};
-				clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				clearValue.Color[0] = 0.0f;
-				clearValue.Color[1] = 0.0f;
-				clearValue.Color[2] = 0.0f;
-				clearValue.Color[3] = 1.0f;
-
-				auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-				ThrowIfFailed(m_device->CreateCommittedResource(
-					&defaultHeapProps,
-					D3D12_HEAP_FLAG_NONE,
-					&renderTargetDesc,
-					D3D12_RESOURCE_STATE_RENDER_TARGET,
-					&clearValue,
-					IID_PPV_ARGS(&m_sceneRenderTargets[n])
-				));
-
-				// RTV 생성
-				m_device->CreateRenderTargetView(m_sceneRenderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, m_rtvDescriptorSize);
-
-				// SRV 생성
-				D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-				srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				srvDesc.Texture2D.MipLevels = 1;
-				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-				m_device->CreateShaderResourceView(m_sceneRenderTargets[n].Get(), &srvDesc, srvHandle);
-				srvHandle.Offset(1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-			}
 		}
 
 		{

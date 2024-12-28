@@ -35,9 +35,12 @@ namespace EngineCore
 
 		Camera m_camera;
 
-		ImVec2 m_scenePos = ImVec2(300, 5);
-		ImVec2 m_sceneSize;
-		ImVec2 m_lastMousePos;
+		float m_mousePosX;
+		float m_mousePosY;
+		float m_mouseDeltaX;
+		float m_mouseDeltaY;
+
+		bool m_isMouseMove;
 
 		struct SceneConstantBuffer
 		{
@@ -57,10 +60,8 @@ namespace EngineCore
 		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
-		ComPtr<ID3D12DescriptorHeap> m_sceneSRVHeap;
-		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
 		ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
 		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
@@ -85,9 +86,6 @@ namespace EngineCore
 		HANDLE m_fenceEvent;
 		ComPtr<ID3D12Fence> m_fence[FrameCount];
 		UINT64 m_fenceValue[FrameCount];
-
-		bool m_windowVisible;
-		bool m_windowedMode;
 
 		// Get Adapter
 		void GetHardwareAdapter(

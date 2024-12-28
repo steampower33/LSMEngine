@@ -20,7 +20,7 @@ namespace EngineCore
 
 	}
 
-	void Camera::Update(float dt, bool &isMouseOverScene, float deltaX, float deltaY)
+	void Camera::Update(float deltaX, float deltaY, float dt, bool &isMouseMove)
 	{
 		if (m_useFirstPersonView) {
 			if (m_keysPressed.w)
@@ -35,13 +35,14 @@ namespace EngineCore
 				MoveUp(-dt);
 			if (m_keysPressed.e)
 				MoveUp(dt);
+
+			if (isMouseMove)
+			{
+				isMouseMove = false;
+				UpdateMouse(deltaX, deltaY, dt);
+			}
 		}
 
-		if (isMouseOverScene)
-		{
-			isMouseOverScene = false;
-			UpdateMouse(deltaX, deltaY, dt);
-		}
 	}
 
 	void Camera::MoveForward(float dt) {
@@ -59,12 +60,12 @@ namespace EngineCore
 	}
 
 
-	void Camera::UpdateMouse(float deltaX, float deltaY, float deltaTime)
+	void Camera::UpdateMouse(float deltaX, float deltaY, float dt)
 	{
 		if (m_useFirstPersonView) {
 			// 마우스 이동량(Delta)에 속도와 deltaTime 적용
-			m_yaw += deltaX * m_speed * deltaTime;
-			m_pitch += deltaY * m_speed * deltaTime;
+			m_yaw += deltaX * m_speed * dt;
+			m_pitch += deltaY * m_speed * dt;
 
 			// Pitch 제한 (카메라가 위/아래로 90도 이상 회전하지 않도록)
 			m_pitch = std::clamp(m_pitch, -DirectX::XM_PIDIV2, DirectX::XM_PIDIV2);

@@ -5,6 +5,7 @@
 #endif
 
 #include <windows.h>
+#include <windowsx.h>
 
 #include <shlobj.h>
 #include <strsafe.h>
