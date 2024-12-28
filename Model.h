@@ -2,8 +2,8 @@
 
 #include "Helpers.h"
 
-namespace Renderer
-{
+namespace Renderer {
+
 	using namespace DirectX;
 
 	class Model
@@ -19,7 +19,7 @@ namespace Renderer
 			ComPtr<ID3D12Device> device,
 			ComPtr<ID3D12GraphicsCommandList> commandList,
 			ComPtr<ID3D12DescriptorHeap> heap);
-		
+
 		struct SceneConstantBuffer
 		{
 			XMFLOAT4X4 world;
@@ -35,7 +35,7 @@ namespace Renderer
 
 	private:
 		void Initialize(
-			ComPtr<ID3D12Device> device, 
+			ComPtr<ID3D12Device> device,
 			ComPtr<ID3D12GraphicsCommandList> commandList,
 			ComPtr<ID3D12DescriptorHeap> heap);
 
@@ -46,6 +46,7 @@ namespace Renderer
 			Vertex(float x, float y, float z, float u, float v) : position(x, y, z), texcoord(u, v) {}
 			XMFLOAT3 position;
 			XMFLOAT2 texcoord;
+			XMFLOAT3 normal;
 		};
 
 		ComPtr<ID3D12Resource> m_vertexBuffer;

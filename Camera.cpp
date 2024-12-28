@@ -14,7 +14,7 @@ namespace EngineCore
 		m_cursorNdcY(0.0f),
 		m_yaw(0.7854f),
 		m_pitch(0.0f),
-		m_speed(5.0f),
+		m_speed(10.0f),
 		m_useFirstPersonView(false)
 	{
 

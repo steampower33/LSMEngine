@@ -1,8 +1,8 @@
 
 #include "Model.h"
 
-namespace Renderer
-{
+namespace Renderer {
+
 	Model::Model(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
@@ -232,11 +232,10 @@ namespace Renderer
 				&srvDesc, // SRV 설명
 				handle // 디스크립터 힙의 핸들
 			);
-
 		}
 	}
 
-	void Model::Update(const XMFLOAT4X4 &world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset)
+	void Model::Update(const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset)
 	{
 		m_constantBufferData.world = world;
 		m_constantBufferData.view = view;

@@ -32,6 +32,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainEngine.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="PSOManager.cpp" />
     <ClCompile Include="WinApp.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +51,7 @@
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="MainEngine.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="PSOManager.h" />
     <ClInclude Include="WinApp.h" />
   </ItemGroup>
   <ItemGroup>

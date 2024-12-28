@@ -55,6 +55,9 @@
     <ClCompile Include="Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PSOManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinApp.h">
@@ -103,6 +106,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PSOManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

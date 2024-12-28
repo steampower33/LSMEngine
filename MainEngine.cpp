@@ -9,7 +9,6 @@ namespace EngineCore
 	void MainEngine::Initialize()
 	{
 		LoadPipeline();
-		LoadAssets();
 
 		Model m(m_device, m_commandList, m_basicHeap);
 		models.push_back(m);
@@ -29,7 +28,16 @@ namespace EngineCore
 	{
 		m_camera.Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
+		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		XMVECTOR posVec = XMLoadFloat4(&pos);
+
+		XMStoreFloat4x4(&m_constantBufferData.world,
+			XMMatrixTranspose(XMMatrixTranslationFromVector(posVec)));
+
 		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+
+		XMStoreFloat4x4(&m_constantBufferData.proj,
+			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
 
 		for (int i = 0; i < models.size(); i++)
 		{
@@ -57,7 +65,7 @@ namespace EngineCore
 	void MainEngine::Render()
 	{
 		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
-		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_psoManager.m_defaultPSO.Get()));
 
 		auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
 			m_renderTargets[m_frameIndex].Get(),
@@ -73,7 +81,7 @@ namespace EngineCore
 
 		m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);;
 
-		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+		m_commandList->SetGraphicsRootSignature(m_psoManager.m_rootSignature.Get());
 		m_commandList->RSSetViewports(1, &m_viewport);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

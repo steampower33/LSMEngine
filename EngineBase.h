@@ -4,11 +4,13 @@
 
 #include "DescriptorHeapAllocator.h"
 #include "Camera.h"
+#include "PSOManager.h"
 
 namespace EngineCore
 {
 	using namespace DirectX;
 	using Microsoft::WRL::ComPtr;
+	using namespace Renderer;
 
 	class EngineBase
 	{
@@ -16,7 +18,7 @@ namespace EngineCore
 		EngineBase();
 		virtual ~EngineBase();
 
-		virtual void Initialize();
+		virtual void Initialize() = 0;
 		virtual void Update(float dt) = 0;
 		virtual void Render() = 0;
 		virtual void UpdateGUI() = 0;
@@ -32,8 +34,8 @@ namespace EngineCore
 		static const UINT TextureHeight = 256;
 		static const UINT TexturePixelSize = 4;
 
-
 		Camera m_camera;
+		PSOManager m_psoManager;
 
 		float m_mousePosX;
 		float m_mousePosY;
@@ -65,19 +67,19 @@ namespace EngineCore
 		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-		ComPtr<ID3D12Resource> m_sceneRenderTargets[FrameCount];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
-		ComPtr<ID3D12RootSignature> m_rootSignature;
-		ComPtr<ID3D12PipelineState> m_pipelineState;
+		/*ComPtr<ID3D12RootSignature> m_rootSignature;
+		ComPtr<ID3D12PipelineState> m_defaultPSO;*/
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 		SceneConstantBuffer m_constantBufferData;
 
 		ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
+
+
 	protected:
 		void LoadPipeline();
-		void LoadAssets();
 		void LoadGUI();
 		void WaitForPreviousFrame();
 		
