@@ -17,4 +17,4 @@ cbuffer GlobalConstants : register(b0)
     float4x4 proj;
     float4x4 d1;
     float4x4 d2;
-};
+}

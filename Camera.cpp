@@ -5,7 +5,7 @@ namespace EngineCore
 	using namespace std;
 
 	Camera::Camera() :
-		m_initPos(-5.0f, 0.0f, -5.0f),
+		m_initPos(-5.0f, 5.0f, -5.0f),
 		m_pos(m_initPos),
 		m_lookDir(0.0f, 0.0f, 1.0f),
 		m_upDir(0.0f, 1.0f, 0.0f),
@@ -13,7 +13,7 @@ namespace EngineCore
 		m_cursorNdcX(0.0f),
 		m_cursorNdcY(0.0f),
 		m_yaw(0.7854f),
-		m_pitch(0.0f),
+		m_pitch(0.6f),
 		m_speed(10.0f),
 		m_useFirstPersonView(false)
 	{
