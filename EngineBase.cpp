@@ -15,7 +15,6 @@ namespace EngineCore
 		m_frameIndex(0),
 		m_viewport(0.0f, 0.0f, m_width, m_height),
 		m_scissorRect(0.0f, 0.0f, static_cast<LONG>(m_width), static_cast<LONG>(m_height)),
-		m_rtvDescriptorSize(0),
 		m_aspectRatio(16.0f / 9.0f),
 		m_useWarpDevice(false),
 		m_isMouseMove(false),
@@ -89,6 +88,9 @@ namespace EngineCore
 			));
 		}
 
+		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		m_cbvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -128,10 +130,8 @@ namespace EngineCore
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
 			D3D12_DESCRIPTOR_HEAP_DESC basicHeapDesc = {};
-			basicHeapDesc.NumDescriptors = 2;
+			basicHeapDesc.NumDescriptors = 3;
 			basicHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			basicHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&basicHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
@@ -188,6 +188,33 @@ namespace EngineCore
 			}
 		}
 
+		basicHandle = m_basicHeap->GetCPUDescriptorHandleForHeapStart();
+		{
+			const UINT globalConstantsSize = sizeof(GlobalConstants);
+
+			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(globalConstantsSize);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&uploadHeapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&buffer,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_globalConstsUploadHeap)));
+
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_globalConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&m_globalConstsBufferDataBegin)));
+			memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
+
+			// Describe and create a constant buffer view.
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation = m_globalConstsUploadHeap->GetGPUVirtualAddress();
+			cbvDesc.SizeInBytes = (globalConstantsSize + 255) & ~255; // 256-byte 정렬
+			m_device->CreateConstantBufferView(&cbvDesc, basicHandle);
+			
+			basicHandle.Offset(1, m_cbvDescriptorSize);
+		}
+
 		{
 			// Depth Stencil 버퍼 생성
 			D3D12_RESOURCE_DESC depthStencilDesc = {};
@@ -222,6 +249,13 @@ namespace EngineCore
 			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 			m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		}
+
+		{
+			XMStoreFloat4x4(&m_globalConstsBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+
+			XMStoreFloat4x4(&m_globalConstsBufferData.proj,
+				XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
 		}
 	}
 

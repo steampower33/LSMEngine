@@ -6,9 +6,9 @@ namespace Renderer {
 	Model::Model(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
-		ComPtr<ID3D12DescriptorHeap> heap)
+		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle)
 	{
-		Initialize(device, commandList, heap);
+		Initialize(device, commandList, basicHandle);
 	}
 
 	Model::~Model()
@@ -19,47 +19,47 @@ namespace Renderer {
 	void Model::Initialize(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
-		ComPtr<ID3D12DescriptorHeap> heap)
+		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle)
 	{
 		// Create the vertex buffer.
 		{
 			Vertex vertexList[] =
 			{
 				// front
-				{ -1.0f, -1.0f, -1.0f, 0.0f, 1.0f },
-				{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f },
-				{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f },
-				{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f },
+				{ -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f},
+				{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f},
+				{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+				{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
 
 				// back
-				{  1.0f, -1.0f, 1.0f, 0.0f, 1.0f },
-				{  1.0f,  1.0f, 1.0f, 0.0f, 0.0f },
-				{ -1.0f,  1.0f, 1.0f, 1.0f, 0.0f },
-				{ -1.0f, -1.0f, 1.0f, 1.0f, 1.0f },
+				{  1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
+				{  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f },
+				{ -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f },
+				{ -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f },
 
 				// top
-				{ -1.0f, 1.0f, -1.0f, 0.0f, 1.0f },
-				{ -1.0f, 1.0f,  1.0f, 0.0f, 0.0f },
-				{  1.0f, 1.0f,  1.0f, 1.0f, 0.0f },
-				{  1.0f, 1.0f, -1.0f, 1.0f, 1.0f },
+				{ -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+				{ -1.0f, 1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f },
+				{  1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f },
+				{  1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
 
 				// bottom
-				{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f },
-				{ -1.0f, -1.0f, -1.0f, 0.0f, 0.0f },
-				{  1.0f, -1.0f, -1.0f, 1.0f, 0.0f },
-				{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f },
+				{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
+				{ -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+				{  1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+				{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
 
 				// left
-				{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f },
-				{ -1.0f,  1.0f,  1.0f, 0.0f, 0.0f },
-				{ -1.0f,  1.0f, -1.0f, 1.0f, 0.0f },
-				{ -1.0f, -1.0f, -1.0f, 1.0f, 1.0f },
+				{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
+				{ -1.0f,  1.0f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+				{ -1.0f,  1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+				{ -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
 
 				// right
-				{  1.0f, -1.0f, -1.0f, 0.0f, 1.0f },
-				{  1.0f,  1.0f, -1.0f, 0.0f, 0.0f },
-				{  1.0f,  1.0f,  1.0f, 1.0f, 0.0f },
-				{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f },
+				{  1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+				{  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+				{  1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+				{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
 
 			};
 
@@ -157,34 +157,32 @@ namespace Renderer {
 			m_indexBufferView.SizeInBytes = indexBufferSize;
 		}
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(heap->GetCPUDescriptorHandleForHeapStart());
-
 		{
-			const UINT constantBufferSize = sizeof(SceneConstantBuffer);
+			const UINT meshConstantsSize = sizeof(GlobalConstants);
 
 			auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(meshConstantsSize);
 			ThrowIfFailed(device->CreateCommittedResource(
 				&uploadHeapProps,
 				D3D12_HEAP_FLAG_NONE,
 				&buffer,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&m_constantBuffer)));
+				IID_PPV_ARGS(&m_meshConstsUploadHeap)));
 
 			CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-			memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+			ThrowIfFailed(m_meshConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&m_meshConstsBufferDataBegin)));
+
+			memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 
 			// Describe and create a constant buffer view.
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-			cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-			cbvDesc.SizeInBytes = (constantBufferSize + 255) & ~255; // 256-byte 정렬
-			device->CreateConstantBufferView(&cbvDesc, handle);
+			cbvDesc.BufferLocation = m_meshConstsUploadHeap->GetGPUVirtualAddress();
+			cbvDesc.SizeInBytes = (meshConstantsSize + 255) & ~255; // 256-byte 정렬
+			device->CreateConstantBufferView(&cbvDesc, basicHandle);
 
-			handle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			basicHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 		}
-
 
 		// Create the texture.
 		auto image = std::make_unique<ScratchImage>();
@@ -230,38 +228,26 @@ namespace Renderer {
 			device->CreateShaderResourceView(
 				m_texture.Get(), // 텍스처 리소스
 				&srvDesc, // SRV 설명
-				handle // 디스크립터 힙의 핸들
+				basicHandle // 디스크립터 힙의 핸들
 			);
 		}
 	}
 
-	void Model::Update(const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset)
+	void Model::Update()
 	{
-		m_constantBufferData.world = world;
-		m_constantBufferData.view = view;
-		m_constantBufferData.proj = proj;
-		m_constantBufferData.offset = offset;
-		memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		XMVECTOR posVec = XMLoadFloat4(&pos);
+
+		XMStoreFloat4x4(&m_meshConstsBufferData.world,
+			XMMatrixTranspose(XMMatrixTranslationFromVector(posVec)));
+
+		memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 	}
 
 	void Model::Render(
 		ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList,
-		ComPtr<ID3D12DescriptorHeap> heap)
+		ComPtr<ID3D12GraphicsCommandList> commandList)
 	{
-		// Set DescriptorHeap
-		ID3D12DescriptorHeap* ppHeaps[] = { heap.Get() };
-		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-		D3D12_GPU_DESCRIPTOR_HANDLE cbvGPUHandle(heap->GetGPUDescriptorHandleForHeapStart());
-		commandList->SetGraphicsRootDescriptorTable(0, cbvGPUHandle);
-
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(
-			heap->GetGPUDescriptorHandleForHeapStart(),
-			1, // 1번 인덱스 (CBV 이후)
-			device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-		);
-		commandList->SetGraphicsRootDescriptorTable(1, srvGpuHandle);
 
 		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		commandList->IASetIndexBuffer(&m_indexBufferView);

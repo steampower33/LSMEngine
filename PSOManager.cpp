@@ -21,7 +21,7 @@ namespace Renderer
 			}
 
 			CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
-			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
 			ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
 			CD3DX12_ROOT_PARAMETER1 rootParameters[2];
@@ -44,7 +44,8 @@ namespace Renderer
 			sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, 
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 			ComPtr<ID3DBlob> signature;
 			ComPtr<ID3DBlob> error;
@@ -57,24 +58,18 @@ namespace Renderer
 			ComPtr<ID3DBlob> vertexShader;
 			ComPtr<ID3DBlob> pixelShader;
 
-			// 컴파일 플래그 설정
-			UINT compileFlags = 0;
-#if defined(_DEBUG) || defined(DEBUG)
-			compileFlags |= D3DCOMPILE_DEBUG; // 디버그 정보를 포함
-			compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION; // 최적화 비활성화
-#endif
-
 			ThrowIfFailed(D3DCompileFromFile(
 				L"VertexShader.hlsl",
-				nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+				nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShader, nullptr));
 			ThrowIfFailed(D3DCompileFromFile(
 				L"PixelShader.hlsl",
-				nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+				nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShader, nullptr));
 
-			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+			D3D12_INPUT_ELEMENT_DESC basicIE[] =
 			{
 				{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-				{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+				{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+				{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 			};
 
 			// Default rasterizer states
@@ -113,7 +108,7 @@ namespace Renderer
 
 			// Describe and create the graphcis pipeline state object (PSO).
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-			psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+			psoDesc.InputLayout = { basicIE, _countof(basicIE) };
 			psoDesc.pRootSignature = m_rootSignature.Get();
 			psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
 			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());

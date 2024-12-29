@@ -12,38 +12,28 @@ namespace Renderer {
 		Model(
 			ComPtr<ID3D12Device> device,
 			ComPtr<ID3D12GraphicsCommandList> commandList,
-			ComPtr<ID3D12DescriptorHeap> heap);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle);
 		~Model();
 
 		void Render(
 			ComPtr<ID3D12Device> device,
-			ComPtr<ID3D12GraphicsCommandList> commandList,
-			ComPtr<ID3D12DescriptorHeap> heap);
+			ComPtr<ID3D12GraphicsCommandList> commandList
+		);
 
-		struct SceneConstantBuffer
-		{
-			XMFLOAT4X4 world;
-			XMFLOAT4X4 view;
-			XMFLOAT4X4 proj;
-			float offset;
-			float padding[15];
-		};
-
-		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
-
-		void Update(const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, float offset);
+		void Update();
 
 	private:
 		void Initialize(
 			ComPtr<ID3D12Device> device,
 			ComPtr<ID3D12GraphicsCommandList> commandList,
-			ComPtr<ID3D12DescriptorHeap> heap);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle);
 
 		int indexBufferSize;
 
 		struct Vertex
 		{
-			Vertex(float x, float y, float z, float u, float v) : position(x, y, z), texcoord(u, v) {}
+			Vertex(float posX, float posY, float posZ, float u, float v, float normalX, float normalY, float normalZ) : 
+				position(posX, posY, posZ), texcoord(u, v), normal(normalX, normalY, normalZ) {}
 			XMFLOAT3 position;
 			XMFLOAT2 texcoord;
 			XMFLOAT3 normal;
@@ -57,10 +47,9 @@ namespace Renderer {
 		ComPtr<ID3D12Resource> m_indexUploadHeap;
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
-		ComPtr<ID3D12Resource> m_constantBuffer;
-		ComPtr<ID3D12Resource> m_constantUploadHeap;
-		SceneConstantBuffer m_constantBufferData;
-		UINT8* m_pCbvDataBegin;
+		ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
+		MeshConstants m_meshConstsBufferData;
+		UINT8* m_meshConstsBufferDataBegin;
 
 		ComPtr<ID3D12Resource> m_texture;
 		ComPtr<ID3D12Resource> m_textureUploadHeap;

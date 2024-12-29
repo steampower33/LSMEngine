@@ -20,6 +20,7 @@
 #include <stdexcept>
 
 using Microsoft::WRL::ComPtr;
+using namespace DirectX;
 
 inline std::string HrToString(HRESULT hr)
 {
@@ -52,3 +53,19 @@ inline void ThrowIfFailed(HRESULT hr)
 // The indexed variant will include the index in the name of the object.
 #define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
 #define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), L#x, n)
+
+__declspec(align(256)) struct GlobalConstants
+{
+    XMFLOAT4X4 view;
+    XMFLOAT4X4 proj;
+    XMFLOAT4X4 dummy1;
+    XMFLOAT4X4 dummy2;
+};
+
+// 주로 Vertex/Geometry 쉐이더에서 사용
+__declspec(align(256)) struct MeshConstants {
+    XMFLOAT4X4 world;
+    XMFLOAT4X4 worldIT;
+    XMFLOAT4X4 dummy1;
+    XMFLOAT4X4 dummy2;
+};

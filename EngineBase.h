@@ -44,17 +44,6 @@ namespace EngineCore
 
 		bool m_isMouseMove;
 
-		struct SceneConstantBuffer
-		{
-			XMFLOAT4 offset;
-			XMFLOAT4X4 world;
-			XMFLOAT4X4 view;
-			XMFLOAT4X4 proj;
-			float padding[12];
-		};
-
-		static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
-
 		// Pipeline objects.
 		CD3DX12_VIEWPORT m_viewport;
 		CD3DX12_RECT m_scissorRect;
@@ -65,18 +54,21 @@ namespace EngineCore
 		ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 		ComPtr<ID3D12DescriptorHeap> m_basicHeap;
 		ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
-		UINT m_rtvDescriptorSize;
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
-		/*ComPtr<ID3D12RootSignature> m_rootSignature;
-		ComPtr<ID3D12PipelineState> m_defaultPSO;*/
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-		SceneConstantBuffer m_constantBufferData;
+		UINT m_rtvDescriptorSize;
+		UINT m_cbvDescriptorSize;
 
 		ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
+		ComPtr<ID3D12Resource> m_globalConstsBuffer;
+		ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
+		GlobalConstants m_globalConstsBufferData;
+		UINT8* m_globalConstsBufferDataBegin;
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle;
 
 	protected:
 		void LoadPipeline();

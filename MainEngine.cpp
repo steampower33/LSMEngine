@@ -10,7 +10,7 @@ namespace EngineCore
 	{
 		LoadPipeline();
 
-		Model m(m_device, m_commandList, m_basicHeap);
+		Model m(m_device, m_commandList, basicHandle);
 		models.push_back(m);
 
 		ThrowIfFailed(m_commandList->Close());
@@ -28,20 +28,30 @@ namespace EngineCore
 	{
 		m_camera.Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-		XMVECTOR posVec = XMLoadFloat4(&pos);
+		// 1. GetViewMatrix() 결과를 가져옴
+		XMMATRIX view = m_camera.GetViewMatrix();
 
-		XMStoreFloat4x4(&m_constantBufferData.world,
-			XMMatrixTranspose(XMMatrixTranslationFromVector(posVec)));
+		// 2. Transpose 적용
+		XMMATRIX viewTrans = XMMatrixTranspose(view);
 
-		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+		// 3. XMFLOAT4X4로 저장
+		XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
 
-		XMStoreFloat4x4(&m_constantBufferData.proj,
-			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
+
+		// 1. GetViewMatrix() 결과를 가져옴
+		XMMATRIX proj = m_camera.GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
+
+		// 2. Transpose 적용
+		XMMATRIX projTrans = XMMatrixTranspose(proj);
+
+		// 3. XMFLOAT4X4로 저장
+		XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
+
+		memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 
 		for (int i = 0; i < models.size(); i++)
 		{
-			models[i].Update(m_constantBufferData.world, m_constantBufferData.view, m_constantBufferData.proj, m_constantBufferData.offset.x);
+			models[i].Update();
 		}
 	}
 	
@@ -54,7 +64,6 @@ namespace EngineCore
 
 		ImGui::Begin("Scene Control");
 		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::SliderFloat("x pos", &m_constantBufferData.offset.x, -m_aspectRatio, m_aspectRatio);
 
 		ImGui::End();
 
@@ -86,9 +95,20 @@ namespace EngineCore
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+		// Set DescriptorHeap
+		ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE basicGPUHandle(m_basicHeap->GetGPUDescriptorHandleForHeapStart());
+		m_commandList->SetGraphicsRootDescriptorTable(0, basicGPUHandle);
+
+		basicGPUHandle.Offset(m_cbvDescriptorSize * 2);
+
+		m_commandList->SetGraphicsRootDescriptorTable(1, basicGPUHandle);
+
 		for (int i = 0; i < models.size(); i++)
 		{
-			models[i].Render(m_device, m_commandList, m_basicHeap);
+			models[i].Render(m_device, m_commandList);
 		}
 
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
