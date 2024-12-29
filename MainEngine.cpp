@@ -37,7 +37,6 @@ namespace EngineCore
 		// 3. XMFLOAT4X4로 저장
 		XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
 
-
 		// 1. GetViewMatrix() 결과를 가져옴
 		XMMATRIX proj = m_camera.GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
 

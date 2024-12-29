@@ -59,11 +59,11 @@ namespace Renderer
 			ComPtr<ID3DBlob> pixelShader;
 
 			ThrowIfFailed(D3DCompileFromFile(
-				L"VertexShader.hlsl",
-				nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShader, nullptr));
+				L"BasicVS.hlsl",
+				nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0", 0, 0, &vertexShader, nullptr));
 			ThrowIfFailed(D3DCompileFromFile(
-				L"PixelShader.hlsl",
-				nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShader, nullptr));
+				L"BasicPS.hlsl",
+				nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pixelShader, nullptr));
 
 			D3D12_INPUT_ELEMENT_DESC basicIE[] =
 			{

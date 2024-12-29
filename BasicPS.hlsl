@@ -1,8 +1,4 @@
-struct PSInput
-{
-    float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
-};
+#include "Common.hlsli"
 
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
