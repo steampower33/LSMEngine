@@ -13,8 +13,8 @@ int wWinMain(
     FILE* pStreamOut = nullptr;
     freopen_s(&pStreamOut, "CONOUT$", "w", stdout);
 
-    EngineCore::MainEngine engine;
-    int result = WindowApplication::WinApp::Run(&engine, hInstance, nShowCmd);
+    MainEngine engine;
+    int result = WinApp::Run(&engine, hInstance, nShowCmd);
 
     fclose(pStreamOut);
     FreeConsole();

@@ -8,7 +8,7 @@ cbuffer MeshConstants : register(b1)
     float4x4 d4;
 }
 
-PSInput main(VertexShaderInput input)
+PSInput main(VSInput input)
 {
     PSInput result;
     
