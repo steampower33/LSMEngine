@@ -2,7 +2,6 @@
 
 #include "imgui.h"
 #include "d3d12.h"
-#include "dxgi.h"
 
 // Simple free list based allocator
 class HeapAllocator

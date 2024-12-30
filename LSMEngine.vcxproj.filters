@@ -63,6 +63,9 @@
     <ClCompile Include="Core\WinApp.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Model\GeometryGenerator.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -88,9 +91,6 @@
     </ClInclude>
     <ClInclude Include="imgui\imstb_truetype.h">
       <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="Model\MeshData.h">
-      <Filter>Model</Filter>
     </ClInclude>
     <ClInclude Include="Model\Model.h">
       <Filter>Model</Filter>
@@ -121,6 +121,12 @@
     </ClInclude>
     <ClInclude Include="Core\WinApp.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\ConstantBuffers.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Model\GeometryGenerator.h">
+      <Filter>Model</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

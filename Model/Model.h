@@ -1,9 +1,23 @@
 #pragma once
 
-#include "Helpers.h"
+#include <d3d12.h>
+#include "d3dx12.h"
+#include "DirectXTex.h"
+
+#include <vector>
 #include "Vertex.h"
 
+#include "ConstantBuffers.h"
+#include "Helpers.h"
+
+using Microsoft::WRL::ComPtr;
 using namespace DirectX;
+
+struct MeshData
+{
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+};
 
 class Model
 {

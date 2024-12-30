@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Helpers.h"
+#include <d3d12.h>
+#include <algorithm>
+#include <DirectXMath.h>
 
 using namespace DirectX;
 
