@@ -9,8 +9,13 @@ void MainEngine::Initialize()
 	LoadPipeline();
 
 	MeshData meshData = GeometryGenerator::MakeBox();
-	Model m(m_device, m_commandList, basicHandle, meshData);
-	models.push_back(m);
+	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, basicHandle, std::vector{ meshData });
+	models.push_back(box);
+
+	/*vector<MeshData> zeldaFbx =
+		GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
+
+	Model zelda(m_device, m_commandList, basicHandle, zeldaFbx);*/
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -47,9 +52,9 @@ void MainEngine::Update(float dt)
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 
-	for (int i = 0; i < models.size(); i++)
+	for (const auto &model : models)
 	{
-		models[i].Update();
+		model->Update();
 	}
 }
 
@@ -104,9 +109,9 @@ void MainEngine::Render()
 
 	m_commandList->SetGraphicsRootDescriptorTable(1, basicGPUHandle);
 
-	for (int i = 0; i < models.size(); i++)
+	for (const auto &model : models)
 	{
-		models[i].Render(m_device, m_commandList);
+		model->Render(m_device, m_commandList);
 	}
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());

@@ -17,6 +17,6 @@ public:
 
 private:
 
-	std::vector<Model> models;
+	std::vector<shared_ptr<Model>> models;
 
 };

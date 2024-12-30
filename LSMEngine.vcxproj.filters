@@ -66,6 +66,9 @@
     <ClCompile Include="Model\GeometryGenerator.cpp">
       <Filter>Model</Filter>
     </ClCompile>
+    <ClCompile Include="Model\ModelLoader.cpp">
+      <Filter>Model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -129,6 +132,12 @@
       <Filter>Model</Filter>
     </ClInclude>
     <ClInclude Include="Model\MeshData.h">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="Model\ModelLoader.h">
+      <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="Model\Mesh.h">
       <Filter>Model</Filter>
     </ClInclude>
   </ItemGroup>

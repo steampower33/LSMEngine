@@ -4,7 +4,7 @@ Model::Model(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-	MeshData &meshData)
+	const std::vector<MeshData>& meshData)
 {
 	Initialize(device, commandList, basicHandle, meshData);
 }
@@ -18,98 +18,19 @@ void Model::Initialize(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-	MeshData &meshData)
+	const std::vector<MeshData>& mesheDatas)
 {
-	// Create the vertex buffer.
+	
+	for (const auto &meshData : mesheDatas)
 	{
-		const UINT vertexBufferSizeInBytes =
-			static_cast<UINT>(meshData.vertices.size() * sizeof(Vertex));
+		std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>();
 
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSizeInBytes);
+		CreateVertexBuffer(device, commandList, meshData.vertices, newMesh);
+		CreateIndexBuffer(device, commandList, meshData.indices, newMesh);
 
-		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&defaultHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&buffer,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_vertexBuffer)));
-
-		m_vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
-
-		auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&uploadHeapProps,
-			D3D12_HEAP_FLAG_NONE, // no flags
-			&buffer,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_vertexUploadHeap)));
-
-		m_vertexUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
-
-		D3D12_SUBRESOURCE_DATA vertexData = {};
-		vertexData.pData = meshData.vertices.data();
-		vertexData.RowPitch = vertexBufferSizeInBytes;
-		vertexData.SlicePitch = vertexBufferSizeInBytes;
-
-		UpdateSubresources(commandList.Get(), m_vertexBuffer.Get(), m_vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
-
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-		commandList->ResourceBarrier(1, &barrier);
-
-		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-		m_vertexBufferView.SizeInBytes = vertexBufferSizeInBytes;
+		m_meshes.push_back(newMesh);
 	}
 
-	// Create Index Buffer
-	{
-		indexBufferCount = meshData.indices.size();
-
-		const UINT indexBufferSizeInBytes =
-			static_cast<UINT>(meshData.indices.size() * sizeof(uint32_t));
-
-		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSizeInBytes);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&defaultHeapProps,
-			D3D12_HEAP_FLAG_NONE, // no flags
-			&buffer,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_indexBuffer)));
-
-		m_indexBuffer->SetName(L"Index Buffer Resource Heap");
-
-		auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&uploadHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&buffer,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_indexUploadHeap)));
-
-		m_indexUploadHeap->SetName(L"Index Buffer Upload Resource Heap");
-
-		D3D12_SUBRESOURCE_DATA indexData = {};
-		indexData.pData = meshData.indices.data();
-		indexData.RowPitch = indexBufferSizeInBytes;
-		indexData.SlicePitch = indexBufferSizeInBytes;
-
-		UpdateSubresources(commandList.Get(), m_indexBuffer.Get(), m_indexUploadHeap.Get(), 0, 0, 1, &indexData);
-
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-		commandList->ResourceBarrier(1, &barrier);
-
-		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_indexBufferView.SizeInBytes = indexBufferSizeInBytes;
-	}
 
 	{
 		const UINT meshConstantsSize = sizeof(GlobalConstants);
@@ -214,7 +135,10 @@ void Model::Render(
 	ComPtr<ID3D12GraphicsCommandList> commandList)
 {
 
-	commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	commandList->IASetIndexBuffer(&m_indexBufferView);
-	commandList->DrawIndexedInstanced(indexBufferCount, 1, 0, 0, 0);
+	for (const auto& mesh : m_meshes)
+	{
+		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
+		commandList->IASetIndexBuffer(&mesh->indexBufferView);
+		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);
+	}
 }

@@ -8,6 +8,9 @@
     {
       "name": "directxtex",
       "features": [ "dx12" ]
+    },
+    {
+      "name": "assimp"
     }
   ]
 }

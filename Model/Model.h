@@ -7,6 +7,7 @@
 #include "MeshData.h"
 #include "ConstantBuffers.h"
 #include "Helpers.h"
+#include "Mesh.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -18,7 +19,7 @@ public:
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-		MeshData &meshData);
+		const std::vector<MeshData> &meshData);
 	~Model();
 
 	void Render(
@@ -33,22 +34,14 @@ private:
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-		MeshData &meshData);
+		const std::vector<MeshData> &meshData);
 
-	int indexBufferCount;
-
-	ComPtr<ID3D12Resource> m_vertexBuffer;
-	ComPtr<ID3D12Resource> m_vertexUploadHeap;
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-
-	ComPtr<ID3D12Resource> m_indexBuffer;
-	ComPtr<ID3D12Resource> m_indexUploadHeap;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-
-	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
-	MeshConstants m_meshConstsBufferData;
-	UINT8* m_meshConstsBufferDataBegin;
+	std::vector<std::shared_ptr<Mesh>> m_meshes;
 
 	ComPtr<ID3D12Resource> m_texture;
 	ComPtr<ID3D12Resource> m_textureUploadHeap;
+	
+	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
+	MeshConstants m_meshConstsBufferData;
+	UINT8* m_meshConstsBufferDataBegin;
 };
