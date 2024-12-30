@@ -8,7 +8,8 @@ void MainEngine::Initialize()
 {
 	LoadPipeline();
 
-	Model m(m_device, m_commandList, basicHandle);
+	MeshData meshData = GeometryGenerator::MakeBox();
+	Model m(m_device, m_commandList, basicHandle, meshData);
 	models.push_back(m);
 
 	ThrowIfFailed(m_commandList->Close());

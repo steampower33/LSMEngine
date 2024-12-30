@@ -1,7 +1,9 @@
 #pragma once
 
 #include "EngineBase.h"
+
 #include "Model.h"
+#include "GeometryGenerator.h"
 
 class MainEngine : public EngineBase
 {

@@ -4,20 +4,12 @@
 #include "d3dx12.h"
 #include "DirectXTex.h"
 
-#include <vector>
-#include "Vertex.h"
-
+#include "MeshData.h"
 #include "ConstantBuffers.h"
 #include "Helpers.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
-
-struct MeshData
-{
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
-};
 
 class Model
 {
@@ -25,7 +17,8 @@ public:
 	Model(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
+		MeshData &meshData);
 	~Model();
 
 	void Render(
@@ -39,9 +32,10 @@ private:
 	void Initialize(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
+		MeshData &meshData);
 
-	int indexBufferSize;
+	int indexBufferCount;
 
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	ComPtr<ID3D12Resource> m_vertexUploadHeap;

@@ -3,9 +3,10 @@
 Model::Model(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle)
+	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
+	MeshData &meshData)
 {
-	Initialize(device, commandList, basicHandle);
+	Initialize(device, commandList, basicHandle, meshData);
 }
 
 Model::~Model()
@@ -16,53 +17,15 @@ Model::~Model()
 void Model::Initialize(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle)
+	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
+	MeshData &meshData)
 {
 	// Create the vertex buffer.
 	{
-		Vertex vertexList[] =
-		{
-			// front
-			{ -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f},
-			{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f},
-			{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-			{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		const UINT vertexBufferSizeInBytes =
+			static_cast<UINT>(meshData.vertices.size() * sizeof(Vertex));
 
-			// back
-			{  1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
-			{  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f },
-			{ -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f },
-			{ -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f },
-
-			// top
-			{ -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-			{ -1.0f, 1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f },
-			{  1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f },
-			{  1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-
-			// bottom
-			{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-			{ -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-			{  1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-			{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-
-			// left
-			{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-			{ -1.0f,  1.0f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-			{ -1.0f,  1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-			{ -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-
-			// right
-			{  1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-			{  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
-			{  1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
-			{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-
-		};
-
-		int vertexBufferSize = sizeof(vertexList);
-
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSizeInBytes);
 
 		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(
@@ -87,9 +50,9 @@ void Model::Initialize(
 		m_vertexUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
 		D3D12_SUBRESOURCE_DATA vertexData = {};
-		vertexData.pData = reinterpret_cast<BYTE*>(vertexList);
-		vertexData.RowPitch = vertexBufferSize;
-		vertexData.SlicePitch = vertexBufferSize;
+		vertexData.pData = meshData.vertices.data();
+		vertexData.RowPitch = vertexBufferSizeInBytes;
+		vertexData.SlicePitch = vertexBufferSizeInBytes;
 
 		UpdateSubresources(commandList.Get(), m_vertexBuffer.Get(), m_vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
 
@@ -99,24 +62,18 @@ void Model::Initialize(
 
 		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-		m_vertexBufferView.SizeInBytes = vertexBufferSize;
+		m_vertexBufferView.SizeInBytes = vertexBufferSizeInBytes;
 	}
 
 	// Create Index Buffer
 	{
-		DWORD indexList[] = {
-			0, 1, 2, 0, 2, 3,
-			4, 5, 6, 4, 6, 7,
-			8, 9, 10, 8, 10, 11,
-			12, 13, 14, 12, 14, 15,
-			16, 17, 18, 16, 18, 19,
-			20, 21, 22, 20, 22, 23,
-		};
+		indexBufferCount = meshData.indices.size();
 
-		indexBufferSize = sizeof(indexList);
+		const UINT indexBufferSizeInBytes =
+			static_cast<UINT>(meshData.indices.size() * sizeof(uint32_t));
 
 		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSizeInBytes);
 		ThrowIfFailed(device->CreateCommittedResource(
 			&defaultHeapProps,
 			D3D12_HEAP_FLAG_NONE, // no flags
@@ -139,9 +96,9 @@ void Model::Initialize(
 		m_indexUploadHeap->SetName(L"Index Buffer Upload Resource Heap");
 
 		D3D12_SUBRESOURCE_DATA indexData = {};
-		indexData.pData = reinterpret_cast<BYTE*>(indexList);
-		indexData.RowPitch = indexBufferSize;
-		indexData.SlicePitch = indexBufferSize;
+		indexData.pData = meshData.indices.data();
+		indexData.RowPitch = indexBufferSizeInBytes;
+		indexData.SlicePitch = indexBufferSizeInBytes;
 
 		UpdateSubresources(commandList.Get(), m_indexBuffer.Get(), m_indexUploadHeap.Get(), 0, 0, 1, &indexData);
 
@@ -151,7 +108,7 @@ void Model::Initialize(
 
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_indexBufferView.SizeInBytes = indexBufferSize;
+		m_indexBufferView.SizeInBytes = indexBufferSizeInBytes;
 	}
 
 	{
@@ -259,5 +216,5 @@ void Model::Render(
 
 	commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 	commandList->IASetIndexBuffer(&m_indexBufferView);
-	commandList->DrawIndexedInstanced(indexBufferSize, 1, 0, 0, 0);
+	commandList->DrawIndexedInstanced(indexBufferCount, 1, 0, 0, 0);
 }
