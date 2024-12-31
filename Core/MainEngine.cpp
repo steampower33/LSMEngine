@@ -9,6 +9,7 @@ void MainEngine::Initialize()
 	LoadPipeline();
 
 	MeshData meshData = GeometryGenerator::MakeBox();
+	meshData.textureFilename = "./Assets/wall.jpg";
 	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, basicHandle, std::vector{ meshData });
 	models.push_back(box);
 

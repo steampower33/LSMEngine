@@ -14,7 +14,6 @@ __declspec(align(256)) struct GlobalConstants
     XMFLOAT4X4 dummy2;
 };
 
-// 주로 Vertex/Geometry 쉐이더에서 사용
 __declspec(align(256)) struct MeshConstants {
     XMFLOAT4X4 world;
     XMFLOAT4X4 worldIT;
