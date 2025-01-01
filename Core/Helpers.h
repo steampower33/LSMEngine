@@ -137,8 +137,7 @@ static void CreateConstBuffer(ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& meshConstsUploadHeap,
 	MeshConstants& meshConstsBufferData,
-	UINT8*& meshConstsBufferDataBegin,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle)
+	UINT8*& meshConstsBufferDataBegin)
 {
 	const UINT meshConstantsSize = sizeof(GlobalConstants);
 
@@ -156,14 +155,6 @@ static void CreateConstBuffer(ComPtr<ID3D12Device>& device,
 	ThrowIfFailed(meshConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&meshConstsBufferDataBegin)));
 
 	memcpy(meshConstsBufferDataBegin, &meshConstsBufferData, sizeof(meshConstsBufferData));
-
-	// Describe and create a constant buffer view.
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-	cbvDesc.BufferLocation = meshConstsUploadHeap->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = (meshConstantsSize + 255) & ~255; // 256-byte 정렬
-	device->CreateConstantBufferView(&cbvDesc, basicHandle);
-
-	basicHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 }
 
 inline std::wstring StringToWString(const std::string& str) {
@@ -172,11 +163,11 @@ inline std::wstring StringToWString(const std::string& str) {
 
 static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12Resource>& texture,
-	ComPtr<ID3D12Resource>& textureUploadHeap,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-	const std::string &filename)
+	const std::string &filename,
+	std::shared_ptr<Mesh>& mesh,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE &textureHandle)
 {
+	int idx = mesh->textureCnt;
 	auto image = std::make_unique<ScratchImage>();
 
 	// std::string → std::wstring 변환
@@ -185,13 +176,13 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
 	DirectX::TexMetadata metaData = image.get()->GetMetadata();
-	ThrowIfFailed(CreateTexture(device.Get(), metaData, &texture));
+	ThrowIfFailed(CreateTexture(device.Get(), metaData, &mesh->texture[idx]));
 
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed(PrepareUpload(device.Get(), image.get()->GetImages(), image.get()->GetImageCount(), metaData, subresources));
 
 	// upload is implemented by application developer. Here's one solution using <d3dx12.h>
-	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, static_cast<unsigned int>(subresources.size()));
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mesh->texture[idx].Get(), 0, static_cast<unsigned int>(subresources.size()));
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
@@ -201,14 +192,14 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 		&buffer,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&textureUploadHeap)));
+		IID_PPV_ARGS(&mesh->textureUploadHeap[idx])));
 
 	UpdateSubresources(
-		commandList.Get(), texture.Get(), textureUploadHeap.Get(),
+		commandList.Get(), mesh->texture[idx].Get(), mesh->textureUploadHeap[idx].Get(),
 		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		texture.Get(), // 텍스처 리소스
+		mesh->texture[idx].Get(), // 텍스처 리소스
 		D3D12_RESOURCE_STATE_COPY_DEST, // 이전 상태
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE // 새로운 상태
 	);
@@ -221,8 +212,11 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	srvDesc.Texture2D.MipLevels = static_cast<UINT>(metaData.mipLevels);
 
 	device->CreateShaderResourceView(
-		texture.Get(), // 텍스처 리소스
+		mesh->texture[idx].Get(), // 텍스처 리소스
 		&srvDesc, // SRV 설명
-		basicHandle // 디스크립터 힙의 핸들
+		textureHandle // 디스크립터 힙의 핸들
 	);
+
+	mesh->textureCnt++;
+	textureHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 }

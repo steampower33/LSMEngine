@@ -58,7 +58,8 @@ public:
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_basicHeap;
+	ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
@@ -69,12 +70,11 @@ public:
 
 	ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
-	ComPtr<ID3D12Resource> m_globalConstsBuffer;
 	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
 	GlobalConstants m_globalConstsBufferData;
 	UINT8* m_globalConstsBufferDataBegin;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
 
 protected:
 	void LoadPipeline();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <d3d12.h>
 #include <algorithm>
 #include <DirectXMath.h>
@@ -20,6 +21,8 @@ public:
 	void MoveForward(float dt);
 	void MoveRight(float dt);
 	void MoveUp(float dt);
+
+	void LogCameraState();
 
 	bool m_useFirstPersonView;
 
@@ -55,7 +58,8 @@ private:
 	float m_yaw;
 	float m_pitch;
 
-	float m_speed;
+	float m_moveSpeed;
+	float m_mouseSensitivity;
 
 	KeysPressed m_keysPressed;
 };

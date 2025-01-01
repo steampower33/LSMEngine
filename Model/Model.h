@@ -16,10 +16,10 @@ class Model
 {
 public:
 	Model(
-		ComPtr<ID3D12Device> &device,
-		ComPtr<ID3D12GraphicsCommandList> &commandList,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-		const std::vector<MeshData> &meshData);
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+		const std::vector<MeshData>& meshDatas);
 	~Model();
 
 	void Render(
@@ -31,15 +31,12 @@ public:
 
 private:
 	void Initialize(
-		ComPtr<ID3D12Device> &device,
-		ComPtr<ID3D12GraphicsCommandList> &commandList,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE basicHandle,
-		const std::vector<MeshData> &meshData);
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+		const std::vector<MeshData>& meshDatas);
 
 	std::vector<std::shared_ptr<Mesh>> m_meshes;
-
-	ComPtr<ID3D12Resource> m_texture;
-	ComPtr<ID3D12Resource> m_textureUploadHeap;
 	
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;

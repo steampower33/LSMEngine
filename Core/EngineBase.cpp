@@ -126,17 +126,23 @@ void EngineBase::LoadPipeline()
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC basicHeapDesc = {};
-		basicHeapDesc.NumDescriptors = 3;
-		basicHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		basicHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&basicHeapDesc, IID_PPV_ARGS(&m_basicHeap)));
-
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
 		dsvHeapDesc.NumDescriptors = 1;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
+
+		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+		cbvHeapDesc.NumDescriptors = 2;
+		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
+
+		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
+		textureHeapDesc.NumDescriptors = 1000;
+		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
 
 		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
 		imguiHeapDesc.NumDescriptors = 32;
@@ -184,7 +190,6 @@ void EngineBase::LoadPipeline()
 		}
 	}
 
-	basicHandle = m_basicHeap->GetCPUDescriptorHandleForHeapStart();
 	{
 		const UINT globalConstantsSize = sizeof(GlobalConstants);
 
@@ -201,14 +206,6 @@ void EngineBase::LoadPipeline()
 		CD3DX12_RANGE readRange(0, 0);
 		ThrowIfFailed(m_globalConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&m_globalConstsBufferDataBegin)));
 		memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
-
-		// Describe and create a constant buffer view.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_globalConstsUploadHeap->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = (globalConstantsSize + 255) & ~255; // 256-byte Á¤·Ä
-		m_device->CreateConstantBufferView(&cbvDesc, basicHandle);
-
-		basicHandle.Offset(1, m_cbvDescriptorSize);
 	}
 
 	{

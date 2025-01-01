@@ -62,7 +62,7 @@ vector<MeshData> GeometryGenerator::ReadFromFile(string basePath, string filenam
 	ModelLoader modelLoader;
 	modelLoader.Load(basePath, filename);
 
-	vector<MeshData>& meshes = modelLoader.meshes;
+	vector<MeshData> &meshes = modelLoader.meshes;
 
 	// Normalize vertices
 	XMFLOAT3 vmin(1000, 1000, 1000);

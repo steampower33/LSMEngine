@@ -8,5 +8,8 @@ struct MeshData
 {
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
-	std::string textureFilename;
+	
+	// 최대 8개의 파일 경로 존재
+	std::string a;
+	std::string b;
 };

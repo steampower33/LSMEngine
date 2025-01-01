@@ -14,6 +14,7 @@ public:
 	void Load(std::string basePath, std::string filename);
 	void ProcessNode(aiNode* node, const aiScene* scene, XMMATRIX parentTransform);
 	MeshData ProcessMesh(aiMesh* mesh, const aiScene* scene);
+	std::string ReadFilename(aiMaterial* material, aiTextureType type);
 
 public:
 	std::string basePath;

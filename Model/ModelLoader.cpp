@@ -47,7 +47,6 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, XMMATRIX paren
 	}
 
 	// 3) 이 노드에 연결된 모든 메시를 처리
-	// 나중에 잘봐라 이거 UINT 헤더 문제 생기는지
 	for (int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -139,20 +138,28 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-		{
-			aiString filepath;
-			if (AI_SUCCESS == material->GetTexture(aiTextureType_DIFFUSE, 0, &filepath))
-			{
-				// basePath와 합쳐서 텍스처 전체 경로를 구성
-				std::string fullPath =
-					this->basePath +
-					std::string(std::filesystem::path(filepath.C_Str()).filename().string());
-
-				newMesh.textureFilename = fullPath;
-			}
-		}
+		newMesh.a =
+			ReadFilename(material, aiTextureType_DIFFUSE);
 	}
 
 	return newMesh;
+}
+
+
+std::string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
+
+	if (material->GetTextureCount(type) > 0) {
+		aiString filepath;
+		material->GetTexture(type, 0, &filepath);
+
+		std::string fullPath =
+			this->basePath +
+			std::string(
+				std::filesystem::path(filepath.C_Str()).filename().string());
+
+		return fullPath;
+	}
+	else {
+		return "";
+	}
 }

@@ -17,5 +17,7 @@ struct Mesh {
 	D3D12_INDEX_BUFFER_VIEW indexBufferView;
 	int indexBufferCount;
 
-
+	ComPtr<ID3D12Resource> texture[8];
+	ComPtr<ID3D12Resource> textureUploadHeap[8];
+	int textureCnt;
 };

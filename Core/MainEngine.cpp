@@ -8,15 +8,19 @@ void MainEngine::Initialize()
 {
 	LoadPipeline();
 
+	m_textureHandle = m_textureHeap->GetCPUDescriptorHandleForHeapStart();
+
 	MeshData meshData = GeometryGenerator::MakeBox();
-	meshData.textureFilename = "./Assets/wall.jpg";
-	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, basicHandle, std::vector{ meshData });
+	meshData.a = "./Assets/wall_black.jpg";
+	meshData.b = "./Assets/tile.jpg";
+	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_textureHandle, std::vector{ meshData });
 	models.push_back(box);
 
 	/*vector<MeshData> zeldaFbx =
 		GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 
-	Model zelda(m_device, m_commandList, basicHandle, zeldaFbx);*/
+	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, basicHandle, zeldaFbx);
+	models.push_back(zelda);*/
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -88,8 +92,8 @@ void MainEngine::Render()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 
-	const float blackColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_commandList->ClearRenderTargetView(rtvHandle, blackColor, 0, nullptr);
+	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);;
@@ -100,15 +104,12 @@ void MainEngine::Render()
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Set DescriptorHeap
-	ID3D12DescriptorHeap* ppHeaps[] = { m_basicHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE basicGPUHandle(m_basicHeap->GetGPUDescriptorHandleForHeapStart());
-	m_commandList->SetGraphicsRootDescriptorTable(0, basicGPUHandle);
+	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
-	basicGPUHandle.Offset(m_cbvDescriptorSize * 2);
-
-	m_commandList->SetGraphicsRootDescriptorTable(1, basicGPUHandle);
+	m_commandList->SetGraphicsRootDescriptorTable(2, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 
 	for (const auto &model : models)
 	{

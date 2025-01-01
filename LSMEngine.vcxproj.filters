@@ -148,11 +148,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="wall.jpg">
-      <Filter>Assets</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="Shaders\BasicPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -165,5 +160,13 @@
     <FxCompile Include="Shaders\NormalVS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\tile.jpg">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\wall_black.jpg">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>
