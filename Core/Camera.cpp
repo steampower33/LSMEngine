@@ -13,7 +13,7 @@ Camera::Camera() :
 	m_yaw(0.705671f),
 	m_pitch(0.710222f),
 	m_moveSpeed(10.0f),
-	m_mouseSensitivity(10.0f),
+	m_mouseSensitivity(5.0f),
 	m_useFirstPersonView(false)
 {
 }

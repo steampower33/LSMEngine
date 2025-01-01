@@ -11,5 +11,4 @@ struct MeshData
 	
 	// 최대 8개의 파일 경로 존재
 	std::string a;
-	std::string b;
 };

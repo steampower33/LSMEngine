@@ -135,21 +135,16 @@ void EngineBase::LoadPipeline()
 		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
 		cbvHeapDesc.NumDescriptors = 2;
 		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
 
 		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-		textureHeapDesc.NumDescriptors = 1000;
+		textureHeapDesc.NumDescriptors = 128;
 		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
-		imguiHeapDesc.NumDescriptors = 32;
-		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
-		m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
+		m_srvAlloc.Create(m_device.Get(), m_textureHeap.Get());
 	}
 
 	{
@@ -276,7 +271,7 @@ void EngineBase::LoadGUI()
 	init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
 	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 	// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-	init_info.SrvDescriptorHeap = m_imguiHeap.Get();
+	init_info.SrvDescriptorHeap = m_textureHeap.Get();
 	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
 	ImGui_ImplDX12_Init(&init_info);

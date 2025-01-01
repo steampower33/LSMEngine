@@ -23,9 +23,9 @@ public:
 	~Model();
 
 	void Render(
-		ComPtr<ID3D12Device> &device,
-		ComPtr<ID3D12GraphicsCommandList> &commandList
-	);
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12DescriptorHeap>& textureHeap);
 
 	void Update();
 

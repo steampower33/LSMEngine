@@ -36,9 +36,6 @@ public:
 
 	float m_aspectRatio;
 	static const UINT FrameCount = 3;
-	static const UINT TextureWidth = 256;
-	static const UINT TextureHeight = 256;
-	static const UINT TexturePixelSize = 4;
 
 	Camera m_camera;
 	PSOManager m_psoManager;
@@ -58,9 +55,8 @@ public:
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_cbvHeap; 
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
-	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;

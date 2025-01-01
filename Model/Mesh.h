@@ -20,4 +20,5 @@ struct Mesh {
 	ComPtr<ID3D12Resource> texture[8];
 	ComPtr<ID3D12Resource> textureUploadHeap[8];
 	int textureCnt;
+	int startIdx;
 };

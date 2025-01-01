@@ -216,7 +216,4 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 		&srvDesc, // SRV 설명
 		textureHandle // 디스크립터 힙의 핸들
 	);
-
-	mesh->textureCnt++;
-	textureHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 }

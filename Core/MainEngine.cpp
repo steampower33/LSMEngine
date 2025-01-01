@@ -12,14 +12,13 @@ void MainEngine::Initialize()
 
 	MeshData meshData = GeometryGenerator::MakeBox();
 	meshData.a = "./Assets/wall_black.jpg";
-	meshData.b = "./Assets/tile.jpg";
 	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_textureHandle, std::vector{ meshData });
 	models.push_back(box);
 
 	/*vector<MeshData> zeldaFbx =
 		GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 
-	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, basicHandle, zeldaFbx);
+	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_textureHandle, zeldaFbx);
 	models.push_back(zelda);*/
 
 	ThrowIfFailed(m_commandList->Close());
@@ -57,7 +56,7 @@ void MainEngine::Update(float dt)
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 
-	for (const auto &model : models)
+	for (const auto& model : models)
 	{
 		model->Update();
 	}
@@ -96,24 +95,21 @@ void MainEngine::Render()
 	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);;
-
 	m_commandList->SetGraphicsRootSignature(m_psoManager.m_rootSignature.Get());
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Set DescriptorHeap
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
+
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
-	m_commandList->SetGraphicsRootDescriptorTable(2, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
-
-	for (const auto &model : models)
+	for (const auto& model : models)
 	{
-		model->Render(m_device, m_commandList);
+		model->Render(m_device, m_commandList, m_textureHeap);
 	}
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
