@@ -3,7 +3,6 @@
 #include <d3d12.h>
 #include "d3dx12.h"
 #include "DirectXTex.h"
-#include <D3Dcompiler.h>
 #include <iostream>
 
 #include "Helpers.h"
