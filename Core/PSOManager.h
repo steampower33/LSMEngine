@@ -4,8 +4,11 @@
 #include "d3dx12.h"
 #include "DirectXTex.h"
 #include <D3Dcompiler.h>
+#include <iostream>
 
 #include "Helpers.h"
+
+#include <dxcapi.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -19,6 +22,8 @@ public:
 
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12PipelineState> m_defaultPSO;
-private:
 
+	ComPtr<IDxcCompiler3> compiler;
+	ComPtr<IDxcUtils> utils;
+	ComPtr<IDxcIncludeHandler> includeHandler;
 };

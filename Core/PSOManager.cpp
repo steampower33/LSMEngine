@@ -19,15 +19,11 @@ void PSOManager::Initialize(ComPtr<ID3D12Device> device)
 
 		CD3DX12_DESCRIPTOR_RANGE1 srvRange;
 		srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
-		
-		CD3DX12_DESCRIPTOR_RANGE1 srvRangeImGui;
-		srvRangeImGui.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE); // ImGui SRV
 
-		CD3DX12_ROOT_PARAMETER1 rootParameters[4];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[3];
 		rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters[2].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
-		rootParameters[3].InitAsDescriptorTable(1, &srvRangeImGui, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		// Static Sampler 설정
 		D3D12_STATIC_SAMPLER_DESC sampler = {};
@@ -55,17 +51,74 @@ void PSOManager::Initialize(ComPtr<ID3D12Device> device)
 		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
+	// DXC 초기화
+	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils)));
+	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
+	ThrowIfFailed(utils->CreateDefaultIncludeHandler(&includeHandler));
 	// Create the pipeline state, which includes compiling and loading shaders.
 	{
-		ComPtr<ID3DBlob> vertexShader;
-		ComPtr<ID3DBlob> pixelShader;
 
-		ThrowIfFailed(D3DCompileFromFile(
-			L"./Shaders/BasicVS.hlsl",
-			nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0", 0, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(
-			L"./Shaders/BasicPS.hlsl",
-			nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pixelShader, nullptr));
+		// Vertex Shader
+		ComPtr<IDxcBlobEncoding> VSSource;
+		ThrowIfFailed(utils->LoadFile(L"./Shaders/BasicVS.hlsl", nullptr, &VSSource));
+
+		DxcBuffer VSBuffer = {};
+		VSBuffer.Ptr = VSSource->GetBufferPointer();
+		VSBuffer.Size = VSSource->GetBufferSize();
+		VSBuffer.Encoding = DXC_CP_ACP; // 기본 인코딩
+
+		LPCWSTR VSArgs[] = {
+			L"-E", L"main",       // Entry point
+			L"-T", L"vs_6_0",     // Shader target (Vertex Shader, SM 6.0)
+			L"-I", L"./Shaders",  // Include 경로
+			L"-Zi",               // Debug 정보 포함
+			L"-Od"                // 최적화 비활성화 (디버깅용)
+		};
+
+		ComPtr<IDxcResult> result1;
+		ThrowIfFailed(compiler->Compile(&VSBuffer, VSArgs, _countof(VSArgs), includeHandler.Get(), IID_PPV_ARGS(&result1)));
+
+		// 컴파일된 셰이더 가져오기
+		ComPtr<IDxcBlob> vertexShader;
+		result1->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&vertexShader), nullptr);
+
+		// Pixel Shader
+		ComPtr<IDxcBlobEncoding> PSSource;
+		ThrowIfFailed(utils->LoadFile(L"./Shaders/BasicPS.hlsl", nullptr, &PSSource));
+
+		DxcBuffer PSBuffer = {};
+		PSBuffer.Ptr = PSSource->GetBufferPointer();
+		PSBuffer.Size = PSSource->GetBufferSize();
+		PSBuffer.Encoding = DXC_CP_ACP; // 기본 인코딩
+
+		LPCWSTR PSArgs[] = {
+			L"-E", L"main",       // Entry point
+			L"-T", L"ps_6_0",     // Shader target (Vertex Shader, SM 6.0)
+			L"-I", L"./Shaders",  // Include 경로
+			L"-Zi",               // Debug 정보 포함
+			L"-Od",                // 최적화 비활성화 (디버깅용)
+			L"-Qstrip_debug" // Strip debug information to minimize size
+		};
+
+		ComPtr<IDxcResult> result2;
+		ThrowIfFailed(compiler->Compile(&PSBuffer, PSArgs, _countof(PSArgs), includeHandler.Get(), IID_PPV_ARGS(&result2)));
+
+		// 컴파일된 셰이더 가져오기
+		ComPtr<IDxcBlob> pixelShader;
+		result2->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pixelShader), nullptr);
+
+		// 셰이더 컴파일 에러 확인
+		ComPtr<IDxcBlobUtf8> errors;
+		result1->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
+
+		if (errors && errors->GetStringLength() > 0) {
+			std::cout << "Vertex Shader Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
+		}
+
+		result2->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
+		if (errors && errors->GetStringLength() > 0) {
+			std::cout << "Pixel Shader Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
+		}
 
 		D3D12_INPUT_ELEMENT_DESC basicIE[] =
 		{
@@ -112,8 +165,8 @@ void PSOManager::Initialize(ComPtr<ID3D12Device> device)
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { basicIE, _countof(basicIE) };
 		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+		psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+		psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
 		psoDesc.RasterizerState = RasterizerDefault;
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
