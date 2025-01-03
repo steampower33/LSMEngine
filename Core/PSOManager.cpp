@@ -18,12 +18,13 @@ void PSOManager::Initialize(ComPtr<ID3D12Device> device)
 		}
 
 		CD3DX12_DESCRIPTOR_RANGE1 srvRange;
-		srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 32, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+		srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 24, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-		CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[4];
 		rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-		rootParameters[2].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+		rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters[3].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		// Static Sampler ¼³Á¤
 		D3D12_STATIC_SAMPLER_DESC sampler = {};

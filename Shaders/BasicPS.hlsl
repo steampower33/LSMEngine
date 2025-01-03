@@ -5,5 +5,5 @@ SamplerState g_sampler : register(s0, space0);
 
 float4 main(PSInput input) : SV_TARGET
 {
-    return g_texture[1].Sample(g_sampler, input.texcoord);
+    return g_texture[diffuseIndex].Sample(g_sampler, input.texcoord);
 }

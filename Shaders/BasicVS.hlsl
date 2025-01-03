@@ -1,13 +1,5 @@
 #include "Common.hlsli"
 
-cbuffer MeshConstants : register(b1)
-{
-    float4x4 world;
-    float4x4 worldIT;
-    float4x4 d3;
-    float4x4 d4;
-}
-
 PSInput main(VSInput input)
 {
     PSInput result;

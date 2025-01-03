@@ -10,16 +10,16 @@ void MainEngine::Initialize()
 
 	m_textureHandle = m_textureHeap->GetCPUDescriptorHandleForHeapStart();
 
-	MeshData meshData = GeometryGenerator::MakeBox();
-	meshData.a = "./Assets/wall_black.jpg";
+	/*MeshData meshData = GeometryGenerator::MakeBox();
+	meshData.diffuseFilename = "./Assets/wall_black.jpg";
 	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_textureHandle, std::vector{ meshData });
-	models.push_back(box);
+	models.push_back(box);*/
 
-	/*vector<MeshData> zeldaFbx =
+	vector<MeshData> zeldaFbx =
 		GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 
 	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_textureHandle, zeldaFbx);
-	models.push_back(zelda);*/
+	models.push_back(zelda);
 
 	ThrowIfFailed(m_commandList->Close());
 

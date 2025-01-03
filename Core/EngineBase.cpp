@@ -17,7 +17,10 @@ EngineBase::EngineBase() :
 	m_mousePosX(m_width / 2),
 	m_mousePosY(m_height / 2),
 	m_mouseDeltaX(0.0f),
-	m_mouseDeltaY(0.0f)
+	m_mouseDeltaY(0.0f),
+	m_cbvDescriptorSize(0),
+	m_rtvDescriptorSize(0),
+	m_fenceEvent(nullptr)
 {
 
 }
@@ -131,12 +134,6 @@ void EngineBase::LoadPipeline()
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
-
-		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-		cbvHeapDesc.NumDescriptors = 2;
-		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
 
 		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
 		textureHeapDesc.NumDescriptors = 32;

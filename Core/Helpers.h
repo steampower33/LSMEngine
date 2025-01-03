@@ -10,6 +10,10 @@
 #include "Mesh.h"
 #include "ConstantBuffers.h"
 
+#include <iostream>
+#include <unordered_set>
+#include <string>
+
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
@@ -37,6 +41,12 @@ inline void ThrowIfFailed(HRESULT hr)
 	{
 		throw HrException(hr);
 	}
+}
+
+inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, std::string& filename)
+{
+
+
 }
 
 static void CreateVertexBuffer(ComPtr<ID3D12Device>& device,
@@ -133,7 +143,7 @@ static void CreateIndexBuffer(ComPtr<ID3D12Device>& device,
 
 }
 
-static void CreateConstBuffer(ComPtr<ID3D12Device>& device,
+static void CreateConstUploadBuffer(ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& meshConstsUploadHeap,
 	MeshConstants& meshConstsBufferData,
@@ -163,11 +173,15 @@ inline std::wstring StringToWString(const std::string& str) {
 
 static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const std::string &filename,
-	std::shared_ptr<Mesh>& mesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE &textureHandle)
+	const std::string& filename,
+	std::shared_ptr<Mesh>& newMesh,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE& textureHandle,
+	std::vector<ComPtr<ID3D12Resource>>& textures,
+	std::vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	std::vector<UINT> &texturesIdx,
+	UINT& textureCnt)
 {
-	int idx = mesh->textureCnt;
+	ComPtr<ID3D12Resource> tex;
 	auto image = std::make_unique<ScratchImage>();
 
 	// std::string → std::wstring 변환
@@ -176,30 +190,31 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
 	DirectX::TexMetadata metaData = image.get()->GetMetadata();
-	ThrowIfFailed(CreateTexture(device.Get(), metaData, &mesh->texture[idx]));
+	ThrowIfFailed(CreateTexture(device.Get(), metaData, &tex));
 
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed(PrepareUpload(device.Get(), image.get()->GetImages(), image.get()->GetImageCount(), metaData, subresources));
 
 	// upload is implemented by application developer. Here's one solution using <d3dx12.h>
-	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mesh->texture[idx].Get(), 0, static_cast<unsigned int>(subresources.size()));
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex.Get(), 0, static_cast<unsigned int>(subresources.size()));
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+	ComPtr<ID3D12Resource> texUploadHeap;
 	ThrowIfFailed(device->CreateCommittedResource(
 		&uploadHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&buffer,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&mesh->textureUploadHeap[idx])));
+		IID_PPV_ARGS(&texUploadHeap)));
 
 	UpdateSubresources(
-		commandList.Get(), mesh->texture[idx].Get(), mesh->textureUploadHeap[idx].Get(),
+		commandList.Get(), tex.Get(), texUploadHeap.Get(),
 		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		mesh->texture[idx].Get(), // 텍스처 리소스
+		tex.Get(), // 텍스처 리소스
 		D3D12_RESOURCE_STATE_COPY_DEST, // 이전 상태
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE // 새로운 상태
 	);
@@ -212,8 +227,60 @@ static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
 	srvDesc.Texture2D.MipLevels = static_cast<UINT>(metaData.mipLevels);
 
 	device->CreateShaderResourceView(
-		mesh->texture[idx].Get(), // 텍스처 리소스
+		tex.Get(), // 텍스처 리소스
 		&srvDesc, // SRV 설명
 		textureHandle // 디스크립터 힙의 핸들
 	);
+
+	textures.push_back(tex);
+	texturesUploadHeap.push_back(texUploadHeap);
+
+	newMesh->constsBufferData.diffuseIndex = textureCnt;
+	texturesIdx.push_back(textureCnt++);
+
+}
+
+static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	std::shared_ptr<Mesh>& mesh)
+{
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	
+	const UINT constantsSize = sizeof(TextureIndexConstants);
+
+	D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantsSize);
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&mesh->constsBuffer)));
+
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	ThrowIfFailed(device->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&mesh->constsUploadHeap)));
+
+	CD3DX12_RANGE readRange(0, 0);
+	ThrowIfFailed(mesh->constsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&mesh->constsBufferDataBegin)));
+	memcpy(mesh->constsBufferDataBegin, &mesh->constsBufferData, sizeof(mesh->constsBufferData));
+	mesh->constsUploadHeap->Unmap(0, nullptr);
+
+	commandList->CopyBufferRegion(mesh->constsBuffer.Get(), 0, mesh->constsUploadHeap.Get(), 0, sizeof(mesh->constsBufferData));
+
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		mesh->constsBuffer.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+	);
+	commandList->ResourceBarrier(1, &barrier);
 }

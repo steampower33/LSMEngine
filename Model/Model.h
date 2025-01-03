@@ -36,9 +36,15 @@ private:
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 		const std::vector<MeshData>& meshDatas);
 
+	std::unordered_set<std::string> filenames;
+
 	std::vector<std::shared_ptr<Mesh>> m_meshes;
 	
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;
 	UINT8 *m_meshConstsBufferDataBegin;
+
+	std::vector<ComPtr<ID3D12Resource>> textures;
+	std::vector<ComPtr<ID3D12Resource>> texturesUploadHeap;
+	std::vector<UINT> texturesIdx;
 };

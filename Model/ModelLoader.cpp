@@ -138,8 +138,7 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-		newMesh.a =
-			ReadFilename(material, aiTextureType_DIFFUSE);
+		newMesh.diffuseFilename = ReadFilename(material, aiTextureType_DIFFUSE);
 	}
 
 	return newMesh;
