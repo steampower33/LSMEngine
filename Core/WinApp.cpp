@@ -24,7 +24,7 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 
 	if (!RegisterClassEx(&wc)) return false;
 
-	RECT windowRect = { 0, 0, pEngine->m_width, pEngine->m_height };
+	RECT windowRect = { 0, 0, static_cast<LONG>(pEngine->m_width), static_cast<LONG>(pEngine->m_height) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
 
 	m_hwnd = CreateWindow(wc.lpszClassName, L"LSMEngineWindow",
@@ -81,12 +81,13 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		HDC hdc = BeginPaint(hwnd, &ps);
 		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 		EndPaint(hwnd, &ps);
+		break;
 	}
 	case WM_MOUSEMOVE:
 	{
 		pEngine->m_isMouseMove = true;
-		float mousePosX = GET_X_LPARAM(lParam);
-		float mousePosY = GET_Y_LPARAM(lParam);
+		float mousePosX = static_cast<float>(GET_X_LPARAM(lParam));
+		float mousePosY = static_cast<float>(GET_Y_LPARAM(lParam));
 		pEngine->m_mouseDeltaX = mousePosX - pEngine->m_mousePosX;
 		pEngine->m_mouseDeltaY = mousePosY - pEngine->m_mousePosY;
 		pEngine->m_mousePosX = mousePosX;
@@ -141,7 +142,7 @@ std::wstring WinApp::GetLatestWinPixGpuCapturerPath()
 
 	WIN32_FIND_DATA findData;
 	bool foundPixInstallation = false;
-	wchar_t newestVersionFound[MAX_PATH];
+	wchar_t newestVersionFound[MAX_PATH] = L"";
 
 	HANDLE hFind = FindFirstFile(pixSearchPath.c_str(), &findData);
 	if (hFind != INVALID_HANDLE_VALUE)
@@ -165,6 +166,7 @@ std::wstring WinApp::GetLatestWinPixGpuCapturerPath()
 	if (!foundPixInstallation)
 	{
 		// TODO: Error, no PIX installation found
+		return L""; // 실패 시 빈 문자열 반환
 	}
 
 	wchar_t output[MAX_PATH];
@@ -172,5 +174,5 @@ std::wstring WinApp::GetLatestWinPixGpuCapturerPath()
 	StringCchCat(output, MAX_PATH, &newestVersionFound[0]);
 	StringCchCat(output, MAX_PATH, L"\\WinPixGpuCapturer.dll");
 
-	return &output[0];
+	return std::wstring(output);
 }

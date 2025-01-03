@@ -1,7 +1,7 @@
 
 #include "DescriptorHeapAllocator.h"
 
-HeapAllocator::HeapAllocator() : Heap(nullptr), HeapHandleIncrement(0) {}
+HeapAllocator::HeapAllocator() {}
 
 HeapAllocator::~HeapAllocator() { Destroy(); }
 
@@ -16,7 +16,7 @@ void HeapAllocator::Create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
 	HeapHandleIncrement = device->GetDescriptorHandleIncrementSize(HeapType);
 	//FreeIndices.reserve((int)desc.NumDescriptors / 2);
 	FreeIndices.reserve(8);
-	for (int n = desc.NumDescriptors; n > desc.NumDescriptors - 8; n--)
+	for (UINT n = desc.NumDescriptors; n > desc.NumDescriptors - 8; n--)
 		FreeIndices.push_back(n);
 }
 

@@ -49,7 +49,8 @@ inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, st
 
 }
 
-static void CreateVertexBuffer(ComPtr<ID3D12Device>& device,
+static void CreateVertexBuffer(
+	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const std::vector<Vertex>& vertcies,
 	std::shared_ptr<Mesh>& mesh)
@@ -96,12 +97,13 @@ static void CreateVertexBuffer(ComPtr<ID3D12Device>& device,
 
 }
 
-static void CreateIndexBuffer(ComPtr<ID3D12Device>& device,
+static void CreateIndexBuffer(
+	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const std::vector<uint32_t>& indices,
 	std::shared_ptr<Mesh>& mesh)
 {
-	mesh->indexBufferCount = indices.size();
+	mesh->indexBufferCount = static_cast<UINT>(indices.size());
 
 	const UINT indexBufferSizeInBytes =
 		static_cast<UINT>(indices.size() * sizeof(uint32_t));
@@ -143,7 +145,8 @@ static void CreateIndexBuffer(ComPtr<ID3D12Device>& device,
 
 }
 
-static void CreateConstUploadBuffer(ComPtr<ID3D12Device>& device,
+static void CreateConstUploadBuffer(
+	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& meshConstsUploadHeap,
 	MeshConstants& meshConstsBufferData,
@@ -171,7 +174,8 @@ inline std::wstring StringToWString(const std::string& str) {
 	return std::wstring(str.begin(), str.end());
 }
 
-static void CreateTextureBuffer(ComPtr<ID3D12Device>& device,
+static void CreateTextureBuffer(
+	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const std::string& filename,
 	std::shared_ptr<Mesh>& newMesh,

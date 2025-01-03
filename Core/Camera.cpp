@@ -3,11 +3,11 @@
 using namespace std;
 
 Camera::Camera() :
-	m_initPos(-3.6594, 4.57421, -4.0804),
+	m_initPos(-3.6594f, 4.57421f, -4.0804f),
 	m_pos(m_initPos),
-	m_lookDir(0.491738, -0.652002, 0.577137),
+	m_lookDir(0.491738f, -0.652002f, 0.577137f),
 	m_upDir(0.0f, 1.0f, 0.0f),
-	m_rightDir(0.761176, 0, -0.648545),
+	m_rightDir(0.761176f, 0.0f, -0.648545f),
 	m_cursorNdcX(0.0f),
 	m_cursorNdcY(0.0f),
 	m_yaw(0.705671f),

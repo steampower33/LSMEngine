@@ -57,7 +57,7 @@
     <ClCompile Include="Core\MainEngine.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Core\PSOManager.cpp">
+    <ClCompile Include="Core\GraphicsCommon.cpp">
       <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\WinApp.cpp">
@@ -119,7 +119,7 @@
     <ClInclude Include="Core\MainEngine.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Core\PSOManager.h">
+    <ClInclude Include="Core\GraphicsCommon.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\WinApp.h">

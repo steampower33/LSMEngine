@@ -81,7 +81,7 @@ void MainEngine::UpdateGUI()
 void MainEngine::Render()
 {
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_psoManager.m_defaultPSO.Get()));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), Graphics::defaultPSO.Get()));
 
 	auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_renderTargets[m_frameIndex].Get(),
@@ -95,7 +95,7 @@ void MainEngine::Render()
 	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	m_commandList->SetGraphicsRootSignature(m_psoManager.m_rootSignature.Get());
+	m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

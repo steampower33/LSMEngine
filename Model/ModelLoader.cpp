@@ -42,12 +42,12 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, XMMATRIX paren
 
 	XMMATRIX worldMatrix = XMMatrixMultiply(nodeMatrix, parentTransform);
 
-	for (int i = 0; i < node->mNumChildren; i++) {
+	for (uint32_t i = 0; i < node->mNumChildren; i++) {
 		ProcessNode(node->mChildren[i], scene, parentTransform);
 	}
 
 	// 3) 이 노드에 연결된 모든 메시를 처리
-	for (int i = 0; i < node->mNumMeshes; i++)
+	for (uint32_t i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 		MeshData newMesh = this->ProcessMesh(mesh, scene);
@@ -69,7 +69,7 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, XMMATRIX paren
 		meshes.push_back(newMesh);
 
 		// 4) 자식 노드 처리 (재귀)
-		for (int i = 0; i < node->mNumChildren; i++)
+		for (uint32_t i = 0; i < node->mNumChildren; i++)
 		{
 			ProcessNode(node->mChildren[i], scene, worldMatrix);
 		}
@@ -86,7 +86,7 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	indices.reserve(mesh->mNumFaces * 3); // Triangulate로 인해 Face는 보통 3 인덱스
 
 	// 1) 정점 정보
-	for (int i = 0; i < mesh->mNumVertices; i++)
+	for (uint32_t i = 0; i < mesh->mNumVertices; i++)
 	{
 		Vertex vertex = {};
 
@@ -120,10 +120,10 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	}
 
 	// 2) 인덱스 정보
-	for (int i = 0; i < mesh->mNumFaces; i++)
+	for (uint32_t i = 0; i < mesh->mNumFaces; i++)
 	{
 		const aiFace& face = mesh->mFaces[i];
-		for (int j = 0; j < face.mNumIndices; j++)
+		for (uint32_t j = 0; j < face.mNumIndices; j++)
 		{
 			indices.push_back(face.mIndices[j]);
 		}

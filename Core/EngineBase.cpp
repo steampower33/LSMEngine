@@ -7,10 +7,8 @@ class WinApp;
 HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
-	m_width(1280), m_height(800),
+	m_width(1280.0f), m_height(800.0f),
 	m_frameIndex(0),
-	m_viewport(0.0f, 0.0f, m_width, m_height),
-	m_scissorRect(0.0f, 0.0f, static_cast<LONG>(m_width), static_cast<LONG>(m_height)),
 	m_aspectRatio(16.0f / 9.0f),
 	m_useWarpDevice(false),
 	m_isMouseMove(false),
@@ -22,7 +20,17 @@ EngineBase::EngineBase() :
 	m_rtvDescriptorSize(0),
 	m_fenceEvent(nullptr)
 {
+	m_viewport.TopLeftX = 0.0f;
+	m_viewport.TopLeftY = 0.0f;
+	m_viewport.Width = m_width;
+	m_viewport.Height = m_height;
+	m_viewport.MinDepth = 0.0f;
+	m_viewport.MaxDepth = 1.0f;
 
+	m_scissorRect.left = 0;
+	m_scissorRect.top = 0;
+	m_scissorRect.right = static_cast<LONG>(m_width);
+	m_scissorRect.bottom = static_cast<LONG>(m_height);
 }
 
 EngineBase::~EngineBase()
@@ -98,8 +106,8 @@ void EngineBase::LoadPipeline()
 
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.BufferCount = FrameCount;
-	swapChainDesc.Width = m_width;
-	swapChainDesc.Height = m_height;
+	swapChainDesc.Width = static_cast<UINT>(m_width);
+	swapChainDesc.Height = static_cast<UINT>(m_height);
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -156,7 +164,7 @@ void EngineBase::LoadPipeline()
 		}
 	}
 
-	m_psoManager.Initialize(m_device);
+	Graphics::Initialize(m_device);
 
 	{
 
@@ -166,7 +174,7 @@ void EngineBase::LoadPipeline()
 		}
 
 		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), m_psoManager.m_defaultPSO.Get(), IID_PPV_ARGS(&m_commandList)));
+		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), Graphics::defaultPSO.Get(), IID_PPV_ARGS(&m_commandList)));
 
 		for (UINT n = 0; n < FrameCount; n++)
 		{
@@ -204,8 +212,8 @@ void EngineBase::LoadPipeline()
 		// Depth Stencil 버퍼 생성
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		depthStencilDesc.Width = m_width; // 화면 너비
-		depthStencilDesc.Height = m_height; // 화면 높이
+		depthStencilDesc.Width = static_cast<UINT>(m_width);; // 화면 너비
+		depthStencilDesc.Height = static_cast<UINT>(m_height); // 화면 높이
 		depthStencilDesc.DepthOrArraySize = 1;
 		depthStencilDesc.MipLevels = 1;
 		depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -296,9 +304,6 @@ void EngineBase::WaitForPreviousFrame()
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-// If no such adapter can be found, *ppAdapter will be set to nullptr.
-_Use_decl_annotations_
 void EngineBase::GetHardwareAdapter(
 	IDXGIFactory1* pFactory,
 	IDXGIAdapter1** ppAdapter,

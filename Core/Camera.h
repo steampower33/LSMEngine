@@ -7,6 +7,27 @@
 
 using namespace DirectX;
 
+struct KeysPressed
+{
+	KeysPressed() :
+		w(false), a(false), s(false), d(false),
+		q(false), e(false),
+		left(false), right(false), up(false), down(false) {
+	}
+
+	bool w;
+	bool a;
+	bool s;
+	bool d;
+	bool q;
+	bool e;
+
+	bool left;
+	bool right;
+	bool up;
+	bool down;
+};
+
 class Camera
 {
 public:
@@ -27,20 +48,6 @@ public:
 	bool m_useFirstPersonView;
 
 private:
-	struct KeysPressed
-	{
-		bool w;
-		bool a;
-		bool s;
-		bool d;
-		bool q;
-		bool e;
-
-		bool left;
-		bool right;
-		bool up;
-		bool down;
-	};
 
 	// set starting camera state
 	XMFLOAT3 m_initPos;

@@ -6,7 +6,7 @@ using namespace DirectX;
 
 struct Vertex
 {
-	Vertex() {}
+	Vertex() : position(0, 0, 0), texcoord(0, 0), normal(0, 0, 0) {}
 
 	Vertex(float x, float y, float z, float u, float v, float nX, float nY, float nZ) :
 		position(x, y, z), texcoord(u, v), normal(nX, nY, nZ) {

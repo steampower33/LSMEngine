@@ -11,7 +11,7 @@
 
 #include "DescriptorHeapAllocator.h"
 #include "Camera.h"
-#include "PSOManager.h"
+#include "GraphicsCommon.h"
 #include "ConstantBuffers.h"
 #include "Helpers.h"
 
@@ -31,14 +31,13 @@ public:
 
 	static HeapAllocator m_srvAlloc;
 
-	UINT m_width;
-	UINT m_height;
+	float m_width;
+	float m_height;
 
 	float m_aspectRatio;
 	static const UINT FrameCount = 3;
 
 	Camera m_camera;
-	PSOManager m_psoManager;
 
 	float m_mousePosX;
 	float m_mousePosY;
