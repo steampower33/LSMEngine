@@ -71,6 +71,7 @@ void MainEngine::UpdateGUI()
 
 	ImGui::Begin("Scene Control");
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGui::Checkbox("Draw Normals", &guiState.m_drawNormals);
 
 	ImGui::End();
 
@@ -109,7 +110,7 @@ void MainEngine::Render()
 
 	for (const auto& model : models)
 	{
-		model->Render(m_device, m_commandList, m_textureHeap);
+		model->Render(m_device, m_commandList, m_textureHeap, guiState);
 	}
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());

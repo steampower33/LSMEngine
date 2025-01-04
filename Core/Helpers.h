@@ -17,6 +17,10 @@
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
+struct GuiState {
+	bool m_drawNormals = false;
+};
+
 inline std::string HrToString(HRESULT hr)
 {
 	char s_str[64] = {};
@@ -42,7 +46,6 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw HrException(hr);
 	}
 }
-
 
 inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, std::string& filename)
 {

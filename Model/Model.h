@@ -26,7 +26,8 @@ public:
 	void Render(
 		ComPtr<ID3D12Device>& device,
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12DescriptorHeap>& textureHeap);
+		ComPtr<ID3D12DescriptorHeap>& textureHeap,
+		GuiState& guiState);
 
 	void Update();
 

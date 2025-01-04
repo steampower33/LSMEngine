@@ -17,6 +17,7 @@ public:
 
 private:
 
-	std::vector<shared_ptr<Model>> models;
+	GuiState guiState;
 
+	std::vector<shared_ptr<Model>> models;
 };
