@@ -25,14 +25,20 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> basicVS;
 	extern ComPtr<IDxcBlob> basicPS;
 
+	extern ComPtr<IDxcBlob> normalVS;
+	extern ComPtr<IDxcBlob> normalGS;
+	extern ComPtr<IDxcBlob> normalPS;
+
 	extern D3D12_RASTERIZER_DESC solidRS;
 
-	extern D3D12_BLEND_DESC defaultBlendDesc;
+	extern D3D12_BLEND_DESC disabledBlend;
 
-	extern D3D12_DEPTH_STENCIL_DESC depthStencilDesc;
+	extern D3D12_DEPTH_STENCIL_DESC disabledDS;
+	extern D3D12_DEPTH_STENCIL_DESC readWriteDS;
 
-	extern ComPtr<ID3D12PipelineState> defaultPSO;
-	
+	extern ComPtr<ID3D12PipelineState> basicPSO;
+	extern ComPtr<ID3D12PipelineState> normalPSO;
+
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();
 	void InitRootSignature(ComPtr<ID3D12Device>& device);
@@ -42,6 +48,10 @@ namespace Graphics
 	void InitDepthStencilStates();
 	void InitPipelineStates(ComPtr<ID3D12Device>& device);
 
-	void CreateVertexShader(ComPtr<ID3D12Device>& device, const wchar_t* basicVS, ComPtr<IDxcBlob>& vertexShader);
-	void CreatePixelShader(ComPtr<ID3D12Device>& device, const wchar_t* basicVS, ComPtr<IDxcBlob>& pixelShader);
+	void CreateShader(
+		ComPtr<ID3D12Device>& device,
+		const wchar_t* filename,
+		const wchar_t* targetProfile, // Shader Target Profile
+		ComPtr<IDxcBlob>& shaderBlob);
+
 }

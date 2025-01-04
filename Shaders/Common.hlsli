@@ -1,13 +1,15 @@
 struct VSInput
 {
-    float3 position : POSITION;
+    float3 posModel : POSITION;
     float2 texcoord : TEXCOORD;
-    float3 normal : NORMAL;
+    float3 normalModel : NORMAL;
 };
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
+    float4 posProj : SV_POSITION;
+    float3 posWorld : POSITION;
+    float3 normalWorld : NORMAL;
     float2 texcoord : TEXCOORD;
 };
 

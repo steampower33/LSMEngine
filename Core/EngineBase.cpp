@@ -8,17 +8,8 @@ HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
 	m_width(1280.0f), m_height(800.0f),
-	m_frameIndex(0),
-	m_aspectRatio(16.0f / 9.0f),
-	m_useWarpDevice(false),
-	m_isMouseMove(false),
 	m_mousePosX(m_width / 2),
-	m_mousePosY(m_height / 2),
-	m_mouseDeltaX(0.0f),
-	m_mouseDeltaY(0.0f),
-	m_cbvDescriptorSize(0),
-	m_rtvDescriptorSize(0),
-	m_fenceEvent(nullptr)
+	m_mousePosY(m_height / 2)
 {
 	m_viewport.TopLeftX = 0.0f;
 	m_viewport.TopLeftY = 0.0f;
@@ -174,7 +165,7 @@ void EngineBase::LoadPipeline()
 		}
 
 		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), Graphics::defaultPSO.Get(), IID_PPV_ARGS(&m_commandList)));
+		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), Graphics::basicPSO.Get(), IID_PPV_ARGS(&m_commandList)));
 
 		for (UINT n = 0; n < FrameCount; n++)
 		{

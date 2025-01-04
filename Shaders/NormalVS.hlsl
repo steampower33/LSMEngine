@@ -1,9 +1,17 @@
 #include "Common.hlsli"
 
-PSInput main( VSInput input )
+struct GSInput
 {
-    PSInput output;
-    output.position = float4(input.position, 1.0);
-    output.texcoord = input.texcoord;
+    float4 posModel : POSITION;
+    float4 normalModel : NORMAL;
+};
+
+GSInput main(VSInput input)
+{
+    GSInput output;
+    
+    output.posModel = float4(input.posModel, 1.0);
+    output.normalModel = float4(input.normalModel, 0.0);
+
     return output;
 }

@@ -160,6 +160,9 @@
     <FxCompile Include="Shaders\NormalVS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\NormalGS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\tile.jpg">

@@ -62,8 +62,6 @@ void Model::Update()
 
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
-	m_meshConstsBufferData.diffuseIndex = 0;
-
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 }
 
@@ -74,16 +72,22 @@ void Model::Render(
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
-	auto handle = textureHeap->GetGPUDescriptorHandleForHeapStart();
+	auto textureHandle = textureHeap->GetGPUDescriptorHandleForHeapStart();
 	auto size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	for (const auto& mesh : m_meshes)
 	{
 		commandList->SetGraphicsRootConstantBufferView(2, mesh->constsBuffer.Get()->GetGPUVirtualAddress());
-		commandList->SetGraphicsRootDescriptorTable(3, handle);
+		commandList->SetGraphicsRootDescriptorTable(3, textureHandle);
 
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
+
+		commandList->SetPipelineState(Graphics::basicPSO.Get());
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);
 
+		commandList->SetPipelineState(Graphics::normalPSO.Get());
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+		commandList->DrawInstanced(mesh->vertexBufferCount, 1, 0, 0);
 	}
 }

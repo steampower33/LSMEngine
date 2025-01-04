@@ -34,17 +34,17 @@ public:
 	float m_width;
 	float m_height;
 
-	float m_aspectRatio;
+	float m_aspectRatio = 16.0f / 9.0f;
 	static const UINT FrameCount = 3;
 
 	Camera m_camera;
 
-	float m_mousePosX;
-	float m_mousePosY;
-	float m_mouseDeltaX;
-	float m_mouseDeltaY;
+	float m_mousePosX = 0;
+	float m_mousePosY = 0;
+	float m_mouseDeltaX = 0;
+	float m_mouseDeltaY = 0;
 
-	bool m_isMouseMove;
+	bool m_isMouseMove = false;
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
@@ -59,14 +59,14 @@ public:
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-	UINT m_rtvDescriptorSize;
-	UINT m_cbvDescriptorSize;
+	UINT m_rtvDescriptorSize = 0;
+	UINT m_cbvDescriptorSize = 0;
 
 	ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
-	GlobalConstants m_globalConstsBufferData;
-	UINT8* m_globalConstsBufferDataBegin;
+	GlobalConstants m_globalConstsBufferData = {};
+	UINT8* m_globalConstsBufferDataBegin = nullptr;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
 
@@ -76,10 +76,10 @@ protected:
 	void WaitForPreviousFrame();
 
 	// Synchronization objects.
-	UINT m_frameIndex;
-	HANDLE m_fenceEvent;
-	ComPtr<ID3D12Fence> m_fence[FrameCount];
-	UINT64 m_fenceValue[FrameCount];
+	UINT m_frameIndex = 0;
+	HANDLE m_fenceEvent = nullptr;
+	ComPtr<ID3D12Fence> m_fence[FrameCount] = {};
+	UINT64 m_fenceValue[FrameCount] = {};
 
 	// Get Adapter
 	void GetHardwareAdapter(
@@ -88,5 +88,5 @@ protected:
 		bool requestHighPerformanceAdapter = false);
 
 	// Adapter info.
-	bool m_useWarpDevice;
+	bool m_useWarpDevice = false;
 };

@@ -11,13 +11,19 @@ namespace Graphics
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
 
+	ComPtr<IDxcBlob> normalVS;
+	ComPtr<IDxcBlob> normalGS;
+	ComPtr<IDxcBlob> normalPS;
+
 	D3D12_RASTERIZER_DESC solidRS;
 
-	D3D12_BLEND_DESC defaultBlendDesc;
+	D3D12_BLEND_DESC disabledBlend;
 
-	D3D12_DEPTH_STENCIL_DESC depthStencilDesc;
+	D3D12_DEPTH_STENCIL_DESC disabledDS;
+	D3D12_DEPTH_STENCIL_DESC readWriteDS;
 
-	ComPtr<ID3D12PipelineState> defaultPSO;
+	ComPtr<ID3D12PipelineState> basicPSO;
+	ComPtr<ID3D12PipelineState> normalPSO;
 }
 
 void Graphics::InitDXC()
@@ -75,11 +81,19 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 
 void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 {
+	// Basic
 	const wchar_t basicVSFilename[] = L"./Shaders/BasicVS.hlsl";
-	CreateVertexShader(device, basicVSFilename, basicVS);
-
 	const wchar_t basicPSFilename[] = L"./Shaders/BasicPS.hlsl";
-	CreatePixelShader(device, basicPSFilename, basicPS);
+	CreateShader(device, basicVSFilename, L"vs_6_0", basicVS);
+	CreateShader(device, basicPSFilename, L"ps_6_0", basicPS);
+
+	// Normal
+	const wchar_t normalVSFilename[] = L"./Shaders/NormalVS.hlsl";
+	const wchar_t normalGSFilename[] = L"./Shaders/NormalGS.hlsl";
+	const wchar_t normalPSFilename[] = L"./Shaders/NormalPS.hlsl";
+	CreateShader(device, normalVSFilename, L"vs_6_0", normalVS);
+	CreateShader(device, normalGSFilename, L"gs_6_0", normalGS);
+	CreateShader(device, normalPSFilename, L"ps_6_0", normalPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -99,43 +113,42 @@ void Graphics::InitRasterizerStates()
 
 void Graphics::InitBlendStates()
 {
-	defaultBlendDesc.AlphaToCoverageEnable = FALSE;  // 멀티샘플링 알파 사용 여부
-	defaultBlendDesc.IndependentBlendEnable = FALSE; // 모든 RenderTarget이 동일한 설정 사용
+	disabledBlend.AlphaToCoverageEnable = FALSE;  // 멀티샘플링 알파 사용 여부
+	disabledBlend.IndependentBlendEnable = FALSE; // 모든 RenderTarget이 동일한 설정 사용
 
-	D3D12_RENDER_TARGET_BLEND_DESC defaultRenderTargetBlendDesc = {};
-	defaultRenderTargetBlendDesc.BlendEnable = FALSE; // 기본적으로 블렌딩 비활성화
-	defaultRenderTargetBlendDesc.LogicOpEnable = FALSE; // 논리 연산 비활성화
-	defaultRenderTargetBlendDesc.SrcBlend = D3D12_BLEND_ONE; // 소스 색상 그대로 사용
-	defaultRenderTargetBlendDesc.DestBlend = D3D12_BLEND_ZERO; // 대상 색상 무시
-	defaultRenderTargetBlendDesc.BlendOp = D3D12_BLEND_OP_ADD; // 소스 + 대상
-	defaultRenderTargetBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE; // 알파값 그대로
-	defaultRenderTargetBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO; // 대상 알파값 무시
-	defaultRenderTargetBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD; // 알파 합산
-	defaultRenderTargetBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA 모두 쓰기 활성화
+	D3D12_RENDER_TARGET_BLEND_DESC disabledBlendDesc = {};
+	disabledBlendDesc.BlendEnable = FALSE; // 기본적으로 블렌딩 비활성화
+	disabledBlendDesc.LogicOpEnable = FALSE; // 논리 연산 비활성화
+	disabledBlendDesc.SrcBlend = D3D12_BLEND_ONE; // 소스 색상 그대로 사용
+	disabledBlendDesc.DestBlend = D3D12_BLEND_ZERO; // 대상 색상 무시
+	disabledBlendDesc.BlendOp = D3D12_BLEND_OP_ADD; // 소스 + 대상
+	disabledBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE; // 알파값 그대로
+	disabledBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO; // 대상 알파값 무시
+	disabledBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD; // 알파 합산
+	disabledBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA 모두 쓰기 활성화
 
-	defaultBlendDesc.RenderTarget[0] = defaultRenderTargetBlendDesc;
+	disabledBlend.RenderTarget[0] = disabledBlendDesc;
 }
 
 void Graphics::InitDepthStencilStates()
 {
-	depthStencilDesc.DepthEnable = TRUE; // Depth 테스트 활성화 여부
-	depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // Depth 쓰기 마스크
-	depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // Depth 비교 함수
-	depthStencilDesc.StencilEnable = FALSE; // 스텐실 테스트 활성화 여부
-	depthStencilDesc.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK; // 스텐실 읽기 마스크
-	depthStencilDesc.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK; // 스텐실 쓰기 마스크
 
-	// Front-facing 스텐실 작업 설정
-	depthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	disabledDS.DepthEnable = FALSE;
+	disabledDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	disabledDS.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	disabledDS.StencilEnable = FALSE;
+	disabledDS.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+	disabledDS.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+	disabledDS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	disabledDS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	disabledDS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	disabledDS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	disabledDS.BackFace = disabledDS.FrontFace;
 
-	// Back-facing 스텐실 작업 설정
-	depthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	readWriteDS = disabledDS;
+	readWriteDS.DepthEnable = TRUE;
+	readWriteDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	readWriteDS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 }
 
 void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
@@ -149,23 +162,39 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	};
 
 	// Describe and create the graphcis pipeline state object (PSO).
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.InputLayout = { basicIE, _countof(basicIE) };
-	psoDesc.pRootSignature = rootSignature.Get();
-	psoDesc.VS = { basicVS->GetBufferPointer(), basicVS->GetBufferSize() };
-	psoDesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
-	psoDesc.RasterizerState = solidRS;
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicPSODesc = {};
+	basicPSODesc.InputLayout = { basicIE, _countof(basicIE) };
+	basicPSODesc.pRootSignature = rootSignature.Get();
+	basicPSODesc.VS = { basicVS->GetBufferPointer(), basicVS->GetBufferSize() };
+	basicPSODesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
+	basicPSODesc.RasterizerState = solidRS;
+	basicPSODesc.BlendState = disabledBlend;
+	basicPSODesc.DepthStencilState = readWriteDS;
+	basicPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	basicPSODesc.SampleDesc.Count = 1;
+	basicPSODesc.SampleMask = UINT_MAX;
+	basicPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	basicPSODesc.NumRenderTargets = 1;
+	basicPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicPSODesc, IID_PPV_ARGS(&basicPSO)));
 
-	psoDesc.DepthStencilState = depthStencilDesc;
-	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	psoDesc.SampleDesc.Count = 1;
-	psoDesc.SampleMask = UINT_MAX;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC normalPSODesc = {};
+	normalPSODesc.InputLayout = { basicIE, _countof(basicIE) };
+	normalPSODesc.pRootSignature = rootSignature.Get();
+	normalPSODesc.VS = { normalVS->GetBufferPointer(), normalVS->GetBufferSize() };
+	normalPSODesc.GS = { normalGS->GetBufferPointer(), normalGS->GetBufferSize() };
+	normalPSODesc.PS = { normalPS->GetBufferPointer(), normalPS->GetBufferSize() };
+	normalPSODesc.RasterizerState = solidRS;
+	normalPSODesc.BlendState = disabledBlend;
+	normalPSODesc.DepthStencilState = readWriteDS;
+	normalPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	normalPSODesc.SampleDesc.Count = 1;
+	normalPSODesc.SampleMask = UINT_MAX;
+	normalPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	normalPSODesc.NumRenderTargets = 1;
+	normalPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&defaultPSO)));
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&normalPSODesc, IID_PPV_ARGS(&normalPSO)));
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)
@@ -180,70 +209,41 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 }
 
 
-void Graphics::CreateVertexShader(ComPtr<ID3D12Device>& device, const wchar_t* basicVS, ComPtr<IDxcBlob>& vertexShader)
+void Graphics::CreateShader(
+	ComPtr<ID3D12Device>& device, 
+	const wchar_t* filename,
+	const wchar_t* targetProfile, // Shader Target Profile
+	ComPtr<IDxcBlob>& shaderBlob)
 {
-	ComPtr<IDxcBlobEncoding> VSSource;
-	ThrowIfFailed(utils->LoadFile(L"./Shaders/BasicVS.hlsl", nullptr, &VSSource));
+	ComPtr<IDxcBlobEncoding> source;
+	ThrowIfFailed(utils->LoadFile(filename, nullptr, &source));
 
-	DxcBuffer VSBuffer = {};
-	VSBuffer.Ptr = VSSource->GetBufferPointer();
-	VSBuffer.Size = VSSource->GetBufferSize();
-	VSBuffer.Encoding = DXC_CP_ACP; // 기본 인코딩
+	DxcBuffer buffer = {};
+	buffer.Ptr = source->GetBufferPointer();
+	buffer.Size = source->GetBufferSize();
+	buffer.Encoding = DXC_CP_ACP; // 기본 인코딩
 
-	LPCWSTR VSArgs[] = {
+	LPCWSTR args[] = {
 		L"-E", L"main",       // Entry point
-		L"-T", L"vs_6_0",     // Shader target (Vertex Shader, SM 6.0)
+		L"-T", targetProfile, // Shader target
 		L"-I", L"./Shaders",  // Include 경로
 		L"-Zi",               // Debug 정보 포함
 		L"-Od",               // 최적화 비활성화 (디버깅용)
-		L"-Qstrip_debug"
+		L"-Qembed_debug"
 	};
 
 	ComPtr<IDxcResult> result;
-	ThrowIfFailed(compiler->Compile(&VSBuffer, VSArgs, _countof(VSArgs), includeHandler.Get(), IID_PPV_ARGS(&result)));
+	ThrowIfFailed(compiler->Compile(&buffer, args, _countof(args), includeHandler.Get(), IID_PPV_ARGS(&result)));
 
 	// 컴파일된 셰이더 가져오기
-	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&vertexShader), nullptr);
+	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
 
 	// 셰이더 컴파일 에러 확인
 	ComPtr<IDxcBlobUtf8> errors;
 	result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
 
 	if (errors && errors->GetStringLength() > 0) {
-		std::cout << "Vertex Shader Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
-	}
-}
-
-void Graphics::CreatePixelShader(ComPtr<ID3D12Device>& device, const wchar_t* basicVS, ComPtr<IDxcBlob>& pixelShader)
-{
-	ComPtr<IDxcBlobEncoding> PSSource;
-	ThrowIfFailed(utils->LoadFile(L"./Shaders/BasicPS.hlsl", nullptr, &PSSource));
-
-	DxcBuffer PSBuffer = {};
-	PSBuffer.Ptr = PSSource->GetBufferPointer();
-	PSBuffer.Size = PSSource->GetBufferSize();
-	PSBuffer.Encoding = DXC_CP_ACP; // 기본 인코딩
-
-	LPCWSTR PSArgs[] = {
-		L"-E", L"main",       // Entry point
-		L"-T", L"ps_6_0",     // Shader target (Vertex Shader, SM 6.0)
-		L"-I", L"./Shaders",  // Include 경로
-		L"-Zi",               // Debug 정보 포함
-		L"-Od",                // 최적화 비활성화 (디버깅용)
-		L"-Qstrip_debug" // Strip debug information to minimize size
-	};
-
-	ComPtr<IDxcResult> result;
-	ThrowIfFailed(compiler->Compile(&PSBuffer, PSArgs, _countof(PSArgs), includeHandler.Get(), IID_PPV_ARGS(&result)));
-
-	// 컴파일된 셰이더 가져오기
-	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pixelShader), nullptr);
-
-	// 셰이더 컴파일 에러 확인
-	ComPtr<IDxcBlobUtf8> errors;
-	result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
-
-	if (errors && errors->GetStringLength() > 0) {
-		std::cout << "Pixel Shader Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
+		std::wcout << targetProfile;
+		std::cout << " Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
 	}
 }

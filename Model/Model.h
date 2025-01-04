@@ -8,6 +8,7 @@
 #include "ConstantBuffers.h"
 #include "Helpers.h"
 #include "Mesh.h"
+#include "GraphicsCommon.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;

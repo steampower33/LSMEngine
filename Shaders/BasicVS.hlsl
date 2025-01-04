@@ -2,13 +2,22 @@
 
 PSInput main(VSInput input)
 {
-    PSInput result;
+    PSInput output;
     
-    float4 worldPosition = mul(float4(input.position, 1.0f), world);
-    float4 viewPosition = mul(worldPosition, view);
-    result.position = mul(viewPosition, proj);
+    float4 pos = float4(input.posModel, 1.0f);
+    pos = mul(pos, world);
     
-    result.texcoord = input.texcoord;
-
-    return result;
+    output.posWorld = pos.xyz;
+    
+    pos = mul(pos, view);
+    pos = mul(pos, proj);
+    
+    output.posProj = pos;
+    output.texcoord = input.texcoord;
+    
+    float4 normal = float4(input.normalModel, 0.0f);
+    output.normalWorld = mul(normal, worldIT).xyz;
+    output.normalWorld = normalize(output.normalWorld);
+    
+    return output;
 }

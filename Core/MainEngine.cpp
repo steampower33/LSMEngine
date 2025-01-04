@@ -81,26 +81,26 @@ void MainEngine::UpdateGUI()
 void MainEngine::Render()
 {
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), Graphics::defaultPSO.Get()));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
 
 	auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_renderTargets[m_frameIndex].Get(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &presentToRT);
 
+	m_commandList->RSSetViewports(1, &m_viewport);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
 
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

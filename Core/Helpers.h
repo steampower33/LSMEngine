@@ -43,6 +43,7 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
+
 inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, std::string& filename)
 {
 
@@ -52,12 +53,13 @@ inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, st
 static void CreateVertexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const std::vector<Vertex>& vertcies,
+	const std::vector<Vertex>& vertices,
 	std::shared_ptr<Mesh>& mesh)
 {
+	mesh->vertexBufferCount = vertices.size();
 
 	const UINT vertexBufferSizeInBytes =
-		static_cast<UINT>(vertcies.size() * sizeof(Vertex));
+		static_cast<UINT>(vertices.size() * sizeof(Vertex));
 
 	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSizeInBytes);
 
@@ -81,7 +83,7 @@ static void CreateVertexBuffer(
 
 
 	D3D12_SUBRESOURCE_DATA vertexData = {};
-	vertexData.pData = vertcies.data();
+	vertexData.pData = vertices.data();
 	vertexData.RowPitch = vertexBufferSizeInBytes;
 	vertexData.SlicePitch = vertexBufferSizeInBytes;
 
