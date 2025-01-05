@@ -163,12 +163,18 @@
     <FxCompile Include="Shaders\NormalGS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SkyboxPS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SkyboxVS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\tile.jpg">
+    <Image Include="Assets\wall_black.jpg">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\wall_black.jpg">
+    <Image Include="Assets\winter.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>

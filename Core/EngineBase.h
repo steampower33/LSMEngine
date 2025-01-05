@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <DirectXMath.h>
@@ -67,8 +69,6 @@ public:
 	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
 	GlobalConstants m_globalConstsBufferData = {};
 	UINT8* m_globalConstsBufferDataBegin = nullptr;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
 
 protected:
 	void LoadPipeline();

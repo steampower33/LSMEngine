@@ -19,5 +19,10 @@ private:
 
 	GuiState guiState;
 
+	shared_ptr<Model> m_skybox;
+
 	std::vector<shared_ptr<Model>> models;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
+	UINT m_totalTextureCnt;
 };

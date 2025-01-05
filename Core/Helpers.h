@@ -11,8 +11,13 @@
 #include "ConstantBuffers.h"
 
 #include <iostream>
+#include <algorithm>
 #include <unordered_set>
 #include <string>
+
+#include "DirectXTex.h"
+#include "directxtk12\DDSTextureLoader.h"
+#include "directxtk12\ResourceUploadBatch.h"
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -179,23 +184,88 @@ inline std::wstring StringToWString(const std::string& str) {
 	return std::wstring(str.begin(), str.end());
 }
 
+
+static void CreateDDSTextureBuffer(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12CommandQueue>& commandQueue,
+	const std::string& filename,
+	std::shared_ptr<Mesh>& newMesh,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+	std::vector<ComPtr<ID3D12Resource>>& textures,
+	std::vector<UINT>& texturesIdx,
+	UINT& totalTextureCnt)
+{
+
+	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	textureHandle.Offset(size * totalTextureCnt);
+
+	std::wstring wideFilename = StringToWString(filename);
+
+	// ResourceUploadBatch 객체 생성
+	ResourceUploadBatch resourceUpload(device.Get());
+	resourceUpload.Begin();
+
+	// DDS 텍스처 로드
+	ComPtr<ID3D12Resource> tex;
+	DDS_ALPHA_MODE alphaMode;
+	bool isCubeMap = true;
+
+	ThrowIfFailed(CreateDDSTextureFromFileEx(
+		device.Get(),
+		resourceUpload,
+		wideFilename.c_str(),
+		0,
+		D3D12_RESOURCE_FLAG_NONE,
+		DDS_LOADER_DEFAULT,
+		tex.GetAddressOf(),
+		&alphaMode,
+		&isCubeMap));
+
+	// 업로드 배치 종료 및 GPU에 제출
+	auto uploadFuture = resourceUpload.End(commandQueue.Get());
+	uploadFuture.wait();
+
+	// SRV 생성
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = tex->GetDesc().Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.Texture2D.MipLevels = tex->GetDesc().MipLevels;
+
+	device->CreateShaderResourceView(
+		tex.Get(),
+		&srvDesc,
+		textureHandle
+	);
+
+	// 리소스 관리
+	textures.push_back(tex);
+
+	newMesh->constsBufferData.cubemapIndex = totalTextureCnt;
+	texturesIdx.push_back(totalTextureCnt++);
+
+	wprintf(L"Successfully loaded DDS texture: %s\n", wideFilename.c_str());
+}
+
 static void CreateTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const std::string& filename,
 	std::shared_ptr<Mesh>& newMesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE& textureHandle,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	std::vector<ComPtr<ID3D12Resource>>& textures,
 	std::vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
-	std::vector<UINT> &texturesIdx,
-	UINT& textureCnt)
+	std::vector<UINT>& texturesIdx,
+	UINT& totalTextureCnt)
 {
-	ComPtr<ID3D12Resource> tex;
+	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	textureHandle.Offset(size * totalTextureCnt);
+
 	auto image = std::make_unique<ScratchImage>();
 
-	// std::string → std::wstring 변환
-	std::wstring wideFilename = StringToWString(filename);
+	ComPtr<ID3D12Resource> tex;
 
+	std::wstring wideFilename = StringToWString(filename);
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
 	DirectX::TexMetadata metaData = image.get()->GetMetadata();
@@ -244,8 +314,10 @@ static void CreateTextureBuffer(
 	textures.push_back(tex);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	newMesh->constsBufferData.diffuseIndex = textureCnt;
-	texturesIdx.push_back(textureCnt++);
+	newMesh->constsBufferData.diffuseIndex = totalTextureCnt;
+	texturesIdx.push_back(totalTextureCnt++);
+
+	wprintf(L"Successfully loaded texture: %s\n", wideFilename.c_str());
 
 }
 
@@ -257,7 +329,7 @@ static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	
+
 	const UINT constantsSize = sizeof(TextureIndexConstants);
 
 	D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantsSize);

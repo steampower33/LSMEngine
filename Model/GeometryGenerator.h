@@ -9,6 +9,6 @@ using namespace std;
 
 class GeometryGenerator {
 public:
-	static MeshData MakeBox();
+	static MeshData MakeBox(const float scale);
 	static vector<MeshData> ReadFromFile(string basePath, string filename);
 };

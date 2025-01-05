@@ -11,6 +11,9 @@
     },
     {
       "name": "assimp"
+    },
+    {
+      "name": "directxtk12"
     }
   ]
 }

@@ -15,6 +15,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> normalGS;
 	ComPtr<IDxcBlob> normalPS;
 
+	ComPtr<IDxcBlob> skyboxVS;
+	ComPtr<IDxcBlob> skyboxPS;
+
 	D3D12_RASTERIZER_DESC solidRS;
 
 	D3D12_BLEND_DESC disabledBlend;
@@ -24,6 +27,7 @@ namespace Graphics
 
 	ComPtr<ID3D12PipelineState> basicPSO;
 	ComPtr<ID3D12PipelineState> normalPSO;
+	ComPtr<ID3D12PipelineState> skyboxPSO;
 }
 
 void Graphics::InitDXC()
@@ -94,6 +98,12 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, normalVSFilename, L"vs_6_0", normalVS);
 	CreateShader(device, normalGSFilename, L"gs_6_0", normalGS);
 	CreateShader(device, normalPSFilename, L"ps_6_0", normalPS);
+
+	// skybox
+	const wchar_t skyboxVSFilename[] = L"./Shaders/SkyboxVS.hlsl";
+	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
+	CreateShader(device, skyboxVSFilename, L"vs_6_0", skyboxVS);
+	CreateShader(device, skyboxPSFilename, L"ps_6_0", skyboxPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -195,6 +205,23 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	normalPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&normalPSODesc, IID_PPV_ARGS(&normalPSO)));
+
+	// Describe and create the graphcis pipeline state object (PSO).
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = {};
+	skyboxPSODesc.InputLayout = { basicIE, _countof(basicIE) };
+	skyboxPSODesc.pRootSignature = rootSignature.Get();
+	skyboxPSODesc.VS = { skyboxVS->GetBufferPointer(), skyboxVS->GetBufferSize() };
+	skyboxPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
+	skyboxPSODesc.RasterizerState = solidRS;
+	skyboxPSODesc.BlendState = disabledBlend;
+	skyboxPSODesc.DepthStencilState = readWriteDS;
+	skyboxPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	skyboxPSODesc.SampleDesc.Count = 1;
+	skyboxPSODesc.SampleMask = UINT_MAX;
+	skyboxPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	skyboxPSODesc.NumRenderTargets = 1;
+	skyboxPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&skyboxPSO)));
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)

@@ -1,45 +1,45 @@
 #include "GeometryGenerator.h"
 
-MeshData GeometryGenerator::MakeBox() {
+MeshData GeometryGenerator::MakeBox(const float scale) {
 	MeshData meshData;
 
 	meshData.vertices =
 	{
 		// front
-		{ -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f},
-		{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f},
-		{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-		{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
 
 		// back
-		{  1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
-		{  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f },
-		{ -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f },
-		{ -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f },
+		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, 0.0f, 0.0f,  1.0f },
+		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, 0.0f, 0.0f,  1.0f },
+		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f, 0.0f, 0.0f,  1.0f },
+		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f, 0.0f, 0.0f,  1.0f },
 
 		// top
-		{ -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-		{ -1.0f, 1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f },
-		{  1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f },
-		{  1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 1.0f, 0.0f,  1.0f, 0.0f },
+		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, 0.0f,  1.0f, 0.0f },
+		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f, 0.0f,  1.0f, 0.0f },
+		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 1.0f, 0.0f,  1.0f, 0.0f },
 
 		// bottom
-		{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-		{ -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-		{  1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-		{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-
+		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
+		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
+	
 		// left
-		{ -1.0f, -1.0f,  1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f,  1.0f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f,  1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-
+		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
+		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
+	
 		// right
-		{  1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-		{  1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
-		{  1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f },
-		{  1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f },
+		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f },
+		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f },
+		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f,  1.0f, 0.0f, 0.0f },
 	};
 
 	meshData.indices = {
@@ -62,7 +62,7 @@ vector<MeshData> GeometryGenerator::ReadFromFile(string basePath, string filenam
 	ModelLoader modelLoader;
 	modelLoader.Load(basePath, filename);
 
-	vector<MeshData> &meshes = modelLoader.meshes;
+	vector<MeshData>& meshes = modelLoader.meshes;
 
 	// Normalize vertices
 	XMFLOAT3 vmin(1000, 1000, 1000);

@@ -9,16 +9,23 @@ void MainEngine::Initialize()
 	LoadPipeline();
 
 	m_textureHandle = m_textureHeap->GetCPUDescriptorHandleForHeapStart();
+	m_totalTextureCnt = 0;
 
-	/*MeshData meshData = GeometryGenerator::MakeBox();
+	/*MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 	meshData.diffuseFilename = "./Assets/wall_black.jpg";
 	shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_textureHandle, std::vector{ meshData });
 	models.push_back(box);*/
 
+	MeshData skybox = GeometryGenerator::MakeBox(20.0f);
+	std::reverse(skybox.indices.begin(), skybox.indices.end());
+
+	skybox.ddsFilename = "./Assets/winter.dds";
+	m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt);
+
 	vector<MeshData> zeldaFbx =
 		GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 
-	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_textureHandle, zeldaFbx);
+	shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, zeldaFbx, m_totalTextureCnt);
 	models.push_back(zelda);
 
 	ThrowIfFailed(m_commandList->Close());
@@ -55,6 +62,8 @@ void MainEngine::Update(float dt)
 	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
+
+	m_skybox->Update();
 
 	for (const auto& model : models)
 	{
@@ -108,10 +117,10 @@ void MainEngine::Render()
 
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
+	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
+
 	for (const auto& model : models)
-	{
 		model->Render(m_device, m_commandList, m_textureHeap, guiState);
-	}
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 

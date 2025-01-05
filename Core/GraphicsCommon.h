@@ -29,6 +29,9 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> normalGS;
 	extern ComPtr<IDxcBlob> normalPS;
 
+	extern ComPtr<IDxcBlob> skyboxVS;
+	extern ComPtr<IDxcBlob> skyboxPS;
+
 	extern D3D12_RASTERIZER_DESC solidRS;
 
 	extern D3D12_BLEND_DESC disabledBlend;
@@ -38,6 +41,7 @@ namespace Graphics
 
 	extern ComPtr<ID3D12PipelineState> basicPSO;
 	extern ComPtr<ID3D12PipelineState> normalPSO;
+	extern ComPtr<ID3D12PipelineState> skyboxPSO;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();

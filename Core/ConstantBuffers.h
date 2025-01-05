@@ -23,7 +23,8 @@ __declspec(align(256)) struct MeshConstants {
 
 __declspec(align(256)) struct TextureIndexConstants {
     UINT diffuseIndex;
-    UINT dummy[15];
+    UINT cubemapIndex;
+    UINT dummy[14];
     XMFLOAT4X4 dummy1;
     XMFLOAT4X4 dummy2;
 };
