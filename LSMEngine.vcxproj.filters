@@ -177,5 +177,8 @@
     <Image Include="Assets\winter.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\earth.jpg">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -28,13 +28,13 @@ MeshData GeometryGenerator::MakeBox(const float scale) {
 		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
 		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
 		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-	
+
 		// left
 		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
 		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
 		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
 		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-	
+
 		// right
 		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f },
 		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f },
@@ -94,7 +94,7 @@ vector<MeshData> GeometryGenerator::ReadFromFile(string basePath, string filenam
 }
 
 MeshData GeometryGenerator::MakeCylinder(
-	const float bottomRadius, const float topRadius, 
+	const float bottomRadius, const float topRadius,
 	float height, int sliceCount) {
 
 	const float dTheta = -XM_2PI / float(sliceCount);
@@ -143,7 +143,7 @@ MeshData GeometryGenerator::MakeCylinder(
 
 		vertices.push_back(v);
 	}
-	
+
 	vector<uint32_t>& indices = meshData.indices;
 
 	for (int i = 0; i < sliceCount; i++) {
@@ -156,5 +156,57 @@ MeshData GeometryGenerator::MakeCylinder(
 		indices.push_back(i + 1);
 	}
 
+	return meshData;
+}
+
+MeshData GeometryGenerator::MakeSphere(const float radius,
+	const int numSlices, const int numStacks) {
+
+	const float dTheta = -XM_2PI / float(numSlices);
+	const float dPhi = -XM_PI / float(numStacks);
+
+	MeshData meshData;
+
+	vector<Vertex>& vertices = meshData.vertices;
+
+	for (int j = 0; j <= numStacks; j++)
+	{
+		XMVECTOR startPosition = { 0.0f, -radius, 0.0f };
+		XMMATRIX rotationZ = XMMatrixRotationZ(dPhi * float(j));
+
+		startPosition = XMVector3TransformCoord(startPosition, rotationZ);
+
+		for (int i = 0; i <= numSlices; i++) {
+			Vertex v;
+
+			XMMATRIX rotationY = XMMatrixRotationY(dTheta * float(i));
+			XMVECTOR position = XMVector3TransformCoord(startPosition, rotationY);
+
+			XMStoreFloat3(&v.position, position);
+
+			XMStoreFloat3(&v.normal, XMVector3Normalize(position));
+
+			v.texcoord = { float(i) / numSlices, 1.0f - float(j) / numStacks};
+
+			vertices.push_back(v);
+		}
+	}
+
+	vector<uint32_t>& indices = meshData.indices;
+
+	for (int j = 0; j < numStacks; j++)
+	{
+		const int offset = (numSlices + 1) * j;
+
+		for (int i = 0; i < numSlices; i++) {
+			indices.push_back(offset + i);
+			indices.push_back(offset + i + numSlices + 1);
+			indices.push_back(offset + i + numSlices + 2);
+
+			indices.push_back(offset + i);
+			indices.push_back(offset + i + numSlices + 2);
+			indices.push_back(offset + i + 1);
+		}
+	}
 	return meshData;
 }

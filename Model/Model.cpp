@@ -84,7 +84,6 @@ void Model::Initialize(
 
 void Model::Update()
 {
-
 	XMVECTOR posVec = XMLoadFloat4(&pos);
 
 	XMMATRIX world = XMMatrixTranspose(XMMatrixTranslationFromVector(posVec));

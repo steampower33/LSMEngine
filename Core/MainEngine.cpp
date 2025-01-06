@@ -20,7 +20,7 @@ void MainEngine::Initialize()
 
 	}
 
-	{
+	/*{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
 		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
@@ -33,6 +33,12 @@ void MainEngine::Initialize()
 		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
 		cylinder->pos = XMFLOAT4(-3.0f, 0.0f, 0.0f, 1.0f);
 		m_models.push_back(cylinder);
+	}*/
+	{
+		MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 15, 100);
+		meshData.diffuseFilename = "./Assets/earth.jpg";
+		shared_ptr<Model> sphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		m_models.push_back(sphere);
 	}
 
 	/*{	

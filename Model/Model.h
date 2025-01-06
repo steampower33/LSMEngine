@@ -44,6 +44,7 @@ public:
 
 	XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 
+
 private:
 	void Initialize(
 		ComPtr<ID3D12Device>& device,
@@ -60,7 +61,6 @@ private:
 		shared_ptr<Mesh>& newMesh);
 
 	vector<shared_ptr<Mesh>> m_meshes;
-
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;
 	UINT8* m_meshConstsBufferDataBegin;

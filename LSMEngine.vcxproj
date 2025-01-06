@@ -97,6 +97,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Assets\earth.jpg" />
     <Image Include="Assets\wall_black.jpg" />
     <Image Include="Assets\winter.dds" />
   </ItemGroup>

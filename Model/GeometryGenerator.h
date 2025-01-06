@@ -17,4 +17,7 @@ public:
 		const float bottomRadius,
 		const float topRadius, float height,
 		int sliceCount);
+	static MeshData MakeSphere(
+		const float radius, 
+		const int numSlices, const int numStacks);
 };
