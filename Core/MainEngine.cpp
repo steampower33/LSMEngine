@@ -94,7 +94,8 @@ void MainEngine::UpdateGUI()
 
 	ImGui::Begin("Scene Control");
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Checkbox("Draw Normals", &guiState.m_drawNormals);
+	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
+	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 
 	ImGui::End();
 

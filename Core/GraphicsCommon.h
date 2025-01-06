@@ -33,13 +33,15 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> skyboxPS;
 
 	extern D3D12_RASTERIZER_DESC solidRS;
+	extern D3D12_RASTERIZER_DESC wireRS;
 
 	extern D3D12_BLEND_DESC disabledBlend;
 
 	extern D3D12_DEPTH_STENCIL_DESC disabledDS;
 	extern D3D12_DEPTH_STENCIL_DESC readWriteDS;
 
-	extern ComPtr<ID3D12PipelineState> basicPSO;
+	extern ComPtr<ID3D12PipelineState> basicSolidPSO;
+	extern ComPtr<ID3D12PipelineState> basicWirePSO;
 	extern ComPtr<ID3D12PipelineState> normalPSO;
 	extern ComPtr<ID3D12PipelineState> skyboxPSO;
 

@@ -19,13 +19,15 @@ namespace Graphics
 	ComPtr<IDxcBlob> skyboxPS;
 
 	D3D12_RASTERIZER_DESC solidRS;
+	D3D12_RASTERIZER_DESC wireRS;
 
 	D3D12_BLEND_DESC disabledBlend;
 
 	D3D12_DEPTH_STENCIL_DESC disabledDS;
 	D3D12_DEPTH_STENCIL_DESC readWriteDS;
 
-	ComPtr<ID3D12PipelineState> basicPSO;
+	ComPtr<ID3D12PipelineState> basicSolidPSO;
+	ComPtr<ID3D12PipelineState> basicWirePSO;
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> skyboxPSO;
 }
@@ -116,6 +118,9 @@ void Graphics::InitRasterizerStates()
 	solidRS.AntialiasedLineEnable = FALSE;
 	solidRS.ForcedSampleCount = 0;
 	solidRS.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	wireRS = solidRS;
+	wireRS.FillMode = D3D12_FILL_MODE_WIREFRAME;
 }
 
 void Graphics::InitBlendStates()
@@ -169,21 +174,25 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	};
 
 	// Describe and create the graphcis pipeline state object (PSO).
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicPSODesc = {};
-	basicPSODesc.InputLayout = { basicIE, _countof(basicIE) };
-	basicPSODesc.pRootSignature = rootSignature.Get();
-	basicPSODesc.VS = { basicVS->GetBufferPointer(), basicVS->GetBufferSize() };
-	basicPSODesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
-	basicPSODesc.RasterizerState = solidRS;
-	basicPSODesc.BlendState = disabledBlend;
-	basicPSODesc.DepthStencilState = readWriteDS;
-	basicPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	basicPSODesc.SampleDesc.Count = 1;
-	basicPSODesc.SampleMask = UINT_MAX;
-	basicPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	basicPSODesc.NumRenderTargets = 1;
-	basicPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicPSODesc, IID_PPV_ARGS(&basicPSO)));
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSolidPSODesc = {};
+	basicSolidPSODesc.InputLayout = { basicIE, _countof(basicIE) };
+	basicSolidPSODesc.pRootSignature = rootSignature.Get();
+	basicSolidPSODesc.VS = { basicVS->GetBufferPointer(), basicVS->GetBufferSize() };
+	basicSolidPSODesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
+	basicSolidPSODesc.RasterizerState = solidRS;
+	basicSolidPSODesc.BlendState = disabledBlend;
+	basicSolidPSODesc.DepthStencilState = readWriteDS;
+	basicSolidPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	basicSolidPSODesc.SampleDesc.Count = 1;
+	basicSolidPSODesc.SampleMask = UINT_MAX;
+	basicSolidPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	basicSolidPSODesc.NumRenderTargets = 1;
+	basicSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSolidPSODesc, IID_PPV_ARGS(&basicSolidPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicWirePSODesc = basicSolidPSODesc;
+	basicWirePSODesc.RasterizerState = wireRS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicWirePSODesc, IID_PPV_ARGS(&basicWirePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC normalPSODesc = {};
 	normalPSODesc.InputLayout = { basicIE, _countof(basicIE) };

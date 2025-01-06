@@ -24,7 +24,8 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
 struct GuiState {
-	bool m_drawNormals = false;
+	bool isDrawNormals = false;
+	bool isWireframe = false;
 };
 
 inline string HrToString(HRESULT hr)

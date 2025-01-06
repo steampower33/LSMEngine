@@ -122,11 +122,15 @@ void Model::Render(
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
 
-		commandList->SetPipelineState(Graphics::basicPSO.Get());
+		if (guiState.isWireframe)
+			commandList->SetPipelineState(Graphics::basicWirePSO.Get());
+		else
+			commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
+
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);
 
-		if (guiState.m_drawNormals)
+		if (guiState.isDrawNormals)
 		{
 			commandList->SetPipelineState(Graphics::normalPSO.Get());
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);

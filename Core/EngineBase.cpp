@@ -165,7 +165,7 @@ void EngineBase::LoadPipeline()
 		}
 
 		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), Graphics::basicPSO.Get(), IID_PPV_ARGS(&m_commandList)));
+		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
 		for (UINT n = 0; n < FrameCount; n++)
 		{
