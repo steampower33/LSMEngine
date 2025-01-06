@@ -21,8 +21,9 @@ private:
 
 	shared_ptr<Model> m_skybox;
 
-	std::vector<shared_ptr<Model>> models;
+	vector<shared_ptr<Model>> m_models;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
 	UINT m_totalTextureCnt;
+	unordered_map<string, int> textureIdx;
 };

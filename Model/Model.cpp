@@ -5,10 +5,11 @@ Model::Model(
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	const std::vector<MeshData>& meshDatas,
-	UINT& totalTextureCnt)
+	const vector<MeshData>& meshDatas,
+	UINT& totalTextureCnt,
+	unordered_map<string, int>& textureIdx)
 {
-	Initialize(device, commandList, commandQueue, textureHandle, meshDatas, totalTextureCnt);
+	Initialize(device, commandList, commandQueue, textureHandle, meshDatas, totalTextureCnt, textureIdx);
 }
 
 Model::~Model()
@@ -16,30 +17,47 @@ Model::~Model()
 
 }
 
+bool Model::CheckDuplcateFilename(
+	unordered_map<string, int>& textureIdx,
+	const string& filename,
+	shared_ptr<Mesh>& newMesh)
+{
+	if (filename.empty())
+		return false;
+
+	auto f = textureIdx.find(filename);
+	if (f != textureIdx.end())
+	{
+		newMesh->constsBufferData.diffuseIndex = f->second;
+		return false;
+	}
+	else
+		return true;
+}
+
 void Model::Initialize(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	const std::vector<MeshData>& meshDatas,
-	UINT& totalTextureCnt)
+	const vector<MeshData>& meshDatas,
+	UINT& totalTextureCnt,
+	unordered_map<string, int>& textureIdx)
 {
-	m_meshConstsBufferData.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
 	for (int i = 0; i < meshDatas.size(); i++)
 	{
-		std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>();
+		shared_ptr<Mesh> newMesh = make_shared<Mesh>();
 
 		CreateVertexBuffer(device, commandList, meshDatas[i].vertices, newMesh);
 		CreateIndexBuffer(device, commandList, meshDatas[i].indices, newMesh);
+		
+		if (CheckDuplcateFilename(textureIdx, meshDatas[i].diffuseFilename, newMesh))
+			CreateTextureBuffer(device, commandList, meshDatas[i].diffuseFilename, newMesh, textureHandle, textures, texturesUploadHeap, totalTextureCnt, textureIdx);
 
-		if (!meshDatas[i].diffuseFilename.empty())
-			CreateTextureBuffer(device, commandList, meshDatas[i].diffuseFilename, newMesh, textureHandle, textures, texturesUploadHeap, texturesIdx, totalTextureCnt);
-
-		if (!meshDatas[i].ddsFilename.empty())
-			CreateDDSTextureBuffer(device, commandQueue, meshDatas[i].ddsFilename, newMesh, textureHandle, textures, texturesIdx, totalTextureCnt);
+		if (CheckDuplcateFilename(textureIdx, meshDatas[i].ddsFilename, newMesh))
+			CreateDDSTextureBuffer(device, commandQueue, meshDatas[i].ddsFilename, newMesh, textureHandle, textures, totalTextureCnt, textureIdx);
 
 		CreateConstDefaultBuffer(device, commandList, newMesh);
 		m_meshes.push_back(newMesh);
@@ -66,6 +84,23 @@ void Model::Initialize(
 
 void Model::Update()
 {
+
+	XMVECTOR posVec = XMLoadFloat4(&pos);
+
+	XMMATRIX world = XMMatrixTranspose(XMMatrixTranslationFromVector(posVec));
+
+	XMStoreFloat4x4(&m_meshConstsBufferData.world, world);
+
+	world.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
+	// 역행렬 계산
+	XMMATRIX worldInv = XMMatrixInverse(nullptr, world);
+
+	// 역행렬의 전치 계산
+	XMMATRIX worldInvTranspose = XMMatrixTranspose(worldInv);
+
+	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
+
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 }
 

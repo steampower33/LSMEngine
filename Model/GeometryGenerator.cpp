@@ -94,11 +94,8 @@ vector<MeshData> GeometryGenerator::ReadFromFile(string basePath, string filenam
 }
 
 MeshData GeometryGenerator::MakeCylinder(
-	const float bottomRadius,
-	const float topRadius, float height,
-	int sliceCount) {
-
-	// Texture 좌표계때문에 (sliceCount + 1) x 2 개의 버텍스 사용
+	const float bottomRadius, const float topRadius, 
+	float height, int sliceCount) {
 
 	const float dTheta = -XM_2PI / float(sliceCount);
 
@@ -108,7 +105,6 @@ MeshData GeometryGenerator::MakeCylinder(
 
 	XMVECTOR bottomPosition = { bottomRadius, -0.5f * height, 0.0f };
 
-	// 옆면의 바닥 버텍스들 (인덱스 0 이상 sliceCount 미만)
 	for (int i = 0; i <= sliceCount; i++) {
 		Vertex v;
 
@@ -127,11 +123,9 @@ MeshData GeometryGenerator::MakeCylinder(
 		vertices.push_back(v);
 	}
 
-	cout << vertices.size() << endl;
 
 	XMVECTOR upPosition = { topRadius, 0.5f * height, 0.0f };
 
-	// 옆면의 바닥 버텍스들 (인덱스 0 이상 sliceCount 미만)
 	for (int i = 0; i <= sliceCount; i++) {
 		Vertex v;
 
@@ -150,12 +144,9 @@ MeshData GeometryGenerator::MakeCylinder(
 		vertices.push_back(v);
 	}
 	
-	cout << vertices.size() << endl;
-
 	vector<uint32_t>& indices = meshData.indices;
 
 	for (int i = 0; i < sliceCount; i++) {
-		// TODO: 삼각형 두 개 씩
 		indices.push_back(i);
 		indices.push_back(i + sliceCount + 1);
 		indices.push_back(i + sliceCount + 2);

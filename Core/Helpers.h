@@ -12,13 +12,14 @@
 
 #include <iostream>
 #include <algorithm>
-#include <unordered_set>
 #include <string>
+#include <unordered_map>
 
 #include "DirectXTex.h"
 #include "directxtk12\DDSTextureLoader.h"
 #include "directxtk12\ResourceUploadBatch.h"
 
+using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
@@ -26,17 +27,17 @@ struct GuiState {
 	bool m_drawNormals = false;
 };
 
-inline std::string HrToString(HRESULT hr)
+inline string HrToString(HRESULT hr)
 {
 	char s_str[64] = {};
 	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
-	return std::string(s_str);
+	return string(s_str);
 }
 
-class HrException : public std::runtime_error
+class HrException : public runtime_error
 {
 public:
-	HrException(HRESULT hr) : std::runtime_error(HrToString(hr)), m_hr(hr) {}
+	HrException(HRESULT hr) : runtime_error(HrToString(hr)), m_hr(hr) {}
 	HRESULT Error() const { return m_hr; }
 private:
 	const HRESULT m_hr;
@@ -52,17 +53,11 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
-inline bool hasDuplicateFilenames(std::unordered_set<std::string>& filenames, std::string& filename)
-{
-
-
-}
-
 static void CreateVertexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const std::vector<Vertex>& vertices,
-	std::shared_ptr<Mesh>& mesh)
+	const vector<Vertex>& vertices,
+	shared_ptr<Mesh>& mesh)
 {
 	mesh->vertexBufferCount = static_cast<UINT>(vertices.size());
 
@@ -110,8 +105,8 @@ static void CreateVertexBuffer(
 static void CreateIndexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const std::vector<uint32_t>& indices,
-	std::shared_ptr<Mesh>& mesh)
+	const vector<uint32_t>& indices,
+	shared_ptr<Mesh>& mesh)
 {
 	mesh->indexBufferCount = static_cast<UINT>(indices.size());
 
@@ -180,26 +175,31 @@ static void CreateConstUploadBuffer(
 	memcpy(meshConstsBufferDataBegin, &meshConstsBufferData, sizeof(meshConstsBufferData));
 }
 
-inline std::wstring StringToWString(const std::string& str) {
-	return std::wstring(str.begin(), str.end());
+inline wstring StringToWString(const string& str) {
+	return wstring(str.begin(), str.end());
 }
 
 
 static void CreateDDSTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
-	const std::string& filename,
-	std::shared_ptr<Mesh>& newMesh,
+	const string& filename,
+	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	std::vector<ComPtr<ID3D12Resource>>& textures,
-	std::vector<UINT>& texturesIdx,
-	UINT& totalTextureCnt)
+	vector<ComPtr<ID3D12Resource>>& textures,
+	UINT& totalTextureCnt,
+	unordered_map<string, int>& textureIdx)
 {
+	if (textureIdx.find(filename) != textureIdx.end())
+	{
+		newMesh->constsBufferData.diffuseIndex = totalTextureCnt;
+		return;
+	}
 
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * totalTextureCnt);
 
-	std::wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filename);
 
 	// ResourceUploadBatch °´Ã¼ »ý¼º
 	ResourceUploadBatch resourceUpload(device.Get());
@@ -242,7 +242,8 @@ static void CreateDDSTextureBuffer(
 	textures.push_back(tex);
 
 	newMesh->constsBufferData.cubemapIndex = totalTextureCnt;
-	texturesIdx.push_back(totalTextureCnt++);
+	textureIdx.insert({ filename, totalTextureCnt });
+	totalTextureCnt++;
 
 	wprintf(L"Successfully loaded DDS texture: %s\n", wideFilename.c_str());
 }
@@ -250,28 +251,28 @@ static void CreateDDSTextureBuffer(
 static void CreateTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const std::string& filename,
-	std::shared_ptr<Mesh>& newMesh,
+	const string& filename,
+	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	std::vector<ComPtr<ID3D12Resource>>& textures,
-	std::vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
-	std::vector<UINT>& texturesIdx,
-	UINT& totalTextureCnt)
+	vector<ComPtr<ID3D12Resource>>& textures,
+	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	UINT& totalTextureCnt,
+	unordered_map<string, int>& textureIdx)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * totalTextureCnt);
 
-	auto image = std::make_unique<ScratchImage>();
+	auto image = make_unique<ScratchImage>();
 
 	ComPtr<ID3D12Resource> tex;
 
-	std::wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filename);
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
 	DirectX::TexMetadata metaData = image.get()->GetMetadata();
 	ThrowIfFailed(CreateTexture(device.Get(), metaData, &tex));
 
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+	vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed(PrepareUpload(device.Get(), image.get()->GetImages(), image.get()->GetImageCount(), metaData, subresources));
 
 	// upload is implemented by application developer. Here's one solution using <d3dx12.h>
@@ -315,7 +316,8 @@ static void CreateTextureBuffer(
 	texturesUploadHeap.push_back(texUploadHeap);
 
 	newMesh->constsBufferData.diffuseIndex = totalTextureCnt;
-	texturesIdx.push_back(totalTextureCnt++);
+	textureIdx.insert({ filename, totalTextureCnt });
+	totalTextureCnt++;
 
 	wprintf(L"Successfully loaded texture: %s\n", wideFilename.c_str());
 
@@ -323,7 +325,7 @@ static void CreateTextureBuffer(
 
 static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	std::shared_ptr<Mesh>& mesh)
+	shared_ptr<Mesh>& mesh)
 {
 	D3D12_HEAP_PROPERTIES heapProps = {};
 	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;

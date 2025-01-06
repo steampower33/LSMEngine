@@ -10,6 +10,7 @@
 #include "Mesh.h"
 #include "GraphicsCommon.h"
 
+using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
@@ -21,8 +22,9 @@ public:
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12CommandQueue>& commandQueue,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-		const std::vector<MeshData>& meshDatas,
-		UINT& totalTextureCnt);
+		const vector<MeshData>& meshDatas,
+		UINT& totalTextureCnt,
+		unordered_map<string, int>& textureIdx);
 
 	~Model();
 
@@ -48,19 +50,22 @@ private:
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12CommandQueue>& commandQueue,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-		const std::vector<MeshData>& meshDatas,
-		UINT& totalTextureCnt);
+		const vector<MeshData>& meshDatas,
+		UINT& totalTextureCnt,
+		unordered_map<string, int>& textureIdx);
 
-	std::unordered_set<std::string> filenames;
+	bool CheckDuplcateFilename(
+		unordered_map<string, int>& textureIdx,
+		const string& filename,
+		shared_ptr<Mesh>& newMesh);
 
-	std::vector<std::shared_ptr<Mesh>> m_meshes;
+	vector<shared_ptr<Mesh>> m_meshes;
 
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;
 	UINT8* m_meshConstsBufferDataBegin;
 
-	std::vector<ComPtr<ID3D12Resource>> textures;
-	std::vector<ComPtr<ID3D12Resource>> texturesUploadHeap;
-	std::vector<UINT> texturesIdx;
+	vector<ComPtr<ID3D12Resource>> textures;
+	vector<ComPtr<ID3D12Resource>> texturesUploadHeap;
 
 };

@@ -16,29 +16,30 @@ void MainEngine::Initialize()
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
 		skybox.ddsFilename = "./Assets/winter.dds";
-		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt);
+		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt, textureIdx);
 
-		vector<MeshData> zeldaFbx =
-			GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 	}
 
-	/*{
+	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt);
-		models.push_back(box);
-	}*/
+		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		m_models.push_back(box);
+	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 100);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt);
-		models.push_back(cylinder);
+		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		cylinder->pos = XMFLOAT4(-3.0f, 0.0f, 0.0f, 1.0f);
+		m_models.push_back(cylinder);
 	}
 
 	/*{	
 		shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, zeldaFbx, m_totalTextureCnt);
-		models.push_back(zelda);
+		m_models.push_back(zelda);
+		vector<MeshData> zeldaFbx =
+			GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
 	}*/
 
 	ThrowIfFailed(m_commandList->Close());
@@ -78,7 +79,7 @@ void MainEngine::Update(float dt)
 
 	m_skybox->Update();
 
-	for (const auto& model : models)
+	for (const auto& model : m_models)
 	{
 		model->Update();
 	}
@@ -132,7 +133,7 @@ void MainEngine::Render()
 
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
 
-	for (const auto& model : models)
+	for (const auto& model : m_models)
 		model->Render(m_device, m_commandList, m_textureHeap, guiState);
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
