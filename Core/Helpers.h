@@ -64,7 +64,7 @@ static void CreateVertexBuffer(
 	const std::vector<Vertex>& vertices,
 	std::shared_ptr<Mesh>& mesh)
 {
-	mesh->vertexBufferCount = vertices.size();
+	mesh->vertexBufferCount = static_cast<UINT>(vertices.size());
 
 	const UINT vertexBufferSizeInBytes =
 		static_cast<UINT>(vertices.size() * sizeof(Vertex));

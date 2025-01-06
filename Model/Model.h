@@ -40,6 +40,8 @@ public:
 
 	void Update();
 
+	XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
 private:
 	void Initialize(
 		ComPtr<ID3D12Device>& device,
@@ -60,4 +62,5 @@ private:
 	std::vector<ComPtr<ID3D12Resource>> textures;
 	std::vector<ComPtr<ID3D12Resource>> texturesUploadHeap;
 	std::vector<UINT> texturesIdx;
+
 };

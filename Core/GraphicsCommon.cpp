@@ -63,14 +63,11 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.MipLODBias = 0;
-	sampler.MaxAnisotropy = 16;
-	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	sampler.MipLODBias = 0.0f;
+	sampler.MaxAnisotropy = 1;
+	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 	sampler.MinLOD = 0.0f;
 	sampler.MaxLOD = D3D12_FLOAT32_MAX;
-	sampler.ShaderRegister = 0;
-	sampler.RegisterSpace = 0;
 	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;

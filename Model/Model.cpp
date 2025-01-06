@@ -24,6 +24,8 @@ void Model::Initialize(
 	const std::vector<MeshData>& meshDatas,
 	UINT& totalTextureCnt)
 {
+	m_meshConstsBufferData.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
 	for (int i = 0; i < meshDatas.size(); i++)
@@ -44,7 +46,6 @@ void Model::Initialize(
 	}
 
 	{
-		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 		XMVECTOR posVec = XMLoadFloat4(&pos);
 
 		XMMATRIX world = XMMatrixTranspose(XMMatrixTranslationFromVector(posVec));
