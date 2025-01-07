@@ -183,24 +183,6 @@ void EngineBase::LoadPipeline()
 	}
 
 	{
-		const UINT globalConstantsSize = sizeof(GlobalConstants);
-
-		auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(globalConstantsSize);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&uploadHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&buffer,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_globalConstsUploadHeap)));
-
-		CD3DX12_RANGE readRange(0, 0);
-		ThrowIfFailed(m_globalConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&m_globalConstsBufferDataBegin)));
-		memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
-	}
-
-	{
 		// Depth Stencil 버퍼 생성
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -236,12 +218,7 @@ void EngineBase::LoadPipeline()
 		m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 	}
 
-	{
-		XMStoreFloat4x4(&m_globalConstsBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
 
-		XMStoreFloat4x4(&m_globalConstsBufferData.proj,
-			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
-	}
 }
 
 void EngineBase::LoadGUI()

@@ -66,10 +66,6 @@ public:
 
 	ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
-	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
-	GlobalConstants m_globalConstsBufferData = {};
-	UINT8* m_globalConstsBufferDataBegin = nullptr;
-
 protected:
 	void LoadPipeline();
 	void LoadGUI();

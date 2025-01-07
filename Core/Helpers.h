@@ -152,29 +152,30 @@ static void CreateIndexBuffer(
 
 }
 
+template <typename T>
 static void CreateConstUploadBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12Resource>& meshConstsUploadHeap,
-	MeshConstants& meshConstsBufferData,
-	UINT8*& meshConstsBufferDataBegin)
+	ComPtr<ID3D12Resource>& constsUploadHeap,
+	T& constsBufferData,
+	UINT8*& constsBufferDataBegin)
 {
-	const UINT meshConstantsSize = sizeof(GlobalConstants);
+	const UINT constantsSize = sizeof(T);
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(meshConstantsSize);
+	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(constantsSize);
 	ThrowIfFailed(device->CreateCommittedResource(
 		&uploadHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&buffer,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&meshConstsUploadHeap)));
+		IID_PPV_ARGS(&constsUploadHeap)));
 
 	CD3DX12_RANGE readRange(0, 0);
-	ThrowIfFailed(meshConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&meshConstsBufferDataBegin)));
+	ThrowIfFailed(constsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&constsBufferDataBegin)));
 
-	memcpy(meshConstsBufferDataBegin, &meshConstsBufferData, sizeof(meshConstsBufferData));
+	memcpy(constsBufferDataBegin, &constsBufferData, sizeof(constsBufferData));
 }
 
 inline wstring StringToWString(const string& str) {
@@ -190,7 +191,8 @@ static void CreateDDSTextureBuffer(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
 	UINT& totalTextureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, int>& textureIdx,
+	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
 	if (textureIdx.find(filename) != textureIdx.end())
 	{
@@ -242,8 +244,8 @@ static void CreateDDSTextureBuffer(
 
 	// 府家胶 包府
 	textures.push_back(tex);
+	cubemapIndexConstsBufferData.cubemapIndex = totalTextureCnt;
 
-	newMesh->constsBufferData.cubemapIndex = totalTextureCnt;
 	textureIdx.insert({ filename, totalTextureCnt });
 	totalTextureCnt++;
 

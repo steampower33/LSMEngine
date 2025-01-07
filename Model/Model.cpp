@@ -7,9 +7,10 @@ Model::Model(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	const vector<MeshData>& meshDatas,
 	UINT& totalTextureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, int>& textureIdx,
+	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	Initialize(device, commandList, commandQueue, textureHandle, meshDatas, totalTextureCnt, textureIdx);
+	Initialize(device, commandList, commandQueue, textureHandle, meshDatas, totalTextureCnt, textureIdx, cubemapIndexConstsBufferData);
 }
 
 Model::~Model()
@@ -42,7 +43,8 @@ void Model::Initialize(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	const vector<MeshData>& meshDatas,
 	UINT& totalTextureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, int>& textureIdx,
+	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
@@ -57,7 +59,7 @@ void Model::Initialize(
 			CreateTextureBuffer(device, commandList, meshDatas[i].diffuseFilename, newMesh, textureHandle, textures, texturesUploadHeap, totalTextureCnt, textureIdx);
 
 		if (CheckDuplcateFilename(textureIdx, meshDatas[i].ddsFilename, newMesh))
-			CreateDDSTextureBuffer(device, commandQueue, meshDatas[i].ddsFilename, newMesh, textureHandle, textures, totalTextureCnt, textureIdx);
+			CreateDDSTextureBuffer(device, commandQueue, meshDatas[i].ddsFilename, newMesh, textureHandle, textures, totalTextureCnt, textureIdx, cubemapIndexConstsBufferData);
 
 		CreateConstDefaultBuffer(device, commandList, newMesh);
 		m_meshes.push_back(newMesh);
@@ -120,7 +122,7 @@ void Model::Render(
 	for (const auto& mesh : m_meshes)
 	{
 		commandList->SetGraphicsRootConstantBufferView(2, mesh->constsBuffer.Get()->GetGPUVirtualAddress());
-		commandList->SetGraphicsRootDescriptorTable(3, textureHandle);
+		commandList->SetGraphicsRootDescriptorTable(4, textureHandle);
 
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
@@ -151,7 +153,7 @@ void Model::RenderSkybox(
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootConstantBufferView(2, m_meshes[0]->constsBuffer.Get()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootDescriptorTable(3, textureHeap->GetGPUDescriptorHandleForHeapStart());
+	commandList->SetGraphicsRootDescriptorTable(4, textureHeap->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->IASetVertexBuffers(0, 1, &m_meshes[0]->vertexBufferView);
 	commandList->IASetIndexBuffer(&m_meshes[0]->indexBufferView);

@@ -16,6 +16,13 @@ public:
 	virtual void UpdateGUI() override;
 
 private:
+	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
+	GlobalConstants m_globalConstsBufferData = {};
+	UINT8* m_globalConstsBufferDataBegin = nullptr;
+
+	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
+	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
+	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	GuiState guiState;
 

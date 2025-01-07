@@ -24,7 +24,8 @@ public:
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 		const vector<MeshData>& meshDatas,
 		UINT& totalTextureCnt,
-		unordered_map<string, int>& textureIdx);
+		unordered_map<string, int>& textureIdx,
+		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
 	~Model();
 
@@ -53,7 +54,8 @@ private:
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 		const vector<MeshData>& meshDatas,
 		UINT& totalTextureCnt,
-		unordered_map<string, int>& textureIdx);
+		unordered_map<string, int>& textureIdx,
+		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
 	bool CheckDuplcateFilename(
 		unordered_map<string, int>& textureIdx,

@@ -8,6 +8,16 @@ void MainEngine::Initialize()
 {
 	LoadPipeline();
 
+	{
+		XMStoreFloat4x4(&m_globalConstsBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
+
+		XMStoreFloat4x4(&m_globalConstsBufferData.proj,
+			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
+	}
+
+	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
+	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
+
 	m_textureHandle = m_textureHeap->GetCPUDescriptorHandleForHeapStart();
 	m_totalTextureCnt = 0;
 
@@ -16,21 +26,20 @@ void MainEngine::Initialize()
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
 		skybox.ddsFilename = "./Assets/park.dds";
-		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt, textureIdx);
-
+		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
 		m_models.push_back(box);
 	}
 
 	/*{
 		MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 100);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
 		cylinder->pos = XMFLOAT4(-3.0f, 0.0f, 0.0f, 1.0f);
 		m_models.push_back(cylinder);
 	}*/
@@ -38,20 +47,13 @@ void MainEngine::Initialize()
 	/*{
 		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
 		meshData.diffuseFilename = "./Assets/earth.jpg";
-		shared_ptr<Model> sphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+		shared_ptr<Model> sphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
 		m_models.push_back(sphere);
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
-		m_cursorSphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
-	}*/
-
-	/*{	
-		shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, zeldaFbx, m_totalTextureCnt);
-		m_models.push_back(zelda);
-		vector<MeshData> zeldaFbx =
-			GeometryGenerator::ReadFromFile("c:/zelda/", "zeldaPosed001.fbx");
+		m_cursorSphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
 	}*/
 
 	ThrowIfFailed(m_commandList->Close());
@@ -93,6 +95,8 @@ void MainEngine::Update(float dt)
 	}
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
+
+	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
 
 	m_skybox->Update();
 
@@ -172,6 +176,8 @@ void MainEngine::Render()
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
 

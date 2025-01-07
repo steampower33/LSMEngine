@@ -153,14 +153,25 @@ cbuffer MeshConstants : register(b1)
 cbuffer TextureIndexConstants : register(b2)
 {
     uint diffuseIndex;
-    uint cubemapIndex;
-    float d31[14];
+    float d31[15];
     
     float4x4 d32;
     
     float4x4 d33;
     
     float4x4 d34;
+}
+
+cbuffer CubemapIndexConstants : register(b3)
+{
+    uint cubemapIndex;
+    float d41[15];
+    
+    float4x4 d42;
+    
+    float4x4 d43;
+    
+    float4x4 d44;
 }
 
 struct VSInput
