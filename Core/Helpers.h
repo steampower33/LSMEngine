@@ -26,6 +26,7 @@ using namespace DirectX;
 struct GuiState {
 	bool isDrawNormals = false;
 	bool isWireframe = false;
+	bool isUseTextrue = true;
 };
 
 inline string HrToString(HRESULT hr)

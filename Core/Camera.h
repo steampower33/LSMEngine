@@ -47,11 +47,9 @@ public:
 
 	bool m_useFirstPersonView;
 
+	XMFLOAT3 m_pos;
 private:
 
-	// set starting camera state
-	XMFLOAT3 m_initPos;
-	XMFLOAT3 m_pos;
 	XMFLOAT3 m_lookDir;
 	XMFLOAT3 m_upDir;
 	XMFLOAT3 m_rightDir;

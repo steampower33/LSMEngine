@@ -180,5 +180,8 @@
     <Image Include="Assets\earth.jpg">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\park.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

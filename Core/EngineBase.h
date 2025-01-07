@@ -36,7 +36,7 @@ public:
 	float m_width;
 	float m_height;
 
-	float m_aspectRatio = 16.0f / 9.0f;
+	float m_aspectRatio;
 	static const UINT FrameCount = 3;
 
 	Camera m_camera;

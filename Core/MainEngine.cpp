@@ -12,34 +12,40 @@ void MainEngine::Initialize()
 	m_totalTextureCnt = 0;
 
 	{
-		MeshData skybox = GeometryGenerator::MakeBox(20.0f);
+		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-		skybox.ddsFilename = "./Assets/winter.dds";
+		skybox.ddsFilename = "./Assets/park.dds";
 		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt, textureIdx);
 
 	}
 
-	/*{
+	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
 		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
 		m_models.push_back(box);
 	}
 
-	{
+	/*{
 		MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 100);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
 		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
 		cylinder->pos = XMFLOAT4(-3.0f, 0.0f, 0.0f, 1.0f);
 		m_models.push_back(cylinder);
 	}*/
-	{
-		MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 15, 100);
+
+	/*{
+		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
 		meshData.diffuseFilename = "./Assets/earth.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
 		m_models.push_back(sphere);
 	}
+
+	{
+		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
+		m_cursorSphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx);
+	}*/
 
 	/*{	
 		shared_ptr<Model> zelda = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, zeldaFbx, m_totalTextureCnt);
@@ -63,23 +69,25 @@ void MainEngine::Update(float dt)
 {
 	m_camera.Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-	// 1. GetViewMatrix() 결과를 가져옴
 	XMMATRIX view = m_camera.GetViewMatrix();
-
-	// 2. Transpose 적용
 	XMMATRIX viewTrans = XMMatrixTranspose(view);
-
-	// 3. XMFLOAT4X4로 저장
 	XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
 
-	// 1. GetViewMatrix() 결과를 가져옴
 	XMMATRIX proj = m_camera.GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
-
-	// 2. Transpose 적용
 	XMMATRIX projTrans = XMMatrixTranspose(proj);
-
-	// 3. XMFLOAT4X4로 저장
 	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
+
+	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
+
+	XMVECTOR det;
+	XMMATRIX invView = XMMatrixInverse(&det, view);
+	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
+	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
+
+	m_globalConstsBufferData.lights[0] = m_lightFromGUI;
+
+	cout << "Size of Light: " << sizeof(Light) << " bytes" << endl;
+	cout << "Size of GlobalConstants: " << sizeof(GlobalConstants) << " bytes" << endl;
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 
@@ -102,11 +110,23 @@ void MainEngine::UpdateGUI()
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
+	ImGui::Checkbox("Use Texture", &guiState.isUseTextrue);
+
+	ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, -5.0f, 5.0f);
+
+	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+
+	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
+
+	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
+
+	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
 
 	ImGui::End();
 
 	// Rendering
 	ImGui::Render();
+
 }
 
 void MainEngine::Render()

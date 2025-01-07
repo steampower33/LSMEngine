@@ -9,7 +9,8 @@ HeapAllocator EngineBase::m_srvAlloc;
 EngineBase::EngineBase() :
 	m_width(1280.0f), m_height(800.0f),
 	m_mousePosX(m_width / 2),
-	m_mousePosY(m_height / 2)
+	m_mousePosY(m_height / 2),
+	m_aspectRatio(m_width / m_height)
 {
 	m_viewport.TopLeftX = 0.0f;
 	m_viewport.TopLeftY = 0.0f;

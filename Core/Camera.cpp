@@ -3,17 +3,16 @@
 using namespace std;
 
 Camera::Camera() :
-	m_initPos(-3.6594f, 4.57421f, -4.0804f),
-	m_pos(m_initPos),
-	m_lookDir(0.491738f, -0.652002f, 0.577137f),
+	m_pos(0.0f, 0.0f, -5.0f),
+	m_lookDir(0.0f, 0.0f, 1.0f),
 	m_upDir(0.0f, 1.0f, 0.0f),
-	m_rightDir(0.761176f, 0.0f, -0.648545f),
+	m_rightDir(1.0f, 0.0f, 0.0f),
 	m_cursorNdcX(0.0f),
 	m_cursorNdcY(0.0f),
-	m_yaw(0.705671f),
-	m_pitch(0.710222f),
-	m_moveSpeed(10.0f),
-	m_mouseSensitivity(5.0f),
+	m_yaw(0.0f),
+	m_pitch(0.0f),
+	m_moveSpeed(20.0f),
+	m_mouseSensitivity(20.0f),
 	m_useFirstPersonView(false)
 {
 }

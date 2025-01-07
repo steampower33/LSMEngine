@@ -21,9 +21,13 @@ private:
 
 	shared_ptr<Model> m_skybox;
 
+	shared_ptr<Model> m_cursorSphere;
+
 	vector<shared_ptr<Model>> m_models;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_textureHandle;
 	UINT m_totalTextureCnt;
 	unordered_map<string, int> textureIdx;
+
+	Light m_lightFromGUI;
 };
