@@ -100,7 +100,7 @@ void Model::Update()
 
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
-	m_meshConstsBufferData.material.diffuse = { 1.0f, 1.0f, 1.0f };
+	m_meshConstsBufferData.material.diffuse = { 0.1f, 0.1f, 0.1f };
 	m_meshConstsBufferData.material.specular = { 1.0f, 1.0f, 1.0f };
 
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));

@@ -6,11 +6,11 @@
 
 using namespace DirectX;
 
-#define MAX_LIGHTS 1
+#define MAX_LIGHTS 3
 
 // ÀçÁú
 struct Material {
-	XMFLOAT3 ambient = { 1.0f, 1.0f, 1.0f };  // 12
+	XMFLOAT3 ambient = { 0.1f, 0.1f, 0.1f };  // 12
 	float shininess = 1.0f;           // 4
 	XMFLOAT3 diffuse = { 0.5f, 0.5f, 0.5f };  // 12
 	float dummy1;                     // 4
@@ -33,11 +33,12 @@ struct Light {
 	float d2;									   // 4
 };
 
-__declspec(align(256)) struct GlobalConstants
+__declspec(align(512)) struct GlobalConstants
 {
 	XMFLOAT4X4 view;
-
 	XMFLOAT4X4 proj;
+	XMFLOAT4X4 d1;
+	XMFLOAT4X4 d2;
 
 	Light lights[MAX_LIGHTS];
 

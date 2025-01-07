@@ -30,4 +30,6 @@ private:
 	unordered_map<string, int> textureIdx;
 
 	Light m_lightFromGUI;
+
+	int m_lightType = 0;
 };

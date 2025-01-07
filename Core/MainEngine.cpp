@@ -84,10 +84,13 @@ void MainEngine::Update(float dt)
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
 
-	m_globalConstsBufferData.lights[0] = m_lightFromGUI;
-
-	cout << "Size of Light: " << sizeof(Light) << " bytes" << endl;
-	cout << "Size of GlobalConstants: " << sizeof(GlobalConstants) << " bytes" << endl;
+	for (int i = 0; i < MAX_LIGHTS; i++)
+	{
+		if (i != m_lightType)
+			m_globalConstsBufferData.lights[i].strength = { 0.0f, 0.0f, 0.0f };
+		else
+			m_globalConstsBufferData.lights[i] = m_lightFromGUI;
+	}
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 
@@ -111,6 +114,18 @@ void MainEngine::UpdateGUI()
 	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 	ImGui::Checkbox("Use Texture", &guiState.isUseTextrue);
+
+	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
+		m_lightType = 0;
+	}
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
+		m_lightType = 1;
+	}
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
+		m_lightType = 2;
+	}
 
 	ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, -5.0f, 5.0f);
 

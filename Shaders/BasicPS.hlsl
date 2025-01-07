@@ -17,7 +17,16 @@ float4 main(PSInput input) : SV_TARGET
         color += ComputeDirectionalLight(lights[i], material, input.normalWorld, toEye);
     }
     
-    return isUseTexture ?
-    float4(color, 1.0) * g_texture[diffuseIndex].Sample(g_sampler, input.texcoord) :
-    float4(lights[0].strength.x, lights[0].strength.y, lights[0].strength.z, 1.0);
+    for (i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
+    {
+        color += ComputePointLight(lights[i], material, input.posWorld, input.normalWorld, toEye);
+    }
+    
+    for (i = NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS; ++i)
+    {
+        color += ComputeSpotLight(lights[i], material, input.posWorld, input.normalWorld, toEye);
+    }
+    
+    return isUseTexture ? float4(color, 1.0) * g_texture[diffuseIndex].Sample(g_sampler, input.texcoord) : float4(color, 1.0);
+
 }
