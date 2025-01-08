@@ -152,8 +152,10 @@ cbuffer MeshConstants : register(b1)
 
 cbuffer TextureIndexConstants : register(b2)
 {
+    uint ambientIndex;
     uint diffuseIndex;
-    float d31[15];
+    uint specularIndex;
+    float d31[13];
     
     float4x4 d32;
     
@@ -164,8 +166,10 @@ cbuffer TextureIndexConstants : register(b2)
 
 cbuffer CubemapIndexConstants : register(b3)
 {
-    uint cubemapIndex;
-    float d41[15];
+    uint cubemapAmbientIndex;
+    uint cubemapDiffuseIndex;
+    uint cubemapSpecularIndex;
+    float d41[13];
     
     float4x4 d42;
     

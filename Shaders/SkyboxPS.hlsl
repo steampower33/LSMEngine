@@ -1,9 +1,9 @@
 #include "Common.hlsli"
 
-TextureCube skyboxTexture[] : register(t0, space0);
+TextureCube skyboxTexture[10] : register(t10, space0);
 SamplerState g_sampler : register(s0, space0);
 
 float4 main(PSInput input) : SV_TARGET
 {
-    return skyboxTexture[cubemapIndex].Sample(g_sampler, input.posWorld);
+    return skyboxTexture[cubemapAmbientIndex - 10].Sample(g_sampler, input.posWorld);
 }

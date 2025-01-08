@@ -36,6 +36,7 @@
     <ClCompile Include="Model\GeometryGenerator.cpp" />
     <ClCompile Include="Model\Model.cpp" />
     <ClCompile Include="Model\ModelLoader.cpp" />
+    <ClCompile Include="Model\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\Camera.h" />
@@ -60,6 +61,7 @@
     <ClInclude Include="Model\MeshData.h" />
     <ClInclude Include="Model\Model.h" />
     <ClInclude Include="Model\ModelLoader.h" />
+    <ClInclude Include="Model\TextureManager.h" />
     <ClInclude Include="Model\Vertex.h" />
   </ItemGroup>
   <ItemGroup>
@@ -98,7 +100,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\earth.jpg" />
-    <Image Include="Assets\park.dds" />
+    <Image Include="Assets\park_ambient.dds" />
+    <Image Include="Assets\park_diffuse.dds" />
+    <Image Include="Assets\park_specular.dds" />
     <Image Include="Assets\wall_black.jpg" />
     <Image Include="Assets\winter.dds" />
   </ItemGroup>

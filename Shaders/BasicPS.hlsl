@@ -1,7 +1,7 @@
 #include "Common.hlsli"
 
-Texture2D g_texture[] : register(t0, space0);
-TextureCube skyboxTexture[] : register(t0, space0);
+Texture2D g_texture[10] : register(t0, space0);
+TextureCube skyboxTexture[10] : register(t10, space0);
 SamplerState g_sampler : register(s0, space0);
 
 float4 main(PSInput input) : SV_TARGET
@@ -30,9 +30,18 @@ float4 main(PSInput input) : SV_TARGET
     
     //return isUseTexture ? float4(color, 1.0) * g_texture[diffuseIndex].Sample(g_sampler, input.texcoord) : float4(color, 1.0);
 
-    float3 reflection = reflect(-toEye, input.normalWorld);
-    float4 reflectColor = skyboxTexture[cubemapIndex].Sample(g_sampler, reflection);
-
-    return reflectColor;
-
+    float4 diffuse = skyboxTexture[cubemapDiffuseIndex - 10].Sample(g_sampler, input.normalWorld);
+    float4 specular = skyboxTexture[cubemapSpecularIndex - 10].Sample(g_sampler, reflect(-toEye, input.normalWorld));
+    
+    specular *= pow((specular.x + specular.y + specular.z) / 3.0, material.shininess);
+    
+    diffuse.xyz *= material.diffuse;
+    specular.xyz *= material.specular;
+    
+    if (isUseTexture)
+    {
+        diffuse *= g_texture[diffuseIndex].Sample(g_sampler, input.texcoord);
+    }
+    
+    return diffuse + specular;
 }

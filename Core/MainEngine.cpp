@@ -1,6 +1,6 @@
 #include "MainEngine.h"
 
-MainEngine::MainEngine() : EngineBase(), m_totalTextureCnt(0)
+MainEngine::MainEngine() : EngineBase()
 {
 }
 
@@ -8,53 +8,43 @@ void MainEngine::Initialize()
 {
 	LoadPipeline();
 
-	{
-		XMStoreFloat4x4(&m_globalConstsBufferData.view, XMMatrixTranspose(m_camera.GetViewMatrix()));
-
-		XMStoreFloat4x4(&m_globalConstsBufferData.proj,
-			XMMatrixTranspose(m_camera.GetProjectionMatrix(45.0f * (3.14f / 180.0f), m_aspectRatio, 0.1f, 1000.0f)));
-	}
-
 	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
 	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
 
-	m_textureHandle = m_textureHeap->GetCPUDescriptorHandleForHeapStart();
-	m_totalTextureCnt = 0;
+	textureManager.SetTextureHandle(m_textureHeap);
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-		skybox.ddsFilename = "./Assets/park.dds";
-		m_skybox = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, vector{ skybox }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
+		skybox.ddsAmbientFilename = "./Assets/park_ambient.dds";
+		skybox.ddsDiffuseFilename = "./Assets/park_diffuse.dds";
+		skybox.ddsSpecularFilename = "./Assets/park_specular.dds";
+		m_skybox = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue, 
+			vector{ skybox }, m_cubemapIndexConstsBufferData, textureManager);
+		m_skybox->key = "skybox";
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> box = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
-		m_models.push_back(box);
-	}
-
-	/*{
-		MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 100);
-		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> cylinder = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
-		cylinder->pos = XMFLOAT4(-3.0f, 0.0f, 0.0f, 1.0f);
-		m_models.push_back(cylinder);
-	}*/
-
-	/*{
-		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
-		meshData.diffuseFilename = "./Assets/earth.jpg";
-		shared_ptr<Model> sphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
-		m_models.push_back(sphere);
+		shared_ptr<Model> box = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue, 
+			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
+		box->key = "box";
+		m_models.insert({ box->key, box });
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
-		m_cursorSphere = make_shared<Model>(m_device, m_commandList, m_commandQueue, m_textureHandle, std::vector{ meshData }, m_totalTextureCnt, textureIdx, m_cubemapIndexConstsBufferData);
-	}*/
+		meshData.diffuseFilename = "./Assets/earth.jpg";
+		shared_ptr<Model> sphere = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue, 
+			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
+		sphere->key = "sphere";
+		m_models.insert({ sphere->key, sphere });
+	}
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -102,7 +92,7 @@ void MainEngine::Update(float dt)
 
 	for (const auto& model : m_models)
 	{
-		model->Update();
+		model.second->Update();
 	}
 }
 
@@ -119,33 +109,30 @@ void MainEngine::UpdateGUI()
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 	ImGui::Checkbox("Use Texture", &guiState.isUseTextrue);
 
-	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
-		m_lightType = 0;
+	for (const auto& model : m_models)
+	{
+		ImGui::PushID(model.first.c_str());
+
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+		if (ImGui::CollapsingHeader(model.first.c_str(), true)) {
+			ImGui::SliderFloat3("Ambient", &model.second.get()->m_meshConstsBufferData.material.ambient.x, 0.0f, 1.0f, "%.1f");
+			ImGui::SliderFloat3("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse.x, 0.0f, 1.0f, "%.1f");
+			ImGui::SliderFloat3("Specular", &model.second.get()->m_meshConstsBufferData.material.specular.x, 0.0f, 1.0f, "%.1f");
+			ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f");
+			
+			ImGui::SliderFloat("X", &model.second.get()->pos.x, -10.0f, 10.0f, "%.1f");
+			ImGui::SliderFloat("Y", &model.second.get()->pos.y, -10.0f, 10.0f, "%.1f");
+			ImGui::SliderFloat("Z", &model.second.get()->pos.z, -10.0f, 10.0f, "%.1f");
+		}
+
+		ImGui::PopID();
 	}
-	ImGui::SameLine();
-	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
-		m_lightType = 1;
-	}
-	ImGui::SameLine();
-	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
-		m_lightType = 2;
-	}
-
-	ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, -5.0f, 5.0f);
-
-	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
-
-	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
-
-	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
-
-	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
 
 	ImGui::End();
 
 	// Rendering
 	ImGui::Render();
-
 }
 
 void MainEngine::Render()
@@ -182,7 +169,7 @@ void MainEngine::Render()
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
 
 	for (const auto& model : m_models)
-		model->Render(m_device, m_commandList, m_textureHeap, guiState);
+		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 

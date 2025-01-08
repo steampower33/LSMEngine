@@ -136,7 +136,7 @@ void EngineBase::LoadPipeline()
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
 
 		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-		textureHeapDesc.NumDescriptors = 32;
+		textureHeapDesc.NumDescriptors = 30;
 		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));

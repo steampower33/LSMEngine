@@ -190,18 +190,25 @@ static void CreateDDSTextureBuffer(
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
-	UINT& totalTextureCnt,
+	UINT& textureCnt,
 	unordered_map<string, int>& textureIdx,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
 	if (textureIdx.find(filename) != textureIdx.end())
 	{
-		newMesh->constsBufferData.diffuseIndex = totalTextureCnt;
+
+		if (filename.find("ambient") != std::string::npos)
+			cubemapIndexConstsBufferData.cubemapAmbientIndex = textureCnt;
+		else if (filename.find("diffuse") != std::string::npos)
+			cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
+		else if (filename.find("specular") != std::string::npos)
+			cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
+
 		return;
 	}
 
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * totalTextureCnt);
+	textureHandle.Offset(size * textureCnt);
 
 	wstring wideFilename = StringToWString(filename);
 
@@ -244,12 +251,18 @@ static void CreateDDSTextureBuffer(
 
 	// 府家胶 包府
 	textures.push_back(tex);
-	cubemapIndexConstsBufferData.cubemapIndex = totalTextureCnt;
 
-	textureIdx.insert({ filename, totalTextureCnt });
-	totalTextureCnt++;
+	if (filename.find("ambient") != std::string::npos)
+		cubemapIndexConstsBufferData.cubemapAmbientIndex = textureCnt;
+	else if (filename.find("diffuse") != std::string::npos)
+		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
+	else if (filename.find("specular") != std::string::npos)
+		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
 
-	wprintf(L"Successfully loaded DDS texture: %s\n", wideFilename.c_str());
+	textureIdx.insert({ filename, textureCnt });
+	textureCnt++;
+
+	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
 }
 
 static void CreateTextureBuffer(
@@ -260,11 +273,23 @@ static void CreateTextureBuffer(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
-	UINT& totalTextureCnt,
+	UINT& textureCnt,
 	unordered_map<string, int>& textureIdx)
 {
+	if (textureIdx.find(filename) != textureIdx.end())
+	{
+		if (filename.find("ambient") != std::string::npos)
+			newMesh->constsBufferData.ambientIndex = textureCnt;
+		else if (filename.find("diffuse") != std::string::npos)
+			newMesh->constsBufferData.diffuseIndex = textureCnt;
+		else if (filename.find("specular") != std::string::npos)
+			newMesh->constsBufferData.specularIndex = textureCnt;
+
+		return;
+	}
+
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * totalTextureCnt);
+	textureHandle.Offset(size * textureCnt);
 
 	auto image = make_unique<ScratchImage>();
 
@@ -319,11 +344,17 @@ static void CreateTextureBuffer(
 	textures.push_back(tex);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	newMesh->constsBufferData.diffuseIndex = totalTextureCnt;
-	textureIdx.insert({ filename, totalTextureCnt });
-	totalTextureCnt++;
+	if (filename.find("ambient") != std::string::npos)
+		newMesh->constsBufferData.ambientIndex = textureCnt;
+	else if (filename.find("diffuse") != std::string::npos)
+		newMesh->constsBufferData.diffuseIndex = textureCnt;
+	else if (filename.find("specular") != std::string::npos)
+		newMesh->constsBufferData.specularIndex = textureCnt;
 
-	wprintf(L"Successfully loaded texture: %s\n", wideFilename.c_str());
+	textureIdx.insert({ filename, textureCnt });
+	textureCnt++;
+
+	wprintf(L"Successfully loaded texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
 
 }
 

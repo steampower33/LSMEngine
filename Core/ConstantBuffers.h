@@ -13,11 +13,11 @@ struct Material {
 	XMFLOAT3 ambient = { 0.1f, 0.1f, 0.1f };  // 12
 	float shininess = 1.0f;           // 4
 	XMFLOAT3 diffuse = { 0.5f, 0.5f, 0.5f };  // 12
-	float dummy1;                     // 4
+	float dummy1 = 0.0f;              // 4
 	XMFLOAT3 specular = { 0.5f, 0.5f, 0.5f }; // 12
-	float dummy2;                     // 4
+	float dummy2 = 0.0f;              // 4
 	XMFLOAT3 dummy3;						  // 12
-	float dummy4;					  // 4
+	float dummy4 = 0.0f;			  // 4
 };
 
 // Α¶Έν
@@ -30,7 +30,7 @@ struct Light {
 	XMFLOAT3 position = { 0.0f, 0.0f, -2.0f }; // 12
 	float spotPower = 1.0f;                        // 4
 	XMFLOAT3 d1;							   // 12
-	float d2;									   // 4
+	float d2 = 0.0f;;									   // 4
 };
 
 __declspec(align(512)) struct GlobalConstants
@@ -59,8 +59,10 @@ __declspec(align(256)) struct MeshConstants {
 };
 
 __declspec(align(256)) struct TextureIndexConstants {
+	UINT ambientIndex;
 	UINT diffuseIndex;
-	float dummy[15];
+	UINT specularIndex;
+	float dummy[13];
 
 	XMFLOAT4X4 dummy1;
 
@@ -70,8 +72,10 @@ __declspec(align(256)) struct TextureIndexConstants {
 };
 
 __declspec(align(256)) struct CubemapIndexConstants {
-	UINT cubemapIndex;
-	float dummy[15];
+	UINT cubemapAmbientIndex;
+	UINT cubemapDiffuseIndex;
+	UINT cubemapSpecularIndex;
+	float dummy[13];
 
 	XMFLOAT4X4 dummy1;
 

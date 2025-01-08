@@ -9,6 +9,7 @@
 #include "Helpers.h"
 #include "Mesh.h"
 #include "GraphicsCommon.h"
+#include "TextureManager.h"
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -21,11 +22,9 @@ public:
 		ComPtr<ID3D12Device>& device,
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12CommandQueue>& commandQueue,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 		const vector<MeshData>& meshDatas,
-		UINT& totalTextureCnt,
-		unordered_map<string, int>& textureIdx,
-		CubemapIndexConstants& cubemapIndexConstsBufferData);
+		CubemapIndexConstants& cubemapIndexConstsBufferData,
+		TextureManager& textureManager);
 
 	~Model();
 
@@ -44,30 +43,21 @@ public:
 	void Update();
 
 	XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-
-
-private:
-	void Initialize(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12CommandQueue>& commandQueue,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-		const vector<MeshData>& meshDatas,
-		UINT& totalTextureCnt,
-		unordered_map<string, int>& textureIdx,
-		CubemapIndexConstants& cubemapIndexConstsBufferData);
-
-	bool CheckDuplcateFilename(
-		unordered_map<string, int>& textureIdx,
-		const string& filename,
-		shared_ptr<Mesh>& newMesh);
+	string key;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;
 	UINT8* m_meshConstsBufferDataBegin;
 
-	vector<ComPtr<ID3D12Resource>> textures;
-	vector<ComPtr<ID3D12Resource>> texturesUploadHeap;
+private:
+	void Initialize(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12CommandQueue>& commandQueue,
+		const vector<MeshData>& meshDatas,
+		CubemapIndexConstants& cubemapIndexConstsBufferData,
+		TextureManager& textureManager);
+
 
 };
