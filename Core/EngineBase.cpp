@@ -7,7 +7,7 @@ class WinApp;
 HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
-	m_width(1280.0f), m_height(800.0f),
+	m_width(1920.0f), m_height(1080.0f),
 	m_mousePosX(m_width / 2),
 	m_mousePosY(m_height / 2),
 	m_aspectRatio(m_width / m_height)
@@ -101,7 +101,7 @@ void EngineBase::LoadPipeline()
 	swapChainDesc.Width = static_cast<UINT>(m_width);
 	swapChainDesc.Height = static_cast<UINT>(m_height);
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
 
@@ -129,6 +129,12 @@ void EngineBase::LoadPipeline()
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+		srvHeapDesc.NumDescriptors = FrameCount;
+		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
 		dsvHeapDesc.NumDescriptors = 1;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -146,13 +152,28 @@ void EngineBase::LoadPipeline()
 
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// Create a RTV for each frame
 		for (UINT n = 0; n < FrameCount; n++)
 		{
+			// Create a RTV for each frame
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 			rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+			// Create a SRV for each frame
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.Format = m_renderTargets[n]->GetDesc().Format;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.Texture2D.MipLevels = m_renderTargets[n]->GetDesc().MipLevels;
+
+			m_device->CreateShaderResourceView(
+				m_renderTargets[n].Get(),
+				&srvDesc,
+				srvHandle
+			);
+			srvHandle.Offset(1, m_cbvDescriptorSize);
 		}
 	}
 

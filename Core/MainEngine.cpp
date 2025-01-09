@@ -21,7 +21,7 @@ void MainEngine::Initialize()
 		skybox.ddsDiffuseFilename = "./Assets/park_diffuse.dds";
 		skybox.ddsSpecularFilename = "./Assets/park_specular.dds";
 		m_skybox = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue, 
+			m_device, m_commandList, m_commandQueue,
 			vector{ skybox }, m_cubemapIndexConstsBufferData, textureManager);
 		m_skybox->key = "skybox";
 	}
@@ -30,7 +30,7 @@ void MainEngine::Initialize()
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		meshData.diffuseFilename = "./Assets/wall_black.jpg";
 		shared_ptr<Model> box = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue, 
+			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
 		box->key = "box";
 		m_models.insert({ box->key, box });
@@ -40,10 +40,19 @@ void MainEngine::Initialize()
 		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
 		meshData.diffuseFilename = "./Assets/earth.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue, 
+			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
 		sphere->key = "sphere";
 		m_models.insert({ sphere->key, sphere });
+	}
+
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare();
+		shared_ptr<Model> square = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
+		square->key = "square";
+		m_models.insert({ square->key, square });
 	}
 
 	ThrowIfFailed(m_commandList->Close());
@@ -120,7 +129,7 @@ void MainEngine::UpdateGUI()
 			ImGui::SliderFloat3("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse.x, 0.0f, 1.0f, "%.1f");
 			ImGui::SliderFloat3("Specular", &model.second.get()->m_meshConstsBufferData.material.specular.x, 0.0f, 1.0f, "%.1f");
 			ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f");
-			
+
 			ImGui::SliderFloat("X", &model.second.get()->pos.x, -10.0f, 10.0f, "%.1f");
 			ImGui::SliderFloat("Y", &model.second.get()->pos.y, -10.0f, 10.0f, "%.1f");
 			ImGui::SliderFloat("Z", &model.second.get()->pos.z, -10.0f, 10.0f, "%.1f");
