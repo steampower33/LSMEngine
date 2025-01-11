@@ -18,6 +18,12 @@ namespace Graphics
 	ComPtr<IDxcBlob> skyboxVS;
 	ComPtr<IDxcBlob> skyboxPS;
 
+	ComPtr<IDxcBlob> samplingVS;
+	ComPtr<IDxcBlob> samplingPS;
+
+	ComPtr<IDxcBlob> combineVS;
+	ComPtr<IDxcBlob> combinePS;
+
 	D3D12_RASTERIZER_DESC solidRS;
 	D3D12_RASTERIZER_DESC wireRS;
 
@@ -30,6 +36,8 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> basicWirePSO;
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> skyboxPSO;
+	ComPtr<ID3D12PipelineState> filterPSO;
+	ComPtr<ID3D12PipelineState> combinePSO;
 }
 
 void Graphics::InitDXC()
@@ -50,16 +58,21 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
-	CD3DX12_DESCRIPTOR_RANGE1 srvRanges[2];
-	srvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	srvRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[2];
+	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[5] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges[1];
+	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[4].InitAsDescriptorTable(2, srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[4].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[5].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[6].InitAsDescriptorTable(1, filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// Static Sampler ¼³Á¤
 	D3D12_STATIC_SAMPLER_DESC sampler = {};
@@ -100,11 +113,23 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, normalGSFilename, L"gs_6_0", normalGS);
 	CreateShader(device, normalPSFilename, L"ps_6_0", normalPS);
 
-	// skybox
+	// Skybox
 	const wchar_t skyboxVSFilename[] = L"./Shaders/SkyboxVS.hlsl";
 	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
 	CreateShader(device, skyboxVSFilename, L"vs_6_0", skyboxVS);
 	CreateShader(device, skyboxPSFilename, L"ps_6_0", skyboxPS);
+
+	// Samplingfilter
+	const wchar_t samplingVSFilename[] = L"./Shaders/SamplingVS.hlsl";
+	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
+	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
+	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
+
+	// CombineFilter
+	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
+	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
+	CreateShader(device, combineVSFilename, L"vs_6_0", combineVS);
+	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -196,40 +221,29 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	basicWirePSODesc.RasterizerState = wireRS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicWirePSODesc, IID_PPV_ARGS(&basicWirePSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC normalPSODesc = {};
-	normalPSODesc.InputLayout = { basicIE, _countof(basicIE) };
-	normalPSODesc.pRootSignature = rootSignature.Get();
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC normalPSODesc = basicSolidPSODesc;
 	normalPSODesc.VS = { normalVS->GetBufferPointer(), normalVS->GetBufferSize() };
 	normalPSODesc.GS = { normalGS->GetBufferPointer(), normalGS->GetBufferSize() };
 	normalPSODesc.PS = { normalPS->GetBufferPointer(), normalPS->GetBufferSize() };
-	normalPSODesc.RasterizerState = solidRS;
-	normalPSODesc.BlendState = disabledBlend;
-	normalPSODesc.DepthStencilState = readWriteDS;
-	normalPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	normalPSODesc.SampleDesc.Count = 1;
-	normalPSODesc.SampleMask = UINT_MAX;
 	normalPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	normalPSODesc.NumRenderTargets = 1;
-	normalPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&normalPSODesc, IID_PPV_ARGS(&normalPSO)));
 
-	// Describe and create the graphcis pipeline state object (PSO).
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = {};
-	skyboxPSODesc.InputLayout = { basicIE, _countof(basicIE) };
-	skyboxPSODesc.pRootSignature = rootSignature.Get();
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = basicSolidPSODesc;
 	skyboxPSODesc.VS = { skyboxVS->GetBufferPointer(), skyboxVS->GetBufferSize() };
 	skyboxPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
-	skyboxPSODesc.RasterizerState = solidRS;
-	skyboxPSODesc.BlendState = disabledBlend;
-	skyboxPSODesc.DepthStencilState = readWriteDS;
-	skyboxPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	skyboxPSODesc.SampleDesc.Count = 1;
-	skyboxPSODesc.SampleMask = UINT_MAX;
-	skyboxPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	skyboxPSODesc.NumRenderTargets = 1;
-	skyboxPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&skyboxPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC filterPSODesc = basicSolidPSODesc;
+	filterPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
+	filterPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
+	filterPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&filterPSODesc, IID_PPV_ARGS(&filterPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;
+	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
+	combinePSODesc.PS = { combinePS->GetBufferPointer(), combinePS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
+
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)
@@ -245,7 +259,7 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 
 
 void Graphics::CreateShader(
-	ComPtr<ID3D12Device>& device, 
+	ComPtr<ID3D12Device>& device,
 	const wchar_t* filename,
 	const wchar_t* targetProfile, // Shader Target Profile
 	ComPtr<IDxcBlob>& shaderBlob)

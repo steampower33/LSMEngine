@@ -14,9 +14,8 @@ void HeapAllocator::Create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
 	HeapStartCpu = Heap->GetCPUDescriptorHandleForHeapStart();
 	HeapStartGpu = Heap->GetGPUDescriptorHandleForHeapStart();
 	HeapHandleIncrement = device->GetDescriptorHandleIncrementSize(HeapType);
-	//FreeIndices.reserve((int)desc.NumDescriptors / 2);
-	FreeIndices.reserve(8);
-	for (UINT n = desc.NumDescriptors; n > desc.NumDescriptors - 8; n--)
+	FreeIndices.reserve(desc.NumDescriptors);
+	for (UINT n = 0; n < desc.NumDescriptors; n++)
 		FreeIndices.push_back(n);
 }
 

@@ -83,3 +83,19 @@ __declspec(align(256)) struct CubemapIndexConstants {
 
 	XMFLOAT4X4 dummy3;
 };
+
+__declspec(align(256)) struct SamplingConstants {
+	float dx;
+	float dy;
+	float threshold;
+	float strength;
+
+	UINT index;
+	UINT d[11];
+
+	XMFLOAT4X4 dummy1;
+	
+	XMFLOAT4X4 dummy2;
+
+	XMFLOAT4X4 dummy3;
+};

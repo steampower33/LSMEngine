@@ -128,14 +128,14 @@ cbuffer GlobalConstants : register(b0)
 {
     float4x4 view;
     float4x4 proj;
-    float4x4 d11;
-    float4x4 d12;
+    float4x4 d01;
+    float4x4 d02;
     
     Light lights[MAX_LIGHTS];
     
     float3 eyeWorld;
     bool isUseTexture;
-    bool d13[3];
+    bool d03[3];
     float4x3 dummy;
 }
 
@@ -147,7 +147,7 @@ cbuffer MeshConstants : register(b1)
     
     Material material;
     
-    float4x4 d21;
+    float4x4 d11;
 }
 
 cbuffer TextureIndexConstants : register(b2)
@@ -155,6 +155,20 @@ cbuffer TextureIndexConstants : register(b2)
     uint ambientIndex;
     uint diffuseIndex;
     uint specularIndex;
+    float d21[13];
+    
+    float4x4 d22;
+    
+    float4x4 d23;
+    
+    float4x4 d24;
+}
+
+cbuffer CubemapIndexConstants : register(b3)
+{
+    uint cubemapAmbientIndex;
+    uint cubemapDiffuseIndex;
+    uint cubemapSpecularIndex;
     float d31[13];
     
     float4x4 d32;
@@ -164,12 +178,15 @@ cbuffer TextureIndexConstants : register(b2)
     float4x4 d34;
 }
 
-cbuffer CubemapIndexConstants : register(b3)
+cbuffer SamplingConstants : register(b4)
 {
-    uint cubemapAmbientIndex;
-    uint cubemapDiffuseIndex;
-    uint cubemapSpecularIndex;
-    float d41[13];
+    float dx;
+    float dy;
+    float threshold;
+    float strength;
+    
+    uint index;
+    uint d40[11];
     
     float4x4 d42;
     

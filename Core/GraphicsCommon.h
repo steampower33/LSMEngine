@@ -32,6 +32,12 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> skyboxVS;
 	extern ComPtr<IDxcBlob> skyboxPS;
 
+	extern ComPtr<IDxcBlob> samplingVS;
+	extern ComPtr<IDxcBlob> samplingPS;
+
+	extern ComPtr<IDxcBlob> combineVS;
+	extern ComPtr<IDxcBlob> combinePS;
+
 	extern D3D12_RASTERIZER_DESC solidRS;
 	extern D3D12_RASTERIZER_DESC wireRS;
 
@@ -44,6 +50,8 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> basicWirePSO;
 	extern ComPtr<ID3D12PipelineState> normalPSO;
 	extern ComPtr<ID3D12PipelineState> skyboxPSO;
+	extern ComPtr<ID3D12PipelineState> filterPSO;
+	extern ComPtr<ID3D12PipelineState> combinePSO;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();

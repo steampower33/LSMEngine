@@ -5,6 +5,7 @@
 #include "Model.h"
 #include "GeometryGenerator.h"
 #include "TextureManager.h"
+#include "PostProcess.h"
 
 class MainEngine : public EngineBase
 {
@@ -34,7 +35,7 @@ private:
 	// Models
 	shared_ptr<Model> m_skybox;
 	unordered_map<string, shared_ptr<Model>> m_models;
-
+	shared_ptr<PostProcess> m_postProcess[FrameCount];
 
 	// Texture
 	TextureManager textureManager;

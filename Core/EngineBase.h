@@ -57,6 +57,7 @@ public:
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];

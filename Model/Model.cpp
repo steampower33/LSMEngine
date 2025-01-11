@@ -32,7 +32,7 @@ void Model::Initialize(
 
 		CreateVertexBuffer(device, commandList, meshDatas[i].vertices, newMesh);
 		CreateIndexBuffer(device, commandList, meshDatas[i].indices, newMesh);
-		
+
 		textureManager.LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
 
 		CreateConstDefaultBuffer(device, commandList, newMesh);
@@ -61,7 +61,6 @@ void Model::Update()
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 }
 
-
 void Model::Render(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
@@ -69,21 +68,19 @@ void Model::Render(
 	GuiState& guiState)
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootDescriptorTable(4, textureHeap->GetGPUDescriptorHandleForHeapStart());
 
-	auto textureHandle = textureHeap->GetGPUDescriptorHandleForHeapStart();
-	auto size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (guiState.isWireframe)
+		commandList->SetPipelineState(Graphics::basicWirePSO.Get());
+	else
+		commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
+
 	for (const auto& mesh : m_meshes)
 	{
 		commandList->SetGraphicsRootConstantBufferView(2, mesh->constsBuffer.Get()->GetGPUVirtualAddress());
-		commandList->SetGraphicsRootDescriptorTable(4, textureHandle);
 
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
-
-		if (guiState.isWireframe)
-			commandList->SetPipelineState(Graphics::basicWirePSO.Get());
-		else
-			commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
 
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);

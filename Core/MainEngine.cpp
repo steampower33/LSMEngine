@@ -1,8 +1,6 @@
 #include "MainEngine.h"
 
-MainEngine::MainEngine() : EngineBase()
-{
-}
+MainEngine::MainEngine() : EngineBase() {}
 
 void MainEngine::Initialize()
 {
@@ -54,6 +52,10 @@ void MainEngine::Initialize()
 		square->key = "square";
 		m_models.insert({ square->key, square });
 	}
+
+	for (int i = 0; i < FrameCount; i++)
+		m_postProcess[i] = make_shared<PostProcess>(
+			m_device, m_commandList, m_width, m_height, 5);
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -168,11 +170,8 @@ void MainEngine::Render()
 	m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
-
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-
 	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
@@ -180,12 +179,24 @@ void MainEngine::Render()
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
 
+	auto RenderToResource = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_renderTargets[m_frameIndex].Get(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	m_commandList->ResourceBarrier(1, &RenderToResource);
+
+	// PostProcess
+	m_commandList->SetPipelineState(Graphics::filterPSO.Get());
+	m_postProcess[m_frameIndex].get()->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
+		m_rtvHeap, m_srvHeap, m_dsvHeap, m_frameIndex);
+
+	ID3D12DescriptorHeap* imguiHeap[] = { m_imguiHeap.Get() };
+	m_commandList->SetDescriptorHeaps(_countof(imguiHeap), imguiHeap);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
-	auto RTToPresent = CD3DX12_RESOURCE_BARRIER::Transition(
+	auto RenderToPresent = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_renderTargets[m_frameIndex].Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	m_commandList->ResourceBarrier(1, &RTToPresent);
+	m_commandList->ResourceBarrier(1, &RenderToPresent);
 
 	ThrowIfFailed(m_commandList->Close());
 

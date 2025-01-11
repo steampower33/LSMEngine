@@ -142,12 +142,17 @@ void EngineBase::LoadPipeline()
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
 
 		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-		textureHeapDesc.NumDescriptors = 30;
+		textureHeapDesc.NumDescriptors = 20;
 		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
 
-		m_srvAlloc.Create(m_device.Get(), m_textureHeap.Get());
+		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
+		imguiHeapDesc.NumDescriptors = 4;
+		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
+		m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
 	}
 
 	{
@@ -165,7 +170,7 @@ void EngineBase::LoadPipeline()
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srvDesc.Format = m_renderTargets[n]->GetDesc().Format;
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MipLevels = m_renderTargets[n]->GetDesc().MipLevels;
 
 			m_device->CreateShaderResourceView(
@@ -266,7 +271,7 @@ void EngineBase::LoadGUI()
 	init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
 	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 	// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-	init_info.SrvDescriptorHeap = m_textureHeap.Get();
+	init_info.SrvDescriptorHeap = m_imguiHeap.Get();
 	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
 	ImGui_ImplDX12_Init(&init_info);
