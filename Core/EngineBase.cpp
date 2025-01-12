@@ -23,6 +23,8 @@ EngineBase::EngineBase() :
 	m_scissorRect.top = 0;
 	m_scissorRect.right = static_cast<LONG>(m_width);
 	m_scissorRect.bottom = static_cast<LONG>(m_height);
+
+	m_camera = make_shared<Camera>(m_aspectRatio);
 }
 
 EngineBase::~EngineBase()

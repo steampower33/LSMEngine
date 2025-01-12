@@ -39,7 +39,7 @@ public:
 	float m_aspectRatio;
 	static const UINT FrameCount = 3;
 
-	Camera m_camera;
+	shared_ptr<Camera> m_camera;
 
 	float m_mousePosX = 0;
 	float m_mousePosY = 0;

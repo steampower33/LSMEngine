@@ -12,18 +12,20 @@ class ImageFilter
 public:
 	ImageFilter(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-		float width, float height, UINT index);
+		UINT width, UINT height, UINT index);
 	~ImageFilter() {}
 
-	void Update(UINT frameIndex);
+	void Update(float threshold, float strength);
+	void UpdateIndex(UINT frameIndex);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList);
 
 private:
 	void Initialize(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-		float width, float height, UINT index);
+		UINT width, UINT height, UINT index);
 
 	CD3DX12_VIEWPORT m_viewport;
+	D3D12_RECT scissorRect;
 
 	SamplingConstants m_samplingConstsBufferData;
 	ComPtr<ID3D12Resource> m_samplingConstsUploadHeap;

@@ -53,9 +53,10 @@ void MainEngine::Initialize()
 		m_models.insert({ square->key, square });
 	}
 
+	const UINT bloomLevels = 5;
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
-			m_device, m_commandList, m_width, m_height, 5);
+			m_device, m_commandList, m_width, m_height, bloomLevels);
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -70,22 +71,22 @@ void MainEngine::Initialize()
 
 void MainEngine::Update(float dt)
 {
-	m_camera.Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
+	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-	XMMATRIX view = m_camera.GetViewMatrix();
+	XMMATRIX view = m_camera->GetViewMatrix();
 	XMMATRIX viewTrans = XMMatrixTranspose(view);
 	XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
 
-	XMMATRIX proj = m_camera.GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
+	XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
 	XMMATRIX projTrans = XMMatrixTranspose(proj);
 	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
-
-	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 
 	XMVECTOR det;
 	XMMATRIX invView = XMMatrixInverse(&det, view);
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
+
+	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 
 	for (int i = 0; i < MAX_LIGHTS; i++)
 	{
@@ -96,14 +97,20 @@ void MainEngine::Update(float dt)
 	}
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
-
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
-
-	m_skybox->Update();
 
 	for (const auto& model : m_models)
 	{
 		model.second->Update();
+	}
+
+	m_skybox->Update();
+
+	if (dirtyFlag.isPostProcessFlag)
+	{
+		dirtyFlag.isPostProcessFlag = false;
+		for (int i = 0; i < FrameCount; i++)
+			m_postProcess[i]->Update(threshold, strength, m_frameIndex);
 	}
 }
 
@@ -124,7 +131,7 @@ void MainEngine::UpdateGUI()
 	{
 		ImGui::PushID(model.first.c_str());
 
-		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 
 		if (ImGui::CollapsingHeader(model.first.c_str(), true)) {
 			ImGui::SliderFloat3("Ambient", &model.second.get()->m_meshConstsBufferData.material.ambient.x, 0.0f, 1.0f, "%.1f");
@@ -139,6 +146,16 @@ void MainEngine::UpdateGUI()
 
 		ImGui::PopID();
 	}
+	
+	if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f, "%.1f"))
+	{
+		dirtyFlag.isPostProcessFlag = true;
+	}
+
+	if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f, "%.1f"))
+	{
+		dirtyFlag.isPostProcessFlag = true;
+	}
 
 	ImGui::End();
 
@@ -146,7 +163,7 @@ void MainEngine::UpdateGUI()
 	ImGui::Render();
 }
 
-void MainEngine::Render()
+void MainEngine::Render()	
 {
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
@@ -185,7 +202,7 @@ void MainEngine::Render()
 	m_commandList->ResourceBarrier(1, &RenderToResource);
 
 	// PostProcess
-	m_postProcess[m_frameIndex].get()->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
+	m_postProcess[m_frameIndex]->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
 		m_rtvHeap, m_srvHeap, m_dsvHeap, m_frameIndex);
 
 	ID3D12DescriptorHeap* imguiHeap[] = { m_imguiHeap.Get() };

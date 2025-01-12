@@ -102,9 +102,9 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		}
 		if (wParam == 'F')
 		{
-			pEngine->m_camera.m_useFirstPersonView = !pEngine->m_camera.m_useFirstPersonView;
+			pEngine->m_camera->m_useFirstPersonView = !pEngine->m_camera->m_useFirstPersonView;
 		}
-		pEngine->m_camera.KeyDown(wParam);
+		pEngine->m_camera->KeyDown(wParam);
 		break;
 	}
 	case WM_KEYUP:
@@ -113,7 +113,7 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		{
 			PostQuitMessage(0);
 		}
-		pEngine->m_camera.KeyUp(wParam);
+		pEngine->m_camera->KeyUp(wParam);
 		break;
 	}
 	case WM_SIZE: {

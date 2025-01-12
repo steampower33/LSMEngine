@@ -31,7 +31,7 @@ struct KeysPressed
 class Camera
 {
 public:
-	Camera();
+	Camera(float aspectRatio);
 	XMMATRIX GetViewMatrix();
 	XMMATRIX GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
 
@@ -58,6 +58,8 @@ private:
 	float m_cursorNdcX;
 	float m_cursorNdcY;
 
+	float m_aspectRatio;
+
 	// roll, pitch, yaw
 	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
 	float m_yaw;
@@ -67,4 +69,6 @@ private:
 	float m_mouseSensitivity;
 
 	KeysPressed m_keysPressed;
+
+	bool m_isKeyMove = false;
 };

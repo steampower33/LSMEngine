@@ -2,7 +2,8 @@
 
 using namespace std;
 
-Camera::Camera() :
+Camera::Camera(float aspectRatio) : 
+	m_aspectRatio(aspectRatio),
 	m_pos(0.0f, 0.0f, -5.0f),
 	m_lookDir(0.0f, 0.0f, 1.0f),
 	m_upDir(0.0f, 1.0f, 0.0f),
@@ -82,29 +83,27 @@ void Camera::MoveRight(float dt) {
 
 void Camera::UpdateMouse(float deltaX, float deltaY, float dt)
 {
-	if (m_useFirstPersonView) {
-		// 마우스 이동량(Delta)에 속도와 deltaTime 적용
-		m_yaw += deltaX * m_mouseSensitivity * dt;
-		m_pitch += deltaY * m_mouseSensitivity * dt;
+	// 마우스 이동량(Delta)에 속도와 deltaTime 적용
+	m_yaw += deltaX * m_mouseSensitivity * dt;
+	m_pitch += deltaY * m_mouseSensitivity * dt;
 
-		// Pitch 제한 (카메라가 위/아래로 90도 이상 회전하지 않도록)
-		m_pitch = std::clamp(m_pitch, -DirectX::XM_PIDIV2, DirectX::XM_PIDIV2);
+	// Pitch 제한 (카메라가 위/아래로 90도 이상 회전하지 않도록)
+	m_pitch = std::clamp(m_pitch, -DirectX::XM_PIDIV2, DirectX::XM_PIDIV2);
 
-		// 새로운 방향 벡터 계산
-		XMVECTOR forward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 카메라의 기본 전방 방향
-		XMMATRIX yawMatrix = XMMatrixRotationY(m_yaw);          // Yaw 회전 행렬
-		XMMATRIX pitchMatrix = XMMatrixRotationX(m_pitch);      // Pitch 회전 행렬
+	// 새로운 방향 벡터 계산
+	XMVECTOR forward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 카메라의 기본 전방 방향
+	XMMATRIX yawMatrix = XMMatrixRotationY(m_yaw);          // Yaw 회전 행렬
+	XMMATRIX pitchMatrix = XMMatrixRotationX(m_pitch);      // Pitch 회전 행렬
 
-		XMVECTOR lookDir = XMVector3TransformNormal(forward, pitchMatrix * yawMatrix);
-		lookDir = XMVector3Normalize(lookDir); // 정규화 추가
-		XMStoreFloat3(&m_lookDir, lookDir);
+	XMVECTOR lookDir = XMVector3TransformNormal(forward, pitchMatrix * yawMatrix);
+	lookDir = XMVector3Normalize(lookDir); // 정규화 추가
+	XMStoreFloat3(&m_lookDir, lookDir);
 
-		// 카메라의 오른쪽 방향도 업데이트
-		XMVECTOR upDir = XMLoadFloat3(&m_upDir); // upDir을 로드하여 정확히 교차
-		XMVECTOR rightDir = XMVector3Cross(upDir, lookDir);
-		rightDir = XMVector3Normalize(rightDir); // 정규화 추가
-		XMStoreFloat3(&m_rightDir, rightDir);
-	}
+	// 카메라의 오른쪽 방향도 업데이트
+	XMVECTOR upDir = XMLoadFloat3(&m_upDir); // upDir을 로드하여 정확히 교차
+	XMVECTOR rightDir = XMVector3Cross(upDir, lookDir);
+	rightDir = XMVector3Normalize(rightDir); // 정규화 추가
+	XMStoreFloat3(&m_rightDir, rightDir);
 }
 
 XMMATRIX Camera::GetViewMatrix()

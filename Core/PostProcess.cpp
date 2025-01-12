@@ -2,7 +2,7 @@
 
 PostProcess::PostProcess(
     ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-    float width, float height, const int bloomLevels)
+    float width, float height, const UINT bloomLevels)
 {
     m_bloomLevels = bloomLevels;
     Initialize(device, commandList, width, height);
@@ -18,7 +18,6 @@ void PostProcess::Initialize(
     float width, float height
 	)
 {
-
 	MeshData square = GeometryGenerator::MakeSquare();
 
     m_mesh = make_shared<Mesh>();
@@ -28,45 +27,54 @@ void PostProcess::Initialize(
 	CreateIndexBuffer(device, commandList, square.indices, m_mesh);
 
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = m_bloomLevels;
+    rtvHeapDesc.NumDescriptors = m_bloomLevels + 1;
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
     D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-    srvHeapDesc.NumDescriptors = m_bloomLevels;
+    srvHeapDesc.NumDescriptors = m_bloomLevels + 1;
     srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
-    m_textures.resize(m_bloomLevels);
-    for (int i = 0; i < m_bloomLevels; i++)
+    m_textures.resize(m_bloomLevels + 1);
+
+    shared_ptr<ImageFilter> copyFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
+    m_filters.push_back(copyFilter);
+    CreateTex2D(device, m_textures[0], width, height, 0);
+
+    for (int i = 1; i < m_bloomLevels + 1; i++)
     {
-        float div = float(pow(2, i + 1));
-        float newWidth = width / div;
-        float newHeight = height / div;
+        float div = float(pow(2, i - 1));
+
+        UINT newWidth = static_cast<UINT>(width / div);
+        UINT newHeight = static_cast<UINT>(height / div);
 
         shared_ptr<ImageFilter> downFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i - 1);
         m_filters.push_back(downFilter);
 
-        CreateTex2D(device, m_textures[i], newWidth, newHeight, i, m_rtvHeap, m_srvHeap);
+        CreateTex2D(device, m_textures[i], newWidth, newHeight, i);
     }
+    m_filters[1]->Update(0.3f, 0.0);
 
     for (int i = m_bloomLevels - 1; i > 0; i--)
     {
-        float div = float(pow(2, i));
+        float div = float(pow(2, i - 1));
         float newWidth = width / div;
         float newHeight = height / div;
 
-        shared_ptr<ImageFilter> upFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i);
+        shared_ptr<ImageFilter> upFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i + 1);
         m_filters.push_back(upFilter);
     }
 
-    m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
+    m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 1);
 }
 
-void PostProcess::Update(UINT frameIndex)
+void PostProcess::Update(float threshold, float strength, UINT frameIndex)
 {
+    m_filters[1]->Update(threshold, 0.0f);
+    m_combineFilter->Update(0.0f, strength);
 }
 
 void PostProcess::Render(
@@ -83,8 +91,8 @@ void PostProcess::Render(
 
     commandList->SetPipelineState(Graphics::filterPSO.Get());
     
-    // DownSampling
-    for (int i = 0; i < m_bloomLevels; i++)
+    // Copy & DownSampling
+    for (int i = 0; i < m_bloomLevels + 1; i++)
     {
         if (i == 0)
         {
@@ -93,7 +101,7 @@ void PostProcess::Render(
 
             CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart());
             commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
-            m_filters[0]->Update(frameIndex);
+            m_filters[0]->UpdateIndex(frameIndex);
         }
         else if (i == 1)
         {
@@ -103,10 +111,13 @@ void PostProcess::Render(
             CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
             commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
         }
-
+        
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * i);
         CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
         commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+        const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+        commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
         commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
         
         m_filters[i]->Render(commandList);
@@ -124,22 +135,26 @@ void PostProcess::Render(
     for (int i = m_bloomLevels - 1; i > 0; i--)
     {
         auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
-            m_textures[i - 1].Get(),
+            m_textures[i].Get(),
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
         commandList->ResourceBarrier(1, &ResourceToRender);
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * (i - 1));
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * i);
         CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
         commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+        const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+        commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+
         commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-        m_filters[m_bloomLevels + m_bloomLevels - (i + 1)]->Render(commandList);
+        m_filters[m_bloomLevels + m_bloomLevels - i]->Render(commandList);
 
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->DrawIndexedInstanced(m_mesh->indexBufferCount, 1, 0, 0, 0);
 
         auto RenderToResource = CD3DX12_RESOURCE_BARRIER::Transition(
-            m_textures[i - 1].Get(),
+            m_textures[i].Get(),
             D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandList->ResourceBarrier(1, &RenderToResource);
     }
@@ -150,16 +165,20 @@ void PostProcess::Render(
     commandList->ResourceBarrier(1, &ResourceToRender);
 
     commandList->SetPipelineState(Graphics::combinePSO.Get());
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvhandle(rtv->GetCPUDescriptorHandleForHeapStart(), rtvSize * frameIndex);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv->GetCPUDescriptorHandleForHeapStart(), rtvSize * frameIndex);
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
-    commandList->OMSetRenderTargets(1, &rtvhandle, FALSE, &dsvHandle);
+    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+    const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+    commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+
     commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     m_combineFilter->Render(commandList);
 
     commandList->DrawIndexedInstanced(m_mesh->indexBufferCount, 1, 0, 0, 0);
 
-    for (int i = 0; i < m_bloomLevels; i++)
+    for (int i = 0; i < m_bloomLevels + 1; i++)
     {
         auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
             m_textures[i].Get(),
@@ -169,9 +188,8 @@ void PostProcess::Render(
 }
 
 void PostProcess::CreateTex2D(
-    ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture, 
-    float width, float height, UINT index,
-    ComPtr<ID3D12DescriptorHeap>& rtv, ComPtr<ID3D12DescriptorHeap>& srv)
+    ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture,
+    UINT width, UINT height, UINT index)
 {
     auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
@@ -186,12 +204,19 @@ void PostProcess::CreateTex2D(
         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET // RT로 사용할 예정이면 플래그 설정
     );
 
+    D3D12_CLEAR_VALUE clearValue = {};
+    clearValue.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // 텍스처의 포맷
+    clearValue.Color[0] = 0.0f; // Red
+    clearValue.Color[1] = 0.2f; // Green
+    clearValue.Color[2] = 1.0f; // Blue
+    clearValue.Color[3] = 1.0f; // Alpha
+
     ThrowIfFailed(device->CreateCommittedResource(
         &heapProps,
         D3D12_HEAP_FLAG_NONE,
         &texDesc,
         D3D12_RESOURCE_STATE_RENDER_TARGET,
-        nullptr,
+        &clearValue,
         IID_PPV_ARGS(&texture)
     ));
 

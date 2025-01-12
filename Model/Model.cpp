@@ -43,19 +43,12 @@ void Model::Initialize(
 void Model::Update()
 {
 	XMVECTOR posVec = XMLoadFloat4(&pos);
-
 	XMMATRIX world = XMMatrixTranspose(XMMatrixTranslationFromVector(posVec));
-
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, world);
 
 	world.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-
-	// 역행렬 계산
 	XMMATRIX worldInv = XMMatrixInverse(nullptr, world);
-
-	// 역행렬의 전치 계산
 	XMMATRIX worldInvTranspose = XMMatrixTranspose(worldInv);
-
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));

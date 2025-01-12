@@ -29,6 +29,10 @@ struct GuiState {
 	bool isUseTextrue = true;
 };
 
+struct DirtyFlag {
+	bool isPostProcessFlag = false;
+};
+
 inline string HrToString(HRESULT hr)
 {
 	char s_str[64] = {};

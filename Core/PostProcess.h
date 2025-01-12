@@ -16,7 +16,7 @@ class PostProcess
 public:
 	PostProcess(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-		float width, float height, const int bloomLevels);
+		float width, float height, const UINT bloomLevels);
 
 	~PostProcess();
 
@@ -27,10 +27,9 @@ public:
 
 	void CreateTex2D(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture,
-		float width, float height, UINT index,
-		ComPtr<ID3D12DescriptorHeap>& rtv, ComPtr<ID3D12DescriptorHeap>& srv);
+		UINT width, UINT height, UINT index);
 
-	void Update(UINT m_frameIndex);
+	void Update(float threshold, float strength, UINT frameIndex);
 
 	void Render(
 		ComPtr<ID3D12Device>& device,
@@ -45,8 +44,6 @@ private:
 	UINT m_bloomLevels;
 
 	shared_ptr<Mesh> m_mesh;
-
-	SamplingConstants m_samplingConsts;
 
 	vector<shared_ptr<ImageFilter>> m_filters;
 	shared_ptr<ImageFilter> m_combineFilter;

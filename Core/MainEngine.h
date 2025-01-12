@@ -28,9 +28,13 @@ private:
 	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	GuiState guiState;
+	DirtyFlag dirtyFlag;
 
 	Light m_lightFromGUI;
 	int m_lightType = 0;
+
+	float threshold = 0.3f;
+	float strength = 1.0f;
 
 	// Models
 	shared_ptr<Model> m_skybox;
