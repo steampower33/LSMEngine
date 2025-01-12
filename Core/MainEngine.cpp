@@ -185,7 +185,6 @@ void MainEngine::Render()
 	m_commandList->ResourceBarrier(1, &RenderToResource);
 
 	// PostProcess
-	m_commandList->SetPipelineState(Graphics::filterPSO.Get());
 	m_postProcess[m_frameIndex].get()->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
 		m_rtvHeap, m_srvHeap, m_dsvHeap, m_frameIndex);
 

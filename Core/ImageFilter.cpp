@@ -21,7 +21,7 @@ void ImageFilter::Initialize(
 	m_samplingConstsBufferData.dx = 1.0f / width;
 	m_samplingConstsBufferData.dy = 1.0f / height;
 
-	m_samplingConstsBufferData.index = index - 1;
+	m_samplingConstsBufferData.index = index;
 
 	CreateConstUploadBuffer(
 		device, commandList,

@@ -39,7 +39,6 @@ void PostProcess::Initialize(
     srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
-    m_filters.resize(m_bloomLevels);
     m_textures.resize(m_bloomLevels);
     for (int i = 0; i < m_bloomLevels; i++)
     {
@@ -47,12 +46,23 @@ void PostProcess::Initialize(
         float newWidth = width / div;
         float newHeight = height / div;
 
-        m_filters[i] = make_shared<ImageFilter>(device, commandList, width / div, height / div, i);
+        shared_ptr<ImageFilter> downFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i - 1);
+        m_filters.push_back(downFilter);
 
         CreateTex2D(device, m_textures[i], newWidth, newHeight, i, m_rtvHeap, m_srvHeap);
     }
 
-    m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, m_bloomLevels - 1);
+    for (int i = m_bloomLevels - 1; i > 0; i--)
+    {
+        float div = float(pow(2, i));
+        float newWidth = width / div;
+        float newHeight = height / div;
+
+        shared_ptr<ImageFilter> upFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i);
+        m_filters.push_back(upFilter);
+    }
+
+    m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
 }
 
 void PostProcess::Update(UINT frameIndex)
@@ -71,6 +81,9 @@ void PostProcess::Render(
     commandList->IASetVertexBuffers(0, 1, &m_mesh->vertexBufferView);
     commandList->IASetIndexBuffer(&m_mesh->indexBufferView);
 
+    commandList->SetPipelineState(Graphics::filterPSO.Get());
+    
+    // DownSampling
     for (int i = 0; i < m_bloomLevels; i++)
     {
         if (i == 0)
@@ -105,7 +118,30 @@ void PostProcess::Render(
             m_textures[i].Get(),
             D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandList->ResourceBarrier(1, &RenderToResource);
+    }
 
+    // UpSampling
+    for (int i = m_bloomLevels - 1; i > 0; i--)
+    {
+        auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
+            m_textures[i - 1].Get(),
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        commandList->ResourceBarrier(1, &ResourceToRender);
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * (i - 1));
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
+        commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+        commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+        m_filters[m_bloomLevels + m_bloomLevels - (i + 1)]->Render(commandList);
+
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->DrawIndexedInstanced(m_mesh->indexBufferCount, 1, 0, 0, 0);
+
+        auto RenderToResource = CD3DX12_RESOURCE_BARRIER::Transition(
+            m_textures[i - 1].Get(),
+            D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        commandList->ResourceBarrier(1, &RenderToResource);
     }
 
     auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -125,10 +161,10 @@ void PostProcess::Render(
 
     for (int i = 0; i < m_bloomLevels; i++)
     {
-        auto RenderToResource = CD3DX12_RESOURCE_BARRIER::Transition(
+        auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
             m_textures[i].Get(),
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        commandList->ResourceBarrier(1, &RenderToResource);
+        commandList->ResourceBarrier(1, &ResourceToRender);
     }
 }
 
