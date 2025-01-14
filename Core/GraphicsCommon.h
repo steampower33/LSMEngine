@@ -8,6 +8,8 @@
 #include "Helpers.h"
 
 #include <dxcapi.h>
+#include <fstream>
+#include <filesystem>
 
 using Microsoft::WRL::ComPtr;
 

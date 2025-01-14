@@ -271,14 +271,20 @@ void Graphics::CreateShader(
 	buffer.Ptr = source->GetBufferPointer();
 	buffer.Size = source->GetBufferSize();
 	buffer.Encoding = DXC_CP_ACP; // 기본 인코딩
+	
+	std::filesystem::path filepath(filename);
+	std::wstring shaderName = filepath.stem().wstring(); // 확장자 제거된 파일 이름
 
+	std::wcout << L"Shader Name: " << shaderName << std::endl;
+
+	std::wstring pdbFilename = L"./PDB/" + std::wstring(shaderName) + L".pdb";
 	LPCWSTR args[] = {
-		L"-E", L"main",       // Entry point
-		L"-T", targetProfile, // Shader target
-		L"-I", L"./Shaders",  // Include 경로
-		L"-Zi",               // Debug 정보 포함
-		L"-Od",               // 최적화 비활성화 (디버깅용)
-		L"-Qembed_debug"
+		L"-E", L"main",							// Entry point
+		L"-T", targetProfile,					// Shader target
+		L"-I", L"./Shaders",					// Include 경로
+		L"-Zi",									// Debug 정보 포함
+		L"-Od",									// 최적화 비활성화 (디버깅용)
+		L"-Fd", pdbFilename.c_str(),			// PDB 파일 생성 경로
 	};
 
 	ComPtr<IDxcResult> result;
@@ -287,12 +293,12 @@ void Graphics::CreateShader(
 	// 컴파일된 셰이더 가져오기
 	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
 
-	// 셰이더 컴파일 에러 확인
-	ComPtr<IDxcBlobUtf8> errors;
-	result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
-
-	if (errors && errors->GetStringLength() > 0) {
-		std::wcout << targetProfile;
-		std::cout << " Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
+	// PDB 파일 출력
+	ComPtr<IDxcBlob> pdbBlob;
+	result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pdbBlob), nullptr);
+	if (pdbBlob) {
+		std::ofstream pdbFile(pdbFilename, std::ios::binary);
+		pdbFile.write((const char*)pdbBlob->GetBufferPointer(), pdbBlob->GetBufferSize());
+		pdbFile.close();
 	}
 }
