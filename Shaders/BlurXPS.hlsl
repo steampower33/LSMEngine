@@ -15,7 +15,7 @@ struct SamplingPSInput
 float4 main(SamplingPSInput input) : SV_TARGET
 {
     // Compute Shader X
-    float3 color = (0.0, 0.0, 0.0);
+    float3 color = float3(0.0, 0.0, 0.0);
     for (int i = -2; i < 3; i++)
     {
         color += g_texture[index].Sample(g_sampler, input.texcoord + float2(dx * i, 0.0)).rgb * weights[i + 2];

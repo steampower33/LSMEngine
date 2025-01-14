@@ -21,8 +21,8 @@ void PostProcess::Initialize(
 	MeshData square = GeometryGenerator::MakeSquare();
 
     m_mesh = make_shared<Mesh>();
-    m_mesh->vertexBufferCount = square.vertices.size();
-    m_mesh->indexBufferCount = square.indices.size();
+    m_mesh->vertexBufferCount = static_cast<UINT>(square.vertices.size());
+    m_mesh->indexBufferCount = static_cast<UINT>(square.indices.size());
     CreateVertexBuffer(device, commandList, square.vertices, m_mesh);
 	CreateIndexBuffer(device, commandList, square.indices, m_mesh);
 
@@ -42,9 +42,9 @@ void PostProcess::Initialize(
 
     shared_ptr<ImageFilter> copyFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
     m_filters.push_back(copyFilter);
-    CreateTex2D(device, m_textures[0], width, height, 0);
+    CreateTex2D(device, m_textures[0], static_cast<UINT>(width), static_cast<UINT>(height), 0);
 
-    for (int i = 1; i < m_bloomLevels + 1; i++)
+    for (UINT i = 1; i < m_bloomLevels + 1; i++)
     {
         float div = float(pow(2, i - 1));
 
@@ -58,11 +58,11 @@ void PostProcess::Initialize(
     }
     m_filters[1]->Update(0.3f, 0.0);
 
-    for (int i = m_bloomLevels - 1; i > 0; i--)
+    for (UINT i = m_bloomLevels - 1; i > 0; i--)
     {
         float div = float(pow(2, i - 1));
-        float newWidth = width / div;
-        float newHeight = height / div;
+        UINT newWidth = static_cast<UINT>(width / div);
+        UINT newHeight = static_cast<UINT>(height / div);
 
         shared_ptr<ImageFilter> upFilter = make_shared<ImageFilter>(device, commandList, newWidth, newHeight, i + 1);
         m_filters.push_back(upFilter);
@@ -93,7 +93,7 @@ void PostProcess::Render(
     commandList->SetPipelineState(Graphics::samplingPSO.Get());
     
     // Copy & DownSampling
-    for (int i = 0; i < m_bloomLevels + 1; i++)
+    for (UINT i = 0; i < m_bloomLevels + 1; i++)
     {
         if (i == 0)
         {
@@ -133,7 +133,7 @@ void PostProcess::Render(
     }
 
     // UpSampling
-    for (int i = m_bloomLevels - 1; i > 0; i--)
+    for (UINT i = m_bloomLevels - 1; i > 0; i--)
     {
         auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
             m_textures[i].Get(),
@@ -179,7 +179,7 @@ void PostProcess::Render(
 
     commandList->DrawIndexedInstanced(m_mesh->indexBufferCount, 1, 0, 0, 0);
 
-    for (int i = 0; i < m_bloomLevels + 1; i++)
+    for (UINT i = 0; i < m_bloomLevels + 1; i++)
     {
         auto ResourceToRender = CD3DX12_RESOURCE_BARRIER::Transition(
             m_textures[i].Get(),
