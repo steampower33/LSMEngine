@@ -53,10 +53,9 @@ void MainEngine::Initialize()
 		m_models.insert({ square->key, square });
 	}
 
-	const UINT bloomLevels = 5;
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
-			m_device, m_commandList, m_width, m_height, bloomLevels);
+			m_device, m_commandList, m_width, m_height);
 
 	ThrowIfFailed(m_commandList->Close());
 

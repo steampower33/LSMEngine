@@ -2,9 +2,9 @@
 
 PostProcess::PostProcess(
     ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-    float width, float height, const UINT bloomLevels)
+    float width, float height)
 {
-    m_bloomLevels = bloomLevels;
+    m_bloomLevels = 4;
     Initialize(device, commandList, width, height);
 }
 
@@ -69,6 +69,7 @@ void PostProcess::Initialize(
     }
 
     m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 1);
+    m_combineFilter->Update(0.0f, 1.0f);
 }
 
 void PostProcess::Update(float threshold, float strength, UINT frameIndex)

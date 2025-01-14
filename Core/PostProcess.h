@@ -16,7 +16,7 @@ class PostProcess
 public:
 	PostProcess(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-		float width, float height, const UINT bloomLevels);
+		float width, float height);
 
 	~PostProcess();
 
