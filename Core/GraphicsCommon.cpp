@@ -21,6 +21,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> samplingVS;
 	ComPtr<IDxcBlob> samplingPS;
 
+	ComPtr<IDxcBlob> blurXPS;
+	ComPtr<IDxcBlob> blurYPS;
+
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
 
@@ -36,7 +39,9 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> basicWirePSO;
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> skyboxPSO;
-	ComPtr<ID3D12PipelineState> filterPSO;
+	ComPtr<ID3D12PipelineState> samplingPSO;
+	ComPtr<ID3D12PipelineState> blurXPSO;
+	ComPtr<ID3D12PipelineState> blurYPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
 }
 
@@ -63,7 +68,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges[1];
-	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + 4 + (4 - 1) * 2, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
@@ -77,9 +82,9 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	// Static Sampler 설정
 	D3D12_STATIC_SAMPLER_DESC sampler = {};
 	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	sampler.MipLODBias = 0.0f;
 	sampler.MaxAnisotropy = 1;
 	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
@@ -124,6 +129,12 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
 	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
 	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
+
+	// BlurX, BlurY
+	const wchar_t blurXPSFilename[] = L"./Shaders/BlurXPS.hlsl";
+	const wchar_t blurYPSFilename[] = L"./Shaders/BlurYPS.hlsl";
+	CreateShader(device, blurXPSFilename, L"ps_6_0", blurXPS);
+	CreateShader(device, blurYPSFilename, L"ps_6_0", blurYPS);
 
 	// CombineFilter
 	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
@@ -233,11 +244,21 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	skyboxPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&skyboxPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC filterPSODesc = basicSolidPSODesc;
-	filterPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
-	filterPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
-	filterPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&filterPSODesc, IID_PPV_ARGS(&filterPSO)));
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC samplingPSODesc = basicSolidPSODesc;
+	samplingPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
+	samplingPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
+	samplingPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&samplingPSODesc, IID_PPV_ARGS(&samplingPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurXPSODesc = samplingPSODesc;
+	blurXPSODesc.PS = { blurXPS->GetBufferPointer(), blurXPS->GetBufferSize() };
+	blurXPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurXPSODesc, IID_PPV_ARGS(&blurXPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurYPSODesc = samplingPSODesc;
+	blurYPSODesc.PS = { blurYPS->GetBufferPointer(), blurYPS->GetBufferSize() };
+	blurYPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurYPSODesc, IID_PPV_ARGS(&blurYPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
@@ -271,7 +292,7 @@ void Graphics::CreateShader(
 	buffer.Ptr = source->GetBufferPointer();
 	buffer.Size = source->GetBufferSize();
 	buffer.Encoding = DXC_CP_ACP; // 기본 인코딩
-	
+
 	std::filesystem::path filepath(filename);
 	std::wstring shaderName = filepath.stem().wstring(); // 확장자 제거된 파일 이름
 
@@ -300,5 +321,14 @@ void Graphics::CreateShader(
 		std::ofstream pdbFile(pdbFilename, std::ios::binary);
 		pdbFile.write((const char*)pdbBlob->GetBufferPointer(), pdbBlob->GetBufferSize());
 		pdbFile.close();
+	}
+
+	// 셰이더 컴파일 에러 확인
+	ComPtr<IDxcBlobUtf8> errors;
+	result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
+
+	if (errors && errors->GetStringLength() > 0) {
+		std::wcout << targetProfile;
+		std::cout << " Compilation Errors:\n" << errors->GetStringPointer() << std::endl;
 	}
 }

@@ -90,7 +90,7 @@ void PostProcess::Render(
     commandList->IASetVertexBuffers(0, 1, &m_mesh->vertexBufferView);
     commandList->IASetIndexBuffer(&m_mesh->indexBufferView);
 
-    commandList->SetPipelineState(Graphics::filterPSO.Get());
+    commandList->SetPipelineState(Graphics::samplingPSO.Get());
     
     // Copy & DownSampling
     for (int i = 0; i < m_bloomLevels + 1; i++)
