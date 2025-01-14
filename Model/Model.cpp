@@ -87,7 +87,6 @@ void Model::Render(
 	}
 }
 
-
 void Model::RenderSkybox(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,

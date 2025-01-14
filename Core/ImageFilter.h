@@ -25,7 +25,6 @@ private:
 		UINT width, UINT height, UINT index);
 
 	CD3DX12_VIEWPORT m_viewport;
-	D3D12_RECT scissorRect;
 
 	SamplingConstants m_samplingConstsBufferData;
 	ComPtr<ID3D12Resource> m_samplingConstsUploadHeap;

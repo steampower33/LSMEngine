@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2D g_texture[6] : register(t0, space1);
+Texture2D g_texture[2] : register(t0, space1);
 SamplerState g_sampler : register(s0, space0);
 
 struct SamplingPSInput

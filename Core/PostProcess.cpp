@@ -4,7 +4,7 @@ PostProcess::PostProcess(
     ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
     float width, float height)
 {
-    m_bloomLevels = 4;
+    m_bloomLevels = 3;
     Initialize(device, commandList, width, height);
 }
 
@@ -46,7 +46,7 @@ void PostProcess::Initialize(
 
     for (UINT i = 1; i < m_bloomLevels + 1; i++)
     {
-        float div = float(pow(2, i - 1));
+        float div = float(pow(2, i));
 
         UINT newWidth = static_cast<UINT>(width / div);
         UINT newHeight = static_cast<UINT>(height / div);
@@ -56,11 +56,10 @@ void PostProcess::Initialize(
 
         CreateTex2D(device, m_textures[i], newWidth, newHeight, i);
     }
-    m_filters[1]->Update(0.3f, 0.0);
 
     for (UINT i = m_bloomLevels - 1; i > 0; i--)
     {
-        float div = float(pow(2, i - 1));
+        float div = float(pow(2, i));
         UINT newWidth = static_cast<UINT>(width / div);
         UINT newHeight = static_cast<UINT>(height / div);
 
@@ -69,12 +68,11 @@ void PostProcess::Initialize(
     }
 
     m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 1);
-    m_combineFilter->Update(0.0f, 1.0f);
 }
 
 void PostProcess::Update(float threshold, float strength, UINT frameIndex)
 {
-    m_filters[1]->Update(threshold, 0.0f);
+    m_filters[0]->Update(threshold, 0.0f);
     m_combineFilter->Update(0.0f, strength);
 }
 
@@ -87,6 +85,7 @@ void PostProcess::Render(
     ComPtr<ID3D12DescriptorHeap>& dsv,
     UINT frameIndex)
 {
+
     commandList->IASetVertexBuffers(0, 1, &m_mesh->vertexBufferView);
     commandList->IASetIndexBuffer(&m_mesh->indexBufferView);
 
@@ -100,16 +99,19 @@ void PostProcess::Render(
             ID3D12DescriptorHeap* heaps[] = { srv.Get() };
             commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-            CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart());
+            CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart(), srvSize * frameIndex);
             commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
-            m_filters[0]->UpdateIndex(frameIndex);
         }
         else if (i == 1)
         {
             ID3D12DescriptorHeap* heaps[] = { m_srvHeap.Get() };
             commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-
-            CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+            CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), srvSize * (i - 1));
+            commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
+        }
+        else
+        {
+            CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), srvSize * (i - 1));
             commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
         }
         
@@ -140,6 +142,9 @@ void PostProcess::Render(
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
         commandList->ResourceBarrier(1, &ResourceToRender);
 
+        CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), srvSize * (i + 1));
+        commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
+
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * i);
         CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
         commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
@@ -166,13 +171,16 @@ void PostProcess::Render(
     commandList->ResourceBarrier(1, &ResourceToRender);
 
     commandList->SetPipelineState(Graphics::combinePSO.Get());
+
+    CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+    commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
+
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv->GetCPUDescriptorHandleForHeapStart(), rtvSize * frameIndex);
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsv->GetCPUDescriptorHandleForHeapStart());
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
     commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-
     commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     m_combineFilter->Render(commandList);

@@ -18,16 +18,11 @@ void ImageFilter::Initialize(
 	m_viewport.MinDepth = 0.0f;
 	m_viewport.MaxDepth = 1.0f;
 
-	scissorRect.left = 0;
-	scissorRect.top = 0;
-	scissorRect.right = static_cast<LONG>(width);
-	scissorRect.bottom = static_cast<LONG>(height);
-
 	m_samplingConstsBufferData.dx = 1.0f / width;
 	m_samplingConstsBufferData.dy = 1.0f / height;
 
 	m_samplingConstsBufferData.threshold = 0.0f;
-	m_samplingConstsBufferData.strength = 0.0f;
+	m_samplingConstsBufferData.strength = 1.0f;
 
 	m_samplingConstsBufferData.index = index;
 
@@ -52,6 +47,5 @@ void ImageFilter::UpdateIndex(UINT frameIndex)
 void ImageFilter::Render(ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
 	commandList->RSSetViewports(1, &m_viewport);
-	commandList->RSSetScissorRects(1, &scissorRect);
 	commandList->SetGraphicsRootConstantBufferView(5, m_samplingConstsUploadHeap.Get()->GetGPUVirtualAddress());
 }

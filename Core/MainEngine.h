@@ -33,7 +33,7 @@ private:
 	Light m_lightFromGUI;
 	int m_lightType = 0;
 
-	float threshold = 0.3f;
+	float threshold = 0.0f;
 	float strength = 1.0f;
 
 	// Models
