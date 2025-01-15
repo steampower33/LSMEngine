@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2D g_texture[2] : register(t0, space1);
+Texture2D g_texture[] : register(t0, space1);
 SamplerState g_sampler : register(s0, space0);
 
 struct SamplingPSInput
@@ -11,8 +11,8 @@ struct SamplingPSInput
 
 float4 main(SamplingPSInput input) : SV_TARGET
 {
-    float4 color1 = g_texture[0].Sample(g_sampler, input.texcoord);
-    float4 color2 = g_texture[1].Sample(g_sampler, input.texcoord);
+    float4 color1 = g_texture[hightIndex].Sample(g_sampler, input.texcoord);
+    float4 color2 = g_texture[lowIndex].Sample(g_sampler, input.texcoord);
     
     return color1 + color2 * strength;
 

@@ -23,6 +23,7 @@ namespace Graphics
 
 	ComPtr<IDxcBlob> blurXPS;
 	ComPtr<IDxcBlob> blurYPS;
+	ComPtr<IDxcBlob> blurCombinePS;
 
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
@@ -42,6 +43,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> samplingPSO;
 	ComPtr<ID3D12PipelineState> blurXPSO;
 	ComPtr<ID3D12PipelineState> blurYPSO;
+	ComPtr<ID3D12PipelineState> blurCombinePSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
 }
 
@@ -68,7 +70,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges[1];
-	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + 3 + 3, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
@@ -130,11 +132,13 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
 	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
 
-	// BlurX, BlurY
+	// BlurX, BlurY, BlurCombine
 	const wchar_t blurXPSFilename[] = L"./Shaders/BlurXPS.hlsl";
 	const wchar_t blurYPSFilename[] = L"./Shaders/BlurYPS.hlsl";
+	const wchar_t blurCombineFilename[] = L"./Shaders/BlurCombinePS.hlsl";
 	CreateShader(device, blurXPSFilename, L"ps_6_0", blurXPS);
 	CreateShader(device, blurYPSFilename, L"ps_6_0", blurYPS);
+	CreateShader(device, blurCombineFilename, L"ps_6_0", blurCombinePS);
 
 	// CombineFilter
 	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
@@ -259,6 +263,11 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	blurYPSODesc.PS = { blurYPS->GetBufferPointer(), blurYPS->GetBufferSize() };
 	blurYPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurYPSODesc, IID_PPV_ARGS(&blurYPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurCombinePSODesc = samplingPSODesc;
+	blurCombinePSODesc.PS = { blurCombinePS->GetBufferPointer(), blurCombinePS->GetBufferSize() };
+	blurCombinePSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurCombinePSODesc, IID_PPV_ARGS(&blurCombinePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };

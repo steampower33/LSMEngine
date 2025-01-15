@@ -91,7 +91,9 @@ __declspec(align(256)) struct SamplingConstants {
 	float strength;
 
 	UINT index;
-	UINT d[11];
+	UINT hightIndex;
+	UINT lowIndex;
+	UINT d[9];
 
 	XMFLOAT4X4 dummy1;
 	

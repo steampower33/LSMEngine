@@ -17,7 +17,15 @@ public:
 
 	void Update(float threshold, float strength);
 	void UpdateIndex(UINT frameIndex);
-	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList);
+	void UpdateBlurCombineIndex(UINT hightIndex, UINT lowIndex);
+
+	void Render(
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12DescriptorHeap>& rtvHeap,
+		UINT rtvOffset,
+		ComPtr<ID3D12DescriptorHeap>& dsvHeap,
+		ComPtr<ID3D12DescriptorHeap>& srvHeap,
+		UINT indexBufferCount);
 
 private:
 	void Initialize(
@@ -29,5 +37,6 @@ private:
 	SamplingConstants m_samplingConstsBufferData;
 	ComPtr<ID3D12Resource> m_samplingConstsUploadHeap;
 	UINT8* m_samplingConstsBufferDataBegin;
+
 };
 

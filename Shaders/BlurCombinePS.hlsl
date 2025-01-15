@@ -11,8 +11,8 @@ struct SamplingPSInput
 
 float4 main(SamplingPSInput input) : SV_TARGET
 {
-    float4 color = g_texture[index].Sample(g_sampler, input.texcoord);
+    float4 color1 = g_texture[hightIndex].Sample(g_sampler, input.texcoord);
+    float4 color2 = g_texture[lowIndex].Sample(g_sampler, input.texcoord);
     
-    return (color.r + color.g + color.b) / 3 < threshold ? 
-    float4(0.0, 0.0, 0.0, 1.0) : color;
+    return color1 + color2 * strength;
 }

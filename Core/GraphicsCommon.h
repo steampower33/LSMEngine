@@ -39,6 +39,7 @@ namespace Graphics
 
 	extern ComPtr<IDxcBlob> blurXPS;
 	extern ComPtr<IDxcBlob> blurYPS;
+	extern ComPtr<IDxcBlob> blurCombinePS;
 
 	extern ComPtr<IDxcBlob> combineVS;
 	extern ComPtr<IDxcBlob> combinePS;
@@ -58,6 +59,7 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> samplingPSO;
 	extern ComPtr<ID3D12PipelineState> blurXPSO;
 	extern ComPtr<ID3D12PipelineState> blurYPSO;
+	extern ComPtr<ID3D12PipelineState> blurCombinePSO;
 	extern ComPtr<ID3D12PipelineState> combinePSO;
 
 	void Initialize(ComPtr<ID3D12Device>& device);

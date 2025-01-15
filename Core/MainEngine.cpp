@@ -105,11 +105,13 @@ void MainEngine::Update(float dt)
 
 	m_skybox->Update();
 
+	m_postProcess[m_frameIndex]->UpdateIndex(m_frameIndex);
+
 	if (dirtyFlag.isPostProcessFlag)
 	{
 		dirtyFlag.isPostProcessFlag = false;
 		for (int i = 0; i < FrameCount; i++)
-			m_postProcess[i]->Update(threshold, strength, m_frameIndex);
+			m_postProcess[i]->Update(threshold, strength);
 	}
 }
 
@@ -167,10 +169,8 @@ void MainEngine::Render()
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
 
-	auto presentToRT = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTargets[m_frameIndex].Get(),
+	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	m_commandList->ResourceBarrier(1, &presentToRT);
 
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -195,10 +195,8 @@ void MainEngine::Render()
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
 
-	auto RenderToResource = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTargets[m_frameIndex].Get(),
+	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	m_commandList->ResourceBarrier(1, &RenderToResource);
 
 	// PostProcess
 	m_postProcess[m_frameIndex]->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
@@ -208,10 +206,8 @@ void MainEngine::Render()
 	m_commandList->SetDescriptorHeaps(_countof(imguiHeap), imguiHeap);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
-	auto RenderToPresent = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTargets[m_frameIndex].Get(),
+	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	m_commandList->ResourceBarrier(1, &RenderToPresent);
 
 	ThrowIfFailed(m_commandList->Close());
 

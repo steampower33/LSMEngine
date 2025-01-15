@@ -186,7 +186,9 @@ cbuffer SamplingConstants : register(b4)
     float strength;
     
     uint index;
-    uint d40[11];
+    uint hightIndex;
+    uint lowIndex;
+    uint d40[9];
     
     float4x4 d42;
     

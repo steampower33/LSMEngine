@@ -25,11 +25,8 @@ public:
 		float width, float height
 	);
 
-	void CreateTex2D(
-		ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture,
-		UINT width, UINT height, UINT index);
-
-	void Update(float threshold, float strength, UINT frameIndex);
+	void Update(float threshold, float strength);
+	void UpdateIndex(UINT frameIndex);
 
 	void Render(
 		ComPtr<ID3D12Device>& device,
@@ -41,17 +38,28 @@ public:
 		UINT frameIndex);
 
 private:
+	UINT rtvSize;
+	UINT srvSize;
+
 	UINT m_bloomLevels;
+	UINT m_bufferSize;
 
 	shared_ptr<Mesh> m_mesh;
 
 	vector<shared_ptr<ImageFilter>> m_filters;
+	vector<shared_ptr<ImageFilter>> m_blurXFilters;
+	vector<shared_ptr<ImageFilter>> m_blurYFilters;
+	vector<shared_ptr<ImageFilter>> m_blurCombineFilters;
 	shared_ptr<ImageFilter> m_combineFilter;
 
-	vector<ComPtr<ID3D12Resource>> m_textures;
-	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	vector<ComPtr<ID3D12Resource>> m_pingPong;
+	ComPtr<ID3D12DescriptorHeap> m_pingPongRtvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_pingPongSrvHeap;
 
-	UINT rtvSize;
-	UINT srvSize;
+	void CreateTex2D(
+		ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture,
+		UINT width, UINT height, UINT index,
+		ComPtr<ID3D12DescriptorHeap>& rtvHeap, ComPtr<ID3D12DescriptorHeap>& srvHeap);
+
+	void CreateDescriptors(ComPtr<ID3D12Device>& device);
 };

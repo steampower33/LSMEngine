@@ -406,3 +406,16 @@ static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 	);
 	commandList->ResourceBarrier(1, &barrier);
 }
+
+static void SetBarrier(
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Resource>& buffer,
+	D3D12_RESOURCE_STATES stateBefore,
+	D3D12_RESOURCE_STATES stateAfter
+	)
+{
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		buffer.Get(),
+		stateBefore, stateAfter);
+	commandList->ResourceBarrier(1, &barrier);
+}

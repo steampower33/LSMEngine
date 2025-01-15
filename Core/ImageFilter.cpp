@@ -44,8 +44,32 @@ void ImageFilter::UpdateIndex(UINT frameIndex)
 	memcpy(m_samplingConstsBufferDataBegin, &m_samplingConstsBufferData, sizeof(m_samplingConstsBufferData));
 }
 
-void ImageFilter::Render(ComPtr<ID3D12GraphicsCommandList>& commandList)
+void ImageFilter::UpdateBlurCombineIndex(UINT hightIndex, UINT lowIndex)
 {
+	m_samplingConstsBufferData.hightIndex = hightIndex;
+	m_samplingConstsBufferData.lowIndex = lowIndex;
+	memcpy(m_samplingConstsBufferDataBegin, &m_samplingConstsBufferData, sizeof(m_samplingConstsBufferData));
+}
+
+void ImageFilter::Render(
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12DescriptorHeap>& rtvHeap,
+	UINT rtvOffset,
+	ComPtr<ID3D12DescriptorHeap>& dsvHeap,
+	ComPtr<ID3D12DescriptorHeap>& srvHeap,
+	UINT indexBufferCount)
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvOffset);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+	commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
 	commandList->RSSetViewports(1, &m_viewport);
 	commandList->SetGraphicsRootConstantBufferView(5, m_samplingConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->DrawIndexedInstanced(indexBufferCount, 1, 0, 0, 0);
 }
