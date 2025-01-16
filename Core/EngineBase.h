@@ -49,7 +49,8 @@ public:
 	float m_ndcY = 0;
 
 	bool m_isMouseMove = false;
-	bool m_isLeftButtonClicked = false;
+	bool m_leftButton = false;
+	bool m_selected = false;
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;

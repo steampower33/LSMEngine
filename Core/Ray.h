@@ -8,10 +8,10 @@ using namespace DirectX;
 class Ray
 {
 public:
-	Ray(float ndcX, float ndcY, XMMATRIX& view, XMMATRIX& proj);
+	Ray(XMFLOAT3& originFloat, XMVECTOR& directionVec);
 	~Ray() {}
 
-	bool RaySphereIntersect(BoundingSphere& boundingSphere);
+	bool RaySphereIntersect(BoundingSphere& boundingSphere, float& dist);
 
 private:
 	XMFLOAT3 rayOrigin;

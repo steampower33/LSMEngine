@@ -216,13 +216,13 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\wall_black.jpg">
+    <Image Include="Assets\wall_black_diffuse.jpg">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\winter.dds">
+    <Image Include="Assets\winter_diffuse.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\earth.jpg">
+    <Image Include="Assets\earth_diffuse.jpg">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\park_ambient.dds">

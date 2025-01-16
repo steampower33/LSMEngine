@@ -42,10 +42,11 @@ private:
 	shared_ptr<Model> m_skybox;
 	unordered_map<string, shared_ptr<Model>> m_models;
 	BoundingSphere m_boundingSphere;
+	shared_ptr<Model> m_cursorSphere;
 
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess[FrameCount];
 
 	// Texture
-	TextureManager textureManager;
+	shared_ptr<TextureManager> m_textureManager;
 };

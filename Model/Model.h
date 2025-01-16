@@ -24,7 +24,7 @@ public:
 		ComPtr<ID3D12CommandQueue>& commandQueue,
 		const vector<MeshData>& meshDatas,
 		CubemapIndexConstants& cubemapIndexConstsBufferData,
-		TextureManager& textureManager);
+		shared_ptr<TextureManager>& textureManager);
 
 	~Model();
 
@@ -42,6 +42,8 @@ public:
 
 	void Update();
 
+	void OnlyCallConstsMemcpy();
+
 	XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	string key;
 
@@ -57,7 +59,7 @@ private:
 		ComPtr<ID3D12CommandQueue>& commandQueue,
 		const vector<MeshData>& meshDatas,
 		CubemapIndexConstants& cubemapIndexConstsBufferData,
-		TextureManager& textureManager);
+		shared_ptr<TextureManager>& textureManager);
 
 
 };

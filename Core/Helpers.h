@@ -59,6 +59,19 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
+static void SetBarrier(
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Resource>& buffer,
+	D3D12_RESOURCE_STATES stateBefore,
+	D3D12_RESOURCE_STATES stateAfter
+)
+{
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		buffer.Get(),
+		stateBefore, stateAfter);
+	commandList->ResourceBarrier(1, &barrier);
+}
+
 static void CreateVertexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
@@ -407,15 +420,76 @@ static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 	commandList->ResourceBarrier(1, &barrier);
 }
 
-static void SetBarrier(
+static void CreateEmptyTexture(
+	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12Resource>& buffer,
-	D3D12_RESOURCE_STATES stateBefore,
-	D3D12_RESOURCE_STATES stateAfter
-	)
+	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+	vector<ComPtr<ID3D12Resource>>& textures,
+	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	UINT& textureCnt)
 {
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		buffer.Get(),
-		stateBefore, stateAfter);
-	commandList->ResourceBarrier(1, &barrier);
+	ComPtr<ID3D12Resource> texture;
+
+	// 1x1 검정 텍스처 데이터 (RGBA)
+	unsigned char blackPixel[4] = { 255, 255, 255, 255 };
+
+	// 텍스처 리소스 생성 (GPU 기본 힙)
+	auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		1, 1, 1, 0,
+		1, 0,
+		D3D12_RESOURCE_FLAG_NONE
+	);
+
+	auto defaultHeapDesc = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	ThrowIfFailed(device->CreateCommittedResource(
+		&defaultHeapDesc,
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&texture)
+	));
+
+	// 업로드 힙 리소스 생성
+	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, 1);
+	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+	ComPtr<ID3D12Resource> textureUploadHeap;
+	ThrowIfFailed(device->CreateCommittedResource(
+		&uploadHeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&buffer,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&textureUploadHeap)));
+
+	// 텍스처 데이터 복사
+	D3D12_SUBRESOURCE_DATA textureData = {};
+	textureData.pData = blackPixel;
+	textureData.RowPitch = 4; // 1x1 픽셀, RGBA
+	textureData.SlicePitch = textureData.RowPitch;
+
+	UpdateSubresources(commandList.Get(), texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+
+	SetBarrier(commandList, texture,
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = texture->GetDesc().Format; // 텍스처의 포맷
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	device->CreateShaderResourceView(
+		texture.Get(), // 텍스처 리소스
+		&srvDesc, // SRV 설명
+		textureHandle // 디스크립터 힙의 핸들
+	);
+
+	textures.push_back(texture);
+	texturesUploadHeap.push_back(textureUploadHeap);
+	textureCnt++;
 }

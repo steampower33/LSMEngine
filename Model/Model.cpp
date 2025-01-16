@@ -6,7 +6,7 @@ Model::Model(
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	const vector<MeshData>& meshDatas,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
-	TextureManager& textureManager)
+	shared_ptr<TextureManager>& textureManager)
 {
 	Initialize(device, commandList, commandQueue, meshDatas, cubemapIndexConstsBufferData, textureManager);
 }
@@ -22,7 +22,7 @@ void Model::Initialize(
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	const vector<MeshData>& meshDatas,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
-	TextureManager& textureManager)
+	shared_ptr<TextureManager>& textureManager)
 {
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
@@ -33,7 +33,7 @@ void Model::Initialize(
 		CreateVertexBuffer(device, commandList, meshDatas[i].vertices, newMesh);
 		CreateIndexBuffer(device, commandList, meshDatas[i].indices, newMesh);
 
-		textureManager.LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
+		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
 
 		CreateConstDefaultBuffer(device, commandList, newMesh);
 		m_meshes.push_back(newMesh);
@@ -51,6 +51,11 @@ void Model::Update()
 	XMMATRIX worldInvTranspose = XMMatrixTranspose(worldInv);
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
+	OnlyCallConstsMemcpy();
+}
+
+void Model::OnlyCallConstsMemcpy()
+{
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 }
 

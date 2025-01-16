@@ -85,9 +85,11 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	}
 	case WM_LBUTTONDOWN:
 	{
-		pEngine->m_isLeftButtonClicked = true;
+		pEngine->m_leftButton = true;
 		break;
 	}
+	case WM_LBUTTONUP:
+		pEngine->m_leftButton = false;
 	case WM_MOUSEMOVE:
 	{
 		pEngine->m_isMouseMove = true;

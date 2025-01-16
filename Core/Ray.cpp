@@ -1,45 +1,13 @@
 #include "Ray.h"
 
-Ray::Ray(float ndcX, float ndcY, XMMATRIX& view, XMMATRIX& proj)
+Ray::Ray(XMFLOAT3& originFloat, XMVECTOR& directionVec)
 {
-
-	// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
-	XMVECTOR rayNDCNear = XMVectorSet(ndcX, ndcY, 0.0f, 1.0f);
-	XMVECTOR rayNDCFar = XMVectorSet(ndcX, ndcY, 1.0f, 1.0f);
-
-	// 역 프로젝션 매트릭스를 사용하여 월드 공간의 좌표로 변환
-	XMMATRIX invProjection = XMMatrixInverse(nullptr, proj);
-	XMMATRIX invView = XMMatrixInverse(nullptr, view);
-
-	// 클립 공간을 보기 공간으로 변환
-	XMVECTOR rayViewNear = XMVector3TransformCoord(rayNDCNear, invProjection);
-	XMVECTOR rayViewFar = XMVector3TransformCoord(rayNDCFar, invProjection);
-
-	// 보기 공간을 월드 공간으로 변환
-	XMVECTOR rayWorldNear = XMVector3TransformCoord(rayViewNear, invView);
-	XMVECTOR rayWorldFar = XMVector3TransformCoord(rayViewFar, invView);
-
-	// 광선의 원점과 방향 계산
-	XMFLOAT3 originFloat;
-	XMStoreFloat3(&originFloat, rayWorldNear);
-	XMFLOAT3 farPointFloat;
-	XMStoreFloat3(&farPointFloat, rayWorldFar);
-
-	XMFLOAT3 direction = {
-		farPointFloat.x - originFloat.x,
-		farPointFloat.y - originFloat.y,
-		farPointFloat.z - originFloat.z
-	};
-
-	// 방향 벡터 정규화
-	XMVECTOR directionVec = XMVector3Normalize(XMLoadFloat3(&direction));
-
 	// 최종 광선의 원점과 방향
 	rayOrigin = originFloat;
 	XMStoreFloat3(&rayDirection, directionVec);
 }
 
-bool Ray::RaySphereIntersect(BoundingSphere& boundingSphere)
+bool Ray::RaySphereIntersect(BoundingSphere& boundingSphere, float& dist)
 {
 	// 광선의 원점과 방향을 벡터로 로드
 	XMVECTOR origin = XMLoadFloat3(&rayOrigin);
@@ -66,6 +34,21 @@ bool Ray::RaySphereIntersect(BoundingSphere& boundingSphere)
 	if (discriminant < 0.0f)
 		return false;
 
-	// 판별식이 0 이상이면 교차함
-	return true;
+	float sqrtDiscriminant = sqrtf(discriminant);
+	float t0 = (-b - sqrtDiscriminant) / (2.0f * a);
+	float t1 = (-b + sqrtDiscriminant) / (2.0f * a);
+
+	// 가장 작은 양의 t 값을 선택
+	if (t0 >= 0.0f && t0 <= t1)
+	{
+		dist = t0;
+		return true;
+	}
+	if (t1 >= 0.0f)
+	{
+		dist = t1;
+		return true;
+	}
+
+	return false;
 }

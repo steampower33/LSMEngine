@@ -18,7 +18,10 @@ using Microsoft::WRL::ComPtr;
 class TextureManager
 {
 public:
-	TextureManager() {}
+	TextureManager(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12DescriptorHeap>& textureHeap);
 	~TextureManager() {}
 
 	void LoadTextures(
@@ -28,8 +31,6 @@ public:
 		const MeshData& meshData,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
-
-	void SetTextureHandle(ComPtr<ID3D12DescriptorHeap>& textureHeap);
 
 private:
 	vector<ComPtr<ID3D12Resource>> m_textures;

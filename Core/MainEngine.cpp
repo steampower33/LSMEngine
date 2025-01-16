@@ -9,7 +9,7 @@ void MainEngine::Initialize()
 	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
 	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
 
-	textureManager.SetTextureHandle(m_textureHeap);
+	m_textureManager = make_shared<TextureManager>(m_device, m_commandList, m_textureHeap);
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
@@ -20,7 +20,7 @@ void MainEngine::Initialize()
 		skybox.ddsSpecularFilename = "./Assets/park_specular.dds";
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ skybox }, m_cubemapIndexConstsBufferData, textureManager);
+			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager);
 		m_skybox->key = "skybox";
 	}
 
@@ -28,15 +28,21 @@ void MainEngine::Initialize()
 		float radius = 1.0f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
 
-		meshData.diffuseFilename = "./Assets/earth.jpg";
+		meshData.diffuseFilename = "./Assets/earth_diffuse.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager);
 		sphere->key = "sphere";
-		
 		m_models.insert({ sphere->key, sphere });
 
 		m_boundingSphere = BoundingSphere(XMFLOAT3(sphere->pos.x, sphere->pos.y, sphere->pos.z), radius);
+
+		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.05f, 100, 100);
+		m_cursorSphere = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager);
+		m_cursorSphere->m_meshConstsBufferData.material.diffuse = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		m_cursorSphere->m_meshConstsBufferData.material.specular = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	}
 
 	for (int i = 0; i < FrameCount; i++)
@@ -71,15 +77,57 @@ void MainEngine::Update(float dt)
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
 
-	if (m_isLeftButtonClicked)
+	if (m_leftButton)
 	{
-		m_isLeftButtonClicked = false;
+		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
+		XMVECTOR rayNDCNear = XMVectorSet(m_ndcX, m_ndcY, 0.0f, 1.0f);
+		XMVECTOR rayNDCFar = XMVectorSet(m_ndcX, m_ndcY, 1.0f, 1.0f);
 
-		Ray ray(m_ndcX, m_ndcY, view, proj);
+		// 역 프로젝션 매트릭스를 사용하여 월드 공간의 좌표로 변환
+		XMMATRIX invProjection = XMMatrixInverse(nullptr, proj);
+		XMMATRIX invView = XMMatrixInverse(nullptr, view);
 
-		if (ray.RaySphereIntersect(m_boundingSphere))
+		// 클립 공간을 보기 공간으로 변환
+		XMVECTOR rayViewNear = XMVector3TransformCoord(rayNDCNear, invProjection);
+		XMVECTOR rayViewFar = XMVector3TransformCoord(rayNDCFar, invProjection);
+
+		// 보기 공간을 월드 공간으로 변환
+		XMVECTOR rayWorldNear = XMVector3TransformCoord(rayViewNear, invView);
+		XMVECTOR rayWorldFar = XMVector3TransformCoord(rayViewFar, invView);
+
+		// 광선의 원점과 방향 계산
+		XMFLOAT3 originFloat;
+		XMStoreFloat3(&originFloat, rayWorldNear);
+		XMFLOAT3 farPointFloat;
+		XMStoreFloat3(&farPointFloat, rayWorldFar);
+
+		XMFLOAT3 direction = {
+			farPointFloat.x - originFloat.x,
+			farPointFloat.y - originFloat.y,
+			farPointFloat.z - originFloat.z
+		};
+
+		// 방향 벡터 정규화
+		XMVECTOR directionVec = XMVector3Normalize(XMLoadFloat3(&direction));
+
+		Ray ray(originFloat, directionVec);
+
+		float dist = 0.0f;
+		m_selected = ray.RaySphereIntersect(m_boundingSphere, dist);
+
+		if (m_selected)
 		{
+			//cout << dist << endl;
 
+			// 충돌 지점에 작은 구 그리기
+			XMVECTOR translation = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));
+			XMMATRIX worldMat = XMMatrixTranslationFromVector(translation);
+			XMMATRIX invTranspose = worldMat;
+			invTranspose.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+			invTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, invTranspose));
+			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.world, XMMatrixTranspose(worldMat));
+			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.worldIT, invTranspose);
+			m_cursorSphere->OnlyCallConstsMemcpy();
 		}
 	}
 
@@ -195,6 +243,9 @@ void MainEngine::Render()
 
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
+
+	if (m_leftButton && m_selected)
+		m_cursorSphere->Render(m_device, m_commandList, m_textureHeap, guiState);
 
 	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

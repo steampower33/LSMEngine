@@ -305,7 +305,7 @@ void Graphics::CreateShader(
 	std::filesystem::path filepath(filename);
 	std::wstring shaderName = filepath.stem().wstring(); // 확장자 제거된 파일 이름
 
-	std::wcout << L"Shader Name: " << shaderName << std::endl;
+	//std::wcout << L"Shader Name: " << shaderName << std::endl;
 
 	std::wstring pdbFilename = L"./PDB/" + std::wstring(shaderName) + L".pdb";
 	LPCWSTR args[] = {

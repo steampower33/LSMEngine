@@ -1,5 +1,17 @@
 #include "TextureManager.h"
 
+TextureManager::TextureManager(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList, 
+	ComPtr<ID3D12DescriptorHeap>& textureHeap)
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(textureHeap->GetCPUDescriptorHandleForHeapStart());
+
+	m_heapStartCpu = heapStartCpu;
+
+	CreateEmptyTexture(device, commandList, heapStartCpu, m_textures, m_texturesUploadHeap, m_normaltextureCnt);
+}
+
 void TextureManager::LoadTextures(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
@@ -39,13 +51,6 @@ void TextureManager::LoadTextures(
 			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
 }
 
-void TextureManager::SetTextureHandle(ComPtr<ID3D12DescriptorHeap>& textureHeap)
-{
-	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(textureHeap->GetCPUDescriptorHandleForHeapStart());
-
-	m_heapStartCpu = heapStartCpu;
-}
-
 bool TextureManager::CheckDuplcateFilename(
 	unordered_map<string, int>& textureIdx,
 	const string& filename,
@@ -63,3 +68,4 @@ bool TextureManager::CheckDuplcateFilename(
 	else
 		return true;
 }
+
