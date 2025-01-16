@@ -41,7 +41,7 @@ private:
 	// Models
 	shared_ptr<Model> m_skybox;
 	unordered_map<string, shared_ptr<Model>> m_models;
-	BoundingSphere m_boundingSphere;
+	shared_ptr<BoundingSphere> m_boundingSphere;
 	shared_ptr<Model> m_cursorSphere;
 
 	// PostProcess
@@ -49,4 +49,9 @@ private:
 
 	// Texture
 	shared_ptr<TextureManager> m_textureManager;
+
+private:
+	void UpdateMouseControl(
+		XMMATRIX& view, XMMATRIX& proj, 
+		XMVECTOR& q, XMVECTOR& dragTranslation);
 };

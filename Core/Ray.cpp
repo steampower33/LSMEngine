@@ -7,12 +7,12 @@ Ray::Ray(XMFLOAT3& originFloat, XMVECTOR& directionVec)
 	XMStoreFloat3(&rayDirection, directionVec);
 }
 
-bool Ray::RaySphereIntersect(BoundingSphere& boundingSphere, float& dist)
+bool Ray::RaySphereIntersect(shared_ptr<BoundingSphere>& boundingSphere, float& dist)
 {
 	// 광선의 원점과 방향을 벡터로 로드
 	XMVECTOR origin = XMLoadFloat3(&rayOrigin);
 	XMVECTOR direction = XMLoadFloat3(&rayDirection);
-	XMVECTOR center = XMLoadFloat3(&boundingSphere.Center);
+	XMVECTOR center = XMLoadFloat3(&boundingSphere->Center);
 
 	// O - C
 	XMVECTOR oc = XMVectorSubtract(origin, center);
@@ -24,7 +24,7 @@ bool Ray::RaySphereIntersect(BoundingSphere& boundingSphere, float& dist)
 	float b = 2.0f * XMVectorGetX(XMVector3Dot(oc, direction));
 
 	// c = (O - C) · (O - C) - r^2
-	float radius = boundingSphere.Radius;
+	float radius = boundingSphere->Radius;
 	float c = XMVectorGetX(XMVector3Dot(oc, oc)) - (radius * radius);
 
 	// 판별식 계산

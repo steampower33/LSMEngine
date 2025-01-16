@@ -91,7 +91,22 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		break;
 	}
 	case WM_LBUTTONUP:
+	{
 		pEngine->m_leftButton = false;
+		break;
+	}
+	case WM_RBUTTONDOWN:
+	{
+		if (!pEngine->m_rightButton)
+			pEngine->m_dragStartFlag = true;
+		pEngine->m_rightButton = true;
+		break;
+	}
+	case WM_RBUTTONUP:
+	{
+		pEngine->m_rightButton = false;
+		break;
+	}
 	case WM_MOUSEMOVE:
 	{
 		pEngine->m_isMouseMove = true;

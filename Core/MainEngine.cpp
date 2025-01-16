@@ -35,9 +35,11 @@ void MainEngine::Initialize()
 		sphere->key = "sphere";
 		m_models.insert({ sphere->key, sphere });
 
-		m_boundingSphere = BoundingSphere(XMFLOAT3(sphere->position.x, sphere->position.y, sphere->position.z), radius);
+		m_boundingSphere = make_shared<BoundingSphere>(XMFLOAT3(sphere->position.x, sphere->position.y, sphere->position.z), radius);
+	}
 
-		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.05f, 100, 100);
+	{
+		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.025f, 100, 100);
 		m_cursorSphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager);
@@ -76,112 +78,10 @@ void MainEngine::Update(float dt)
 	XMMATRIX invView = XMMatrixInverse(&det, view);
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
-	
-	XMVECTOR axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-	float angleRadians = 0.0f;
-	XMVECTOR q = XMQuaternionRotationAxis(axis, angleRadians);
-	
-	static XMVECTOR prevVector{ 0.0f };
-	if (m_leftButton)
-	{
-		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
-		XMVECTOR rayNDCNear = XMVectorSet(m_ndcX, m_ndcY, 0.0f, 1.0f);
-		XMVECTOR rayNDCFar = XMVectorSet(m_ndcX, m_ndcY, 1.0f, 1.0f);
 
-		// 역 프로젝션 매트릭스를 사용하여 월드 공간의 좌표로 변환
-		XMMATRIX invProjection = XMMatrixInverse(nullptr, proj);
-		XMMATRIX invView = XMMatrixInverse(nullptr, view);
-
-		// 클립 공간을 보기 공간으로 변환
-		XMVECTOR rayViewNear = XMVector3TransformCoord(rayNDCNear, invProjection);
-		XMVECTOR rayViewFar = XMVector3TransformCoord(rayNDCFar, invProjection);
-
-		// 보기 공간을 월드 공간으로 변환
-		XMVECTOR rayWorldNear = XMVector3TransformCoord(rayViewNear, invView);
-		XMVECTOR rayWorldFar = XMVector3TransformCoord(rayViewFar, invView);
-
-		// 광선의 원점과 방향 계산
-		XMFLOAT3 originFloat;
-		XMStoreFloat3(&originFloat, rayWorldNear);
-		XMFLOAT3 farPointFloat;
-		XMStoreFloat3(&farPointFloat, rayWorldFar);
-
-		XMFLOAT3 direction = {
-			farPointFloat.x - originFloat.x,
-			farPointFloat.y - originFloat.y,
-			farPointFloat.z - originFloat.z
-		};
-
-		// 방향 벡터 정규화
-		XMVECTOR directionVec = XMVector3Normalize(XMLoadFloat3(&direction));
-
-		Ray ray(originFloat, directionVec);
-
-		float dist = 0.0f;
-		m_selected = ray.RaySphereIntersect(m_boundingSphere, dist);
-
-		if (m_selected)
-		{
-			//cout << dist << endl;
-
-			// 충돌 지점에 작은 구 그리기
-			XMVECTOR pickVec = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));
-			XMMATRIX worldMat = XMMatrixTranslationFromVector(pickVec);
-			XMMATRIX invTranspose = worldMat;
-			invTranspose.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-			invTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, invTranspose));
-			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.world, XMMatrixTranspose(worldMat));
-			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.worldIT, invTranspose);
-			m_cursorSphere->OnlyCallConstsMemcpy();
-
-			// 드래그
-			XMVECTOR centerVec = XMLoadFloat3(&m_boundingSphere.Center);
-			if (m_dragStartFlag)
-			{
-				m_dragStartFlag = false;
-				prevVector = XMVectorSubtract(pickVec, centerVec);
-				prevVector = XMVector3Normalize(prevVector);
-			}
-			else
-			{
-				// 현재 벡터 계산 및 정규화
-				XMVECTOR currentVector = XMVectorSubtract(pickVec, centerVec);
-				currentVector = XMVector3Normalize(currentVector);
-
-				// 벡터 차이 계산
-				XMVECTOR delta = XMVectorSubtract(currentVector, prevVector);
-				float deltaLength = XMVectorGetX(XMVector3Length(delta));
-
-				// 마우스가 조금이라도 움직였을 경우에만 회전시키기
-				if (deltaLength > 1e-3f) {
-					// 축과 각도 계산
-					XMVECTOR cross = XMVector3Cross(prevVector, currentVector);
-					XMVECTOR dot = XMVector3Dot(prevVector, currentVector);
-					float dotValue = XMVectorGetX(dot);
-					float angle = acosf(dotValue); // 각도 (라디안)
-
-					// 벡터가 반대 방향인 경우를 처리
-					if (fabsf(dotValue + 1.0f) < 1e-3f) {
-						// 벡터가 반대 방향인 경우, 임의의 직교 축 선택
-						XMVECTOR arbitrary = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-						cross = XMVector3Cross(prevVector, arbitrary);
-						cross = XMVector3Normalize(cross);
-						angle = XM_PI;
-					}
-					else {
-						// 축 정규화
-						cross = XMVector3Normalize(cross);
-					}
-
-					// 쿼터니언 생성
-					q = XMQuaternionRotationAxis(cross, angle);
-
-					// 이전 벡터 업데이트
-					prevVector = currentVector;
-				}
-			}
-		}
-	}
+	XMVECTOR q = XMQuaternionIdentity();
+	XMVECTOR dragTranslation{ 0.0f };
+	UpdateMouseControl(view, proj, q, dragTranslation);
 
 	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 
@@ -198,11 +98,14 @@ void MainEngine::Update(float dt)
 
 	for (const auto& model : m_models)
 	{
-		model.second->Update(q);
+		model.second->Update(q, dragTranslation);
+		XMMATRIX world = XMLoadFloat4x4(&model.second->world);
+		XMStoreFloat3(&m_boundingSphere->Center, world.r[3]);
 	}
 
 	XMVECTOR qi = XMQuaternionIdentity();
-	m_skybox->Update(qi);
+	XMVECTOR di{ 0.0f };
+	m_skybox->Update(qi, di);
 
 	m_postProcess[m_frameIndex]->UpdateIndex(m_frameIndex);
 
@@ -297,7 +200,7 @@ void MainEngine::Render()
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
 
-	if (m_leftButton && m_selected)
+	if (m_selected && (m_leftButton || m_rightButton) )
 		m_cursorSphere->Render(m_device, m_commandList, m_textureHeap, guiState);
 
 	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
@@ -324,4 +227,136 @@ void MainEngine::Render()
 	ThrowIfFailed(m_swapChain->Present(0, 0));
 
 	WaitForPreviousFrame();
+}
+
+void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj, XMVECTOR& q, XMVECTOR& dragTranslation)
+{
+	if (m_leftButton || m_rightButton)
+	{
+		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
+		XMVECTOR rayNDCNear = XMVectorSet(m_ndcX, m_ndcY, 0.0f, 1.0f);
+		XMVECTOR rayNDCFar = XMVectorSet(m_ndcX, m_ndcY, 1.0f, 1.0f);
+
+		// 역 프로젝션 매트릭스를 사용하여 월드 공간의 좌표로 변환
+		XMMATRIX invProjection = XMMatrixInverse(nullptr, proj);
+		XMMATRIX invView = XMMatrixInverse(nullptr, view);
+
+		// 클립 공간을 보기 공간으로 변환
+		XMVECTOR rayViewNear = XMVector3TransformCoord(rayNDCNear, invProjection);
+		XMVECTOR rayViewFar = XMVector3TransformCoord(rayNDCFar, invProjection);
+
+		// 보기 공간을 월드 공간으로 변환
+		XMVECTOR rayWorldNear = XMVector3TransformCoord(rayViewNear, invView);
+		XMVECTOR rayWorldFar = XMVector3TransformCoord(rayViewFar, invView);
+
+		// 광선의 원점과 방향 계산
+		XMFLOAT3 originFloat;
+		XMStoreFloat3(&originFloat, rayWorldNear);
+		XMFLOAT3 farPointFloat;
+		XMStoreFloat3(&farPointFloat, rayWorldFar);
+
+		XMFLOAT3 direction = {
+			farPointFloat.x - originFloat.x,
+			farPointFloat.y - originFloat.y,
+			farPointFloat.z - originFloat.z
+		};
+
+		// 방향 벡터 정규화
+		XMVECTOR directionVec = XMVector3Normalize(XMLoadFloat3(&direction));
+
+		Ray ray(originFloat, directionVec);
+
+		float dist = 0.0f;
+		m_selected = ray.RaySphereIntersect(m_boundingSphere, dist);
+
+		if (m_selected)
+		{
+			cout << dist << endl;
+
+			// 충돌 지점에 작은 구 그리기
+			XMVECTOR pickVec = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));
+			XMMATRIX worldMat = XMMatrixTranslationFromVector(pickVec);
+			XMMATRIX invTranspose = worldMat;
+			invTranspose.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+			invTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, invTranspose));
+			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.world, XMMatrixTranspose(worldMat));
+			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.worldIT, invTranspose);
+			m_cursorSphere->OnlyCallConstsMemcpy();
+
+			// 드래그
+			XMVECTOR centerVec = XMLoadFloat3(&m_boundingSphere->Center);
+
+			if (m_leftButton)
+			{
+				static XMVECTOR prevVector{ 0.0f };
+				if (m_dragStartFlag)
+				{
+					m_dragStartFlag = false;
+					prevVector = XMVectorSubtract(pickVec, centerVec);
+					prevVector = XMVector3Normalize(prevVector);
+				}
+				else
+				{
+					// 현재 벡터 계산 및 정규화
+					XMVECTOR currentVector = XMVectorSubtract(pickVec, centerVec);
+					currentVector = XMVector3Normalize(currentVector);
+
+					// 벡터 차이 계산
+					XMVECTOR delta = XMVectorSubtract(currentVector, prevVector);
+					float deltaLength = XMVectorGetX(XMVector3Length(delta));
+
+					// 마우스가 조금이라도 움직였을 경우에만 회전시키기
+					if (deltaLength > 1e-3f) {
+						// 축과 각도 계산
+						XMVECTOR cross = XMVector3Cross(prevVector, currentVector);
+						XMVECTOR dot = XMVector3Dot(prevVector, currentVector);
+						float dotValue = XMVectorGetX(dot);
+						float angle = acosf(dotValue); // 각도 (라디안)
+
+						// 벡터가 반대 방향인 경우를 처리
+						if (fabsf(dotValue + 1.0f) < 1e-3f) {
+							// 벡터가 반대 방향인 경우, 임의의 직교 축 선택
+							XMVECTOR arbitrary = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+							cross = XMVector3Cross(prevVector, arbitrary);
+							cross = XMVector3Normalize(cross);
+							angle = XM_PI;
+						}
+						else {
+							// 축 정규화
+							cross = XMVector3Normalize(cross);
+						}
+
+						// 쿼터니언 생성
+						q = XMQuaternionRotationAxis(cross, angle);
+
+						// 이전 벡터 업데이트
+						prevVector = currentVector;
+					}
+				}
+			}
+			else if (m_rightButton)
+			{
+				static float prevRatio = 0.0f;
+				static XMVECTOR prevPos{ 0.0f };
+				if (m_dragStartFlag)
+				{
+					m_dragStartFlag = false;
+					float nearToFar = XMVectorGetX(XMVector3Length(XMVectorSubtract(rayWorldFar, rayWorldNear)));
+					prevRatio = dist / nearToFar;
+					prevPos = pickVec;
+				}
+				else
+				{
+					XMVECTOR nearToFarVec = XMVectorSubtract(rayWorldFar, rayWorldNear);
+					XMVECTOR newPos = rayWorldNear + nearToFarVec * prevRatio;
+					float newPosDist = XMVectorGetX(XMVector3Length((XMVectorSubtract(newPos, prevPos))));
+					if (newPosDist > 1e-3)
+					{
+						dragTranslation = XMVectorSubtract(newPos, prevPos);
+						prevPos = newPos;
+					}
+				}
+			}
+		}
+	}
 }

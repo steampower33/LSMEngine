@@ -47,7 +47,7 @@ void Model::Initialize(
 	}
 }
 
-void Model::Update(XMVECTOR& q)
+void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 {
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&world);
 	XMVECTOR translation = worldMatrix.r[3];
@@ -57,9 +57,10 @@ void Model::Update(XMVECTOR& q)
 
 	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
 
+	XMMATRIX dragTranslationMatrix = XMMatrixTranslationFromVector(dragTranslation);
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
 
-	XMMATRIX newWorld = worldWithoutTranslation * rotationMatrix * translationMatrix;
+	XMMATRIX newWorld = worldWithoutTranslation * rotationMatrix * translationMatrix * dragTranslationMatrix;
 
 	XMStoreFloat4x4(&world, newWorld);
 

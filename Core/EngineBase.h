@@ -50,6 +50,7 @@ public:
 
 	bool m_isMouseMove = false;
 	bool m_leftButton = false;
+	bool m_rightButton = false;
 	bool m_selected = false;
 	bool m_dragStartFlag = false;
 

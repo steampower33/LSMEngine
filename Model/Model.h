@@ -10,6 +10,7 @@
 #include "Mesh.h"
 #include "GraphicsCommon.h"
 #include "TextureManager.h"
+#include <DirectXCollision.h>
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -40,7 +41,7 @@ public:
 		ComPtr<ID3D12DescriptorHeap>& textureHeap,
 		GuiState& guiState);
 
-	void Update(XMVECTOR& q);
+	void Update(XMVECTOR& q, XMVECTOR& dragTranslation);
 
 	void OnlyCallConstsMemcpy();
 
