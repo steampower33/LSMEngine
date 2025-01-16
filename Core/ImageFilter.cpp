@@ -22,7 +22,7 @@ void ImageFilter::Initialize(
 	m_samplingConstsBufferData.dy = 1.0f / height;
 
 	m_samplingConstsBufferData.threshold = 0.0f;
-	m_samplingConstsBufferData.strength = 1.0f;
+	m_samplingConstsBufferData.strength = 0.5f;
 
 	m_samplingConstsBufferData.index = index;
 

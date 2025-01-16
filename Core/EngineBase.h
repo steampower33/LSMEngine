@@ -45,6 +45,8 @@ public:
 	float m_mousePosY = 0;
 	float m_mouseDeltaX = 0;
 	float m_mouseDeltaY = 0;
+	float m_ndcX = 0;
+	float m_ndcY = 0;
 
 	bool m_isMouseMove = false;
 

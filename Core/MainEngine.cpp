@@ -25,16 +25,6 @@ void MainEngine::Initialize()
 	}
 
 	{
-		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
-		meshData.diffuseFilename = "./Assets/wall_black.jpg";
-		shared_ptr<Model> box = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
-		box->key = "box";
-		m_models.insert({ box->key, box });
-	}
-
-	{
 		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
 		meshData.diffuseFilename = "./Assets/earth.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
@@ -42,15 +32,6 @@ void MainEngine::Initialize()
 			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
 		sphere->key = "sphere";
 		m_models.insert({ sphere->key, sphere });
-	}
-
-	{
-		MeshData meshData = GeometryGenerator::MakeSquare();
-		shared_ptr<Model> square = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
-		square->key = "square";
-		m_models.insert({ square->key, square });
 	}
 
 	for (int i = 0; i < FrameCount; i++)
@@ -147,15 +128,18 @@ void MainEngine::UpdateGUI()
 
 		ImGui::PopID();
 	}
-	
-	if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f, "%.1f"))
-	{
-		dirtyFlag.isPostProcessFlag = true;
-	}
 
-	if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f, "%.1f"))
+	if (ImGui::CollapsingHeader("Post Process"))
 	{
-		dirtyFlag.isPostProcessFlag = true;
+		if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f, "%.1f"))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
+
+		if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f, "%.1f"))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
 	}
 
 	ImGui::End();
@@ -164,7 +148,7 @@ void MainEngine::UpdateGUI()
 	ImGui::Render();
 }
 
-void MainEngine::Render()	
+void MainEngine::Render()
 {
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));

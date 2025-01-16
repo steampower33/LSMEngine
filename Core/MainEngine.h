@@ -34,11 +34,13 @@ private:
 	int m_lightType = 0;
 
 	float threshold = 0.0f;
-	float strength = 1.0f;
+	float strength = 0.5f;
 
 	// Models
 	shared_ptr<Model> m_skybox;
 	unordered_map<string, shared_ptr<Model>> m_models;
+	
+	// PostProcess
 	shared_ptr<PostProcess> m_postProcess[FrameCount];
 
 	// Texture

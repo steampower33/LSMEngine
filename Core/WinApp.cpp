@@ -92,6 +92,10 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		pEngine->m_mouseDeltaY = mousePosY - pEngine->m_mousePosY;
 		pEngine->m_mousePosX = mousePosX;
 		pEngine->m_mousePosY = mousePosY;
+		pEngine->m_ndcX = (2.0f * static_cast<float>(mousePosX)) / static_cast<float>(pEngine->m_width) - 1.0f;
+		pEngine->m_ndcY = 1.0f - (2.0f * static_cast<float>(mousePosY)) / static_cast<float>(pEngine->m_height);
+
+		//std::cout << pEngine->m_ndcX << " " << pEngine->m_ndcY << " " << std::endl;
 		break;
 	}
 	case WM_KEYDOWN:
