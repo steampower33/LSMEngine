@@ -27,6 +27,7 @@
     <ClCompile Include="Core\MainEngine.cpp" />
     <ClCompile Include="Core\GraphicsCommon.cpp" />
     <ClCompile Include="Core\PostProcess.cpp" />
+    <ClCompile Include="Core\Ray.cpp" />
     <ClCompile Include="Core\WinApp.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
@@ -51,6 +52,7 @@
     <ClInclude Include="Core\MainEngine.h" />
     <ClInclude Include="Core\GraphicsCommon.h" />
     <ClInclude Include="Core\PostProcess.h" />
+    <ClInclude Include="Core\Ray.h" />
     <ClInclude Include="Core\WinApp.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />

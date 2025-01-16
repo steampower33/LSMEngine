@@ -78,6 +78,9 @@
     <ClCompile Include="Core\PostProcess.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\Ray.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -156,6 +159,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\PostProcess.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Ray.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

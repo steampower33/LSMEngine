@@ -25,13 +25,18 @@ void MainEngine::Initialize()
 	}
 
 	{
-		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 100, 100);
+		float radius = 1.0f;
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
+
 		meshData.diffuseFilename = "./Assets/earth.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, textureManager);
 		sphere->key = "sphere";
+		
 		m_models.insert({ sphere->key, sphere });
+
+		m_boundingSphere = BoundingSphere(XMFLOAT3(sphere->pos.x, sphere->pos.y, sphere->pos.z), radius);
 	}
 
 	for (int i = 0; i < FrameCount; i++)
@@ -65,6 +70,18 @@ void MainEngine::Update(float dt)
 	XMMATRIX invView = XMMatrixInverse(&det, view);
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
+
+	if (m_isLeftButtonClicked)
+	{
+		m_isLeftButtonClicked = false;
+
+		Ray ray(m_ndcX, m_ndcY, view, proj);
+
+		if (ray.RaySphereIntersect(m_boundingSphere))
+		{
+
+		}
+	}
 
 	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 

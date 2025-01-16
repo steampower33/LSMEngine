@@ -6,6 +6,8 @@
 #include "GeometryGenerator.h"
 #include "TextureManager.h"
 #include "PostProcess.h"
+#include "Ray.h"
+#include <DirectXCollision.h>
 
 class MainEngine : public EngineBase
 {
@@ -39,7 +41,8 @@ private:
 	// Models
 	shared_ptr<Model> m_skybox;
 	unordered_map<string, shared_ptr<Model>> m_models;
-	
+	BoundingSphere m_boundingSphere;
+
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess[FrameCount];
 
