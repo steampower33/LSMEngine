@@ -85,6 +85,8 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	}
 	case WM_LBUTTONDOWN:
 	{
+		if (!pEngine->m_leftButton)
+			pEngine->m_dragStartFlag = true;
 		pEngine->m_leftButton = true;
 		break;
 	}

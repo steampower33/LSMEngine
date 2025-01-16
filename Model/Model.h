@@ -40,11 +40,12 @@ public:
 		ComPtr<ID3D12DescriptorHeap>& textureHeap,
 		GuiState& guiState);
 
-	void Update();
+	void Update(XMVECTOR& q);
 
 	void OnlyCallConstsMemcpy();
 
-	XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	XMFLOAT4 position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	XMFLOAT4X4 world;
 	string key;
 
 	vector<shared_ptr<Mesh>> m_meshes;

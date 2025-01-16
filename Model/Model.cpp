@@ -24,6 +24,13 @@ void Model::Initialize(
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	shared_ptr<TextureManager>& textureManager)
 {
+	// 초기 world, invTrans 설정
+	XMVECTOR positionVector = XMLoadFloat4(&position);
+	XMMATRIX positionMatrix = XMMatrixTranslationFromVector(positionVector);
+	XMStoreFloat4x4(&world, positionMatrix);
+	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(positionMatrix));
+	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixTranspose(XMMatrixInverse(nullptr, positionMatrix)));
+
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
 	for (int i = 0; i < meshDatas.size(); i++)
@@ -40,15 +47,26 @@ void Model::Initialize(
 	}
 }
 
-void Model::Update()
+void Model::Update(XMVECTOR& q)
 {
-	XMVECTOR posVec = XMLoadFloat4(&pos);
-	XMMATRIX world = XMMatrixTranspose(XMMatrixTranslationFromVector(posVec));
-	XMStoreFloat4x4(&m_meshConstsBufferData.world, world);
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&world);
+	XMVECTOR translation = worldMatrix.r[3];
 
-	world.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-	XMMATRIX worldInv = XMMatrixInverse(nullptr, world);
-	XMMATRIX worldInvTranspose = XMMatrixTranspose(worldInv);
+	XMMATRIX worldWithoutTranslation = worldMatrix;
+	worldWithoutTranslation.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
+	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
+
+	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
+
+	XMMATRIX newWorld = worldWithoutTranslation * rotationMatrix * translationMatrix;
+
+	XMStoreFloat4x4(&world, newWorld);
+
+	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(newWorld));
+
+	newWorld.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMMATRIX worldInvTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, newWorld));
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
 	OnlyCallConstsMemcpy();

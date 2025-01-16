@@ -35,7 +35,7 @@ void MainEngine::Initialize()
 		sphere->key = "sphere";
 		m_models.insert({ sphere->key, sphere });
 
-		m_boundingSphere = BoundingSphere(XMFLOAT3(sphere->pos.x, sphere->pos.y, sphere->pos.z), radius);
+		m_boundingSphere = BoundingSphere(XMFLOAT3(sphere->position.x, sphere->position.y, sphere->position.z), radius);
 
 		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.05f, 100, 100);
 		m_cursorSphere = make_shared<Model>(
@@ -76,7 +76,12 @@ void MainEngine::Update(float dt)
 	XMMATRIX invView = XMMatrixInverse(&det, view);
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
-
+	
+	XMVECTOR axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	float angleRadians = 0.0f;
+	XMVECTOR q = XMQuaternionRotationAxis(axis, angleRadians);
+	
+	static XMVECTOR prevVector{ 0.0f };
 	if (m_leftButton)
 	{
 		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
@@ -120,14 +125,61 @@ void MainEngine::Update(float dt)
 			//cout << dist << endl;
 
 			// 충돌 지점에 작은 구 그리기
-			XMVECTOR translation = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));
-			XMMATRIX worldMat = XMMatrixTranslationFromVector(translation);
+			XMVECTOR pickVec = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));
+			XMMATRIX worldMat = XMMatrixTranslationFromVector(pickVec);
 			XMMATRIX invTranspose = worldMat;
 			invTranspose.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 			invTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, invTranspose));
 			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.world, XMMatrixTranspose(worldMat));
 			XMStoreFloat4x4(&m_cursorSphere->m_meshConstsBufferData.worldIT, invTranspose);
 			m_cursorSphere->OnlyCallConstsMemcpy();
+
+			// 드래그
+			XMVECTOR centerVec = XMLoadFloat3(&m_boundingSphere.Center);
+			if (m_dragStartFlag)
+			{
+				m_dragStartFlag = false;
+				prevVector = XMVectorSubtract(pickVec, centerVec);
+				prevVector = XMVector3Normalize(prevVector);
+			}
+			else
+			{
+				// 현재 벡터 계산 및 정규화
+				XMVECTOR currentVector = XMVectorSubtract(pickVec, centerVec);
+				currentVector = XMVector3Normalize(currentVector);
+
+				// 벡터 차이 계산
+				XMVECTOR delta = XMVectorSubtract(currentVector, prevVector);
+				float deltaLength = XMVectorGetX(XMVector3Length(delta));
+
+				// 마우스가 조금이라도 움직였을 경우에만 회전시키기
+				if (deltaLength > 1e-3f) {
+					// 축과 각도 계산
+					XMVECTOR cross = XMVector3Cross(prevVector, currentVector);
+					XMVECTOR dot = XMVector3Dot(prevVector, currentVector);
+					float dotValue = XMVectorGetX(dot);
+					float angle = acosf(dotValue); // 각도 (라디안)
+
+					// 벡터가 반대 방향인 경우를 처리
+					if (fabsf(dotValue + 1.0f) < 1e-3f) {
+						// 벡터가 반대 방향인 경우, 임의의 직교 축 선택
+						XMVECTOR arbitrary = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+						cross = XMVector3Cross(prevVector, arbitrary);
+						cross = XMVector3Normalize(cross);
+						angle = XM_PI;
+					}
+					else {
+						// 축 정규화
+						cross = XMVector3Normalize(cross);
+					}
+
+					// 쿼터니언 생성
+					q = XMQuaternionRotationAxis(cross, angle);
+
+					// 이전 벡터 업데이트
+					prevVector = currentVector;
+				}
+			}
 		}
 	}
 
@@ -146,10 +198,11 @@ void MainEngine::Update(float dt)
 
 	for (const auto& model : m_models)
 	{
-		model.second->Update();
+		model.second->Update(q);
 	}
 
-	m_skybox->Update();
+	XMVECTOR qi = XMQuaternionIdentity();
+	m_skybox->Update(qi);
 
 	m_postProcess[m_frameIndex]->UpdateIndex(m_frameIndex);
 
@@ -186,9 +239,9 @@ void MainEngine::UpdateGUI()
 			ImGui::SliderFloat3("Specular", &model.second.get()->m_meshConstsBufferData.material.specular.x, 0.0f, 1.0f, "%.1f");
 			ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f");
 
-			ImGui::SliderFloat("X", &model.second.get()->pos.x, -10.0f, 10.0f, "%.1f");
-			ImGui::SliderFloat("Y", &model.second.get()->pos.y, -10.0f, 10.0f, "%.1f");
-			ImGui::SliderFloat("Z", &model.second.get()->pos.z, -10.0f, 10.0f, "%.1f");
+			ImGui::SliderFloat("X", &model.second.get()->position.x, -10.0f, 10.0f, "%.1f");
+			ImGui::SliderFloat("Y", &model.second.get()->position.y, -10.0f, 10.0f, "%.1f");
+			ImGui::SliderFloat("Z", &model.second.get()->position.z, -10.0f, 10.0f, "%.1f");
 		}
 
 		ImGui::PopID();
