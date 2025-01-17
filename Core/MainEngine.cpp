@@ -20,8 +20,16 @@ void MainEngine::Initialize()
 		skybox.ddsSpecularFilename = "./Assets/park_specular.dds";
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager);
-		m_skybox->key = "skybox";
+			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+
+	{
+		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+		m_cursorSphere = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		m_cursorSphere->m_meshConstsBufferData.material.diffuse = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		m_cursorSphere->m_meshConstsBufferData.material.specular = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	}
 
 	{
@@ -31,20 +39,20 @@ void MainEngine::Initialize()
 		meshData.diffuseFilename = "./Assets/earth_diffuse.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager);
-		sphere->key = "sphere";
-		m_models.insert({ sphere->key, sphere });
-
-		m_boundingSphere = make_shared<BoundingSphere>(XMFLOAT3(sphere->position.x, sphere->position.y, sphere->position.z), radius);
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		sphere->m_key = "sphere";
+		m_models.insert({ sphere->m_key, sphere });
 	}
 
 	{
-		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.025f, 100, 100);
-		m_cursorSphere = make_shared<Model>(
+		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
+
+		meshData.diffuseFilename = "./Assets/wall_black_diffuse.jpg";
+		shared_ptr<Model> box = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager);
-		m_cursorSphere->m_meshConstsBufferData.material.diffuse = XMFLOAT3(1.0f, 1.0f, 0.0f);
-		m_cursorSphere->m_meshConstsBufferData.material.specular = XMFLOAT3(0.0f, 0.0f, 0.0f);
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+		box->m_key = "box";
+		m_models.insert({ box->m_key, box });
 	}
 
 	for (int i = 0; i < FrameCount; i++)
@@ -79,9 +87,7 @@ void MainEngine::Update(float dt)
 	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
 
-	XMVECTOR q = XMQuaternionIdentity();
-	XMVECTOR dragTranslation{ 0.0f };
-	UpdateMouseControl(view, proj, q, dragTranslation);
+	UpdateMouseControl(view, proj);
 
 	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 
@@ -95,17 +101,6 @@ void MainEngine::Update(float dt)
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
-
-	for (const auto& model : m_models)
-	{
-		model.second->Update(q, dragTranslation);
-		XMMATRIX world = XMLoadFloat4x4(&model.second->world);
-		XMStoreFloat3(&m_boundingSphere->Center, world.r[3]);
-	}
-
-	XMVECTOR qi = XMQuaternionIdentity();
-	XMVECTOR di{ 0.0f };
-	m_skybox->Update(qi, di);
 
 	m_postProcess[m_frameIndex]->UpdateIndex(m_frameIndex);
 
@@ -141,10 +136,6 @@ void MainEngine::UpdateGUI()
 			ImGui::SliderFloat3("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse.x, 0.0f, 1.0f, "%.1f");
 			ImGui::SliderFloat3("Specular", &model.second.get()->m_meshConstsBufferData.material.specular.x, 0.0f, 1.0f, "%.1f");
 			ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f");
-
-			ImGui::SliderFloat("X", &model.second.get()->position.x, -10.0f, 10.0f, "%.1f");
-			ImGui::SliderFloat("Y", &model.second.get()->position.y, -10.0f, 10.0f, "%.1f");
-			ImGui::SliderFloat("Z", &model.second.get()->position.z, -10.0f, 10.0f, "%.1f");
 		}
 
 		ImGui::PopID();
@@ -229,8 +220,11 @@ void MainEngine::Render()
 	WaitForPreviousFrame();
 }
 
-void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj, XMVECTOR& q, XMVECTOR& dragTranslation)
+void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj)
 {
+	XMVECTOR q = XMQuaternionIdentity();
+	XMVECTOR dragTranslation{ 0.0f };
+
 	if (m_leftButton || m_rightButton)
 	{
 		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
@@ -266,8 +260,17 @@ void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj, XMVECTOR& q,
 
 		Ray ray(originFloat, directionVec);
 
+		shared_ptr<Model> selectedModel = nullptr;
 		float dist = 0.0f;
-		m_selected = ray.RaySphereIntersect(m_boundingSphere, dist);
+		for (auto& model : m_models)
+		{
+			m_selected = ray.RaySphereIntersect(model.second->m_boundingSphere, dist);
+			if (m_selected)
+			{
+				selectedModel = model.second;
+				break;
+			}
+		}
 
 		if (m_selected)
 		{
@@ -284,7 +287,7 @@ void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj, XMVECTOR& q,
 			m_cursorSphere->OnlyCallConstsMemcpy();
 
 			// 드래그
-			XMVECTOR centerVec = XMLoadFloat3(&m_boundingSphere->Center);
+			XMVECTOR centerVec = XMLoadFloat3(&selectedModel->m_boundingSphere->Center);
 
 			if (m_leftButton)
 			{
@@ -357,6 +360,8 @@ void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj, XMVECTOR& q,
 					}
 				}
 			}
+
+			selectedModel->Update(q, dragTranslation);
 		}
 	}
 }

@@ -25,7 +25,8 @@ public:
 		ComPtr<ID3D12CommandQueue>& commandQueue,
 		const vector<MeshData>& meshDatas,
 		CubemapIndexConstants& cubemapIndexConstsBufferData,
-		shared_ptr<TextureManager>& textureManager);
+		shared_ptr<TextureManager>& textureManager,
+		XMFLOAT4 position);
 
 	~Model();
 
@@ -45,14 +46,17 @@ public:
 
 	void OnlyCallConstsMemcpy();
 
-	XMFLOAT4 position = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	XMFLOAT4X4 world;
-	string key;
+	float m_radius;
+	XMFLOAT4 m_position;
+	XMFLOAT4X4 m_world;
+	string m_key;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData;
 	UINT8* m_meshConstsBufferDataBegin;
+
+	shared_ptr<BoundingSphere> m_boundingSphere;
 
 private:
 	void Initialize(
@@ -62,6 +66,4 @@ private:
 		const vector<MeshData>& meshDatas,
 		CubemapIndexConstants& cubemapIndexConstsBufferData,
 		shared_ptr<TextureManager>& textureManager);
-
-
 };

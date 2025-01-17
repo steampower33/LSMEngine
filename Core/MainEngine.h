@@ -51,7 +51,5 @@ private:
 	shared_ptr<TextureManager> m_textureManager;
 
 private:
-	void UpdateMouseControl(
-		XMMATRIX& view, XMMATRIX& proj, 
-		XMVECTOR& q, XMVECTOR& dragTranslation);
+	void UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj);
 };

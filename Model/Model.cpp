@@ -6,8 +6,10 @@ Model::Model(
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	const vector<MeshData>& meshDatas,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
-	shared_ptr<TextureManager>& textureManager)
+	shared_ptr<TextureManager>& textureManager,
+	XMFLOAT4 position)
 {
+	m_position = position;
 	Initialize(device, commandList, commandQueue, meshDatas, cubemapIndexConstsBufferData, textureManager);
 }
 
@@ -24,10 +26,13 @@ void Model::Initialize(
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	shared_ptr<TextureManager>& textureManager)
 {
+	m_radius = 1.0f;
+	m_boundingSphere = make_shared<BoundingSphere>(XMFLOAT3(m_position.x, m_position.y, m_position.z), m_radius);
+
 	// 초기 world, invTrans 설정
-	XMVECTOR positionVector = XMLoadFloat4(&position);
+	XMVECTOR positionVector = XMLoadFloat4(&m_position);
 	XMMATRIX positionMatrix = XMMatrixTranslationFromVector(positionVector);
-	XMStoreFloat4x4(&world, positionMatrix);
+	XMStoreFloat4x4(&m_world, positionMatrix);
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(positionMatrix));
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixTranspose(XMMatrixInverse(nullptr, positionMatrix)));
 
@@ -49,7 +54,7 @@ void Model::Initialize(
 
 void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 {
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&world);
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_world);
 	XMVECTOR translation = worldMatrix.r[3];
 
 	XMMATRIX worldWithoutTranslation = worldMatrix;
@@ -57,12 +62,14 @@ void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 
 	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
 
-	XMMATRIX dragTranslationMatrix = XMMatrixTranslationFromVector(dragTranslation);
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
+	XMMATRIX dragTranslationMatrix = XMMatrixTranslationFromVector(dragTranslation);
 
 	XMMATRIX newWorld = worldWithoutTranslation * rotationMatrix * translationMatrix * dragTranslationMatrix;
 
-	XMStoreFloat4x4(&world, newWorld);
+	XMStoreFloat3(&m_boundingSphere->Center, newWorld.r[3]);
+
+	XMStoreFloat4x4(&m_world, newWorld);
 
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(newWorld));
 
