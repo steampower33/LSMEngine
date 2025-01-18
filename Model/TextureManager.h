@@ -46,5 +46,6 @@ private:
 	bool CheckDuplcateFilename(
 		unordered_map<string, int>& textureIdx,
 		const string& filename,
-		shared_ptr<Mesh>& newMesh);
+		shared_ptr<Mesh>& newMesh,
+		CubemapIndexConstants& cubemapIndexConstsBufferData);
 };

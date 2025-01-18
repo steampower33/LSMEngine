@@ -5,5 +5,5 @@ SamplerState g_sampler : register(s0, space0);
 
 float4 main(PSInput input) : SV_TARGET
 {
-    return skyboxTexture[cubemapAmbientIndex - 10].Sample(g_sampler, input.posWorld);
+    return skyboxTexture[cubemapColorIndex - 10].Sample(g_sampler, input.posWorld);
 }

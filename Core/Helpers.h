@@ -217,19 +217,6 @@ static void CreateDDSTextureBuffer(
 	unordered_map<string, int>& textureIdx,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	if (textureIdx.find(filename) != textureIdx.end())
-	{
-
-		if (filename.find("ambient") != std::string::npos)
-			cubemapIndexConstsBufferData.cubemapAmbientIndex = textureCnt;
-		else if (filename.find("diffuse") != std::string::npos)
-			cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
-		else if (filename.find("specular") != std::string::npos)
-			cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
-
-		return;
-	}
-
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
 
@@ -275,11 +262,11 @@ static void CreateDDSTextureBuffer(
 	// 府家胶 包府
 	textures.push_back(tex);
 
-	if (filename.find("ambient") != std::string::npos)
-		cubemapIndexConstsBufferData.cubemapAmbientIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	if (filename.find("Color") != std::string::npos)
+		cubemapIndexConstsBufferData.cubemapColorIndex = textureCnt;
+	else if (filename.find("Diffuse") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (filename.find("Specular") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
@@ -301,19 +288,6 @@ static void CreateMipMapTextureBuffer(
 	UINT& textureCnt,
 	unordered_map<string, int>& textureIdx)
 {
-
-	if (textureIdx.find(filename) != textureIdx.end())
-	{
-		if (filename.find("ambient") != std::string::npos)
-			newMesh->constsBufferData.ambientIndex = textureCnt;
-		else if (filename.find("diffuse") != std::string::npos)
-			newMesh->constsBufferData.diffuseIndex = textureCnt;
-		else if (filename.find("specular") != std::string::npos)
-			newMesh->constsBufferData.specularIndex = textureCnt;
-
-		return;
-	}
-
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
 
@@ -411,11 +385,11 @@ static void CreateMipMapTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("ambient") != std::string::npos)
-		newMesh->constsBufferData.ambientIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	if (filename.find("Color") != std::string::npos)
+		newMesh->constsBufferData.colorIndex = textureCnt;
+	else if (filename.find("Diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (filename.find("Specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
@@ -438,18 +412,6 @@ static void CreateTextureBuffer(
 	UINT& textureCnt,
 	unordered_map<string, int>& textureIdx)
 {
-	if (textureIdx.find(filename) != textureIdx.end())
-	{
-		if (filename.find("ambient") != std::string::npos)
-			newMesh->constsBufferData.ambientIndex = textureCnt;
-		else if (filename.find("diffuse") != std::string::npos)
-			newMesh->constsBufferData.diffuseIndex = textureCnt;
-		else if (filename.find("specular") != std::string::npos)
-			newMesh->constsBufferData.specularIndex = textureCnt;
-
-		return;
-	}
-
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
 
@@ -502,11 +464,11 @@ static void CreateTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("ambient") != std::string::npos)
-		newMesh->constsBufferData.ambientIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	if (filename.find("Color") != std::string::npos)
+		newMesh->constsBufferData.colorIndex = textureCnt;
+	else if (filename.find("Diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (filename.find("Specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");

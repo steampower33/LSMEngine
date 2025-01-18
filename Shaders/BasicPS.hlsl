@@ -28,8 +28,6 @@ float4 main(PSInput input) : SV_TARGET
         color += ComputeSpotLight(lights[i], material, input.posWorld, input.normalWorld, toEye);
     }
     
-    //return isUseTexture ? float4(color, 1.0) * g_texture[diffuseIndex].Sample(g_sampler, input.texcoord) : float4(color, 1.0);
-
     float4 diffuse = skyboxTexture[cubemapDiffuseIndex - 10].Sample(g_sampler, input.normalWorld);
     float4 specular = skyboxTexture[cubemapSpecularIndex - 10].Sample(g_sampler, reflect(-toEye, input.normalWorld));
     
@@ -44,7 +42,7 @@ float4 main(PSInput input) : SV_TARGET
         float distMin = 10.0;
         float distMax = 50.0;
         float lod = 10.0 * saturate(dist / (distMax - distMin));
-        diffuse *= g_texture[diffuseIndex].SampleLevel(g_sampler, input.texcoord, lod);
+        diffuse *= g_texture[colorIndex].SampleLevel(g_sampler, input.texcoord, lod);
     }
     
     return diffuse + specular;

@@ -7,7 +7,7 @@
 // ÀçÁú
 struct Material
 {
-    float ambient;
+    float color;
     float diffuse;
     float specular;
     float shininess;
@@ -44,7 +44,7 @@ float BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal,
     float ndoth = max(dot(normal, halfway), 0.0);
     float specualr = mat.specular * pow(ndoth, mat.shininess);
     
-    return mat.ambient + length((mat.diffuse + specualr) * lightStrength) / 3;
+    return mat.color + length((mat.diffuse + specualr) * lightStrength) / 3;
 
 }
 
@@ -152,7 +152,7 @@ cbuffer MeshConstants : register(b1)
 
 cbuffer TextureIndexConstants : register(b2)
 {
-    uint ambientIndex;
+    uint colorIndex;
     uint diffuseIndex;
     uint specularIndex;
     float d21[13];
@@ -166,7 +166,7 @@ cbuffer TextureIndexConstants : register(b2)
 
 cbuffer CubemapIndexConstants : register(b3)
 {
-    uint cubemapAmbientIndex;
+    uint cubemapColorIndex;
     uint cubemapDiffuseIndex;
     uint cubemapSpecularIndex;
     float d31[13];

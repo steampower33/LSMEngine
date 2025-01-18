@@ -216,28 +216,28 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\wall_black_diffuse.jpg">
+    <Image Include="Assets\BlackWall_Color.jpg">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\winter_diffuse.dds">
+    <Image Include="Assets\Bricks075A_4K-JPG_Color.jpg">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\earth_diffuse.jpg">
+    <Image Include="Assets\ChessBoard_Color.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\park_ambient.dds">
+    <Image Include="Assets\Earth_Color.jpg">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\park_diffuse.dds">
+    <Image Include="Assets\Park_Color.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\park_specular.dds">
+    <Image Include="Assets\Park_Diffuse.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\tree1_diffuse.png">
+    <Image Include="Assets\Park_Specular.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\chess_board_diffuse.jpg">
+    <Image Include="Assets\Winter_Color.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>

@@ -61,7 +61,7 @@ __declspec(align(256)) struct MeshConstants {
 };
 
 __declspec(align(256)) struct TextureIndexConstants {
-	UINT ambientIndex;
+	UINT colorIndex;
 	UINT diffuseIndex;
 	UINT specularIndex;
 	float dummy[13];
@@ -74,7 +74,7 @@ __declspec(align(256)) struct TextureIndexConstants {
 };
 
 __declspec(align(256)) struct CubemapIndexConstants {
-	UINT cubemapAmbientIndex;
+	UINT cubemapColorIndex;
 	UINT cubemapDiffuseIndex;
 	UINT cubemapSpecularIndex;
 	float dummy[13];

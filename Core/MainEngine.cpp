@@ -15,9 +15,9 @@ void MainEngine::Initialize()
 		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-		skybox.ddsAmbientFilename = "./Assets/park_ambient.dds";
-		skybox.ddsDiffuseFilename = "./Assets/park_diffuse.dds";
-		skybox.ddsSpecularFilename = "./Assets/park_specular.dds";
+		skybox.ddsColorFilename = "./Assets/Park_Color.dds";
+		skybox.ddsDiffuseFilename = "./Assets/Park_Diffuse.dds";
+		skybox.ddsSpecularFilename = "./Assets/Park_Specular.dds";
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -33,7 +33,7 @@ void MainEngine::Initialize()
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		meshData.diffuseFilename = "./Assets/chess_board_diffuse.png";
+		meshData.colorFilename = "./Assets/ChessBoard_Color.png";
 		m_board = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -48,10 +48,21 @@ void MainEngine::Initialize()
 	}
 
 	{
+		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
+
+		meshData.colorFilename = "./Assets/ChessBoard_Color.png";
+		shared_ptr<Model> square = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		square->m_key = "square";
+		m_models.insert({ square->m_key, square });
+	}
+
+	{
 		float radius = 1.0f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
 
-		meshData.diffuseFilename = "./Assets/earth_diffuse.jpg";
+		meshData.colorFilename = "./Assets/Earth_Color.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -59,16 +70,16 @@ void MainEngine::Initialize()
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
-	//{
-	//	MeshData meshData = GeometryGenerator::MakeBox(1.0f);
+	{
+		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 
-	//	meshData.diffuseFilename = "./Assets/wall_black_diffuse.jpg";
-	//	shared_ptr<Model> box = make_shared<Model>(
-	//		m_device, m_commandList, m_commandQueue,
-	//		vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
-	//	box->m_key = "box";
-	//	m_models.insert({ box->m_key, box });
-	//}
+		meshData.colorFilename = "./Assets/BlackWall_Color.jpg";
+		shared_ptr<Model> box = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+		box->m_key = "box";
+		m_models.insert({ box->m_key, box });
+	}
 
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
