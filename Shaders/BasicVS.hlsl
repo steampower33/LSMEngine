@@ -4,6 +4,13 @@ PSInput main(VSInput input)
 {
     PSInput output;
     
+    float4 normal = float4(input.normalModel, 0.0f);
+    output.normalWorld = mul(normal, worldIT).xyz;
+    output.normalWorld = normalize(output.normalWorld);
+    
+    float4 tangentWorld = float4(input.tangentModel, 0.0f);
+    tangentWorld = mul(tangentWorld, world);
+    
     float4 pos = float4(input.posModel, 1.0f);
     pos = mul(pos, world);
     
@@ -14,10 +21,7 @@ PSInput main(VSInput input)
     
     output.posProj = pos;
     output.texcoord = input.texcoord;
-    
-    float4 normal = float4(input.normalModel, 0.0f);
-    output.normalWorld = mul(normal, worldIT).xyz;
-    output.normalWorld = normalize(output.normalWorld);
+    output.tangentWorld = tangentWorld.xyz;
     
     return output;
 }

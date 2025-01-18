@@ -150,6 +150,7 @@
   <ItemGroup>
     <Image Include="Assets\BlackWall_Color.jpg" />
     <Image Include="Assets\Bricks075A_4K-JPG_Color.jpg" />
+    <Image Include="Assets\Bricks075A_4K-JPG_NormalDX.jpg" />
     <Image Include="Assets\ChessBoard_Color.png" />
     <Image Include="Assets\Earth_Color.jpg" />
     <Image Include="Assets\Park_Color.dds" />

@@ -45,9 +45,13 @@ __declspec(align(512)) struct GlobalConstants
 	Light lights[MAX_LIGHTS];
 
 	XMFLOAT3 eyeWorld;
-	bool isUseTexture;
-	bool dummy3[3];
-	XMFLOAT4X3 dummy4;
+	float d3;
+
+	alignas(4) bool isUseTexture = true;
+	alignas(4) bool isUseNormalMap = true;
+	float d4[2];
+
+	float d5[8];
 };
 
 __declspec(align(256)) struct MeshConstants {
@@ -64,7 +68,8 @@ __declspec(align(256)) struct TextureIndexConstants {
 	UINT colorIndex;
 	UINT diffuseIndex;
 	UINT specularIndex;
-	float dummy[13];
+	UINT normalIndex;
+	float dummy[12];
 
 	XMFLOAT4X4 dummy1;
 

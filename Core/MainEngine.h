@@ -8,6 +8,7 @@
 #include "PostProcess.h"
 #include "Ray.h"
 #include <DirectXCollision.h>
+#include <cmath>
 
 class MainEngine : public EngineBase
 {

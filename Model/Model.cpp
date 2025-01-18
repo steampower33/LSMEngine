@@ -34,7 +34,7 @@ void Model::Initialize(
 	XMMATRIX positionMatrix = XMMatrixTranslationFromVector(positionVector);
 	XMStoreFloat4x4(&m_world, positionMatrix);
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(positionMatrix));
-	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixTranspose(XMMatrixInverse(nullptr, positionMatrix)));
+	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixInverse(nullptr, positionMatrix));
 
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 
@@ -74,7 +74,7 @@ void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(newWorld));
 
 	newWorld.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-	XMMATRIX worldInvTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, newWorld));
+	XMMATRIX worldInvTranspose = XMMatrixInverse(nullptr, newWorld);
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
 
 	OnlyCallConstsMemcpy();

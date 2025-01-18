@@ -12,6 +12,7 @@ struct MeshData
 	std::string colorFilename;
 	std::string diffuseFilename;
 	std::string specularFilename;
+	std::string normalFilename;
 
 	std::string ddsColorFilename;
 	std::string ddsDiffuseFilename;

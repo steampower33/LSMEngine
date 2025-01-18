@@ -134,9 +134,13 @@ cbuffer GlobalConstants : register(b0)
     Light lights[MAX_LIGHTS];
     
     float3 eyeWorld;
+    float d03;
+    
     bool isUseTexture;
-    bool d03[3];
-    float4x3 dummy;
+    bool isUseNormalMap;
+    float d04[2];
+    
+    float d05[8];
 }
 
 cbuffer MeshConstants : register(b1)
@@ -155,7 +159,8 @@ cbuffer TextureIndexConstants : register(b2)
     uint colorIndex;
     uint diffuseIndex;
     uint specularIndex;
-    float d21[13];
+    uint normalIndex;
+    float d21[12];
     
     float4x4 d22;
     
@@ -202,6 +207,7 @@ struct VSInput
     float3 posModel : POSITION;
     float2 texcoord : TEXCOORD;
     float3 normalModel : NORMAL;
+    float3 tangentModel : TANGENT;
 };
 
 struct PSInput
@@ -209,5 +215,6 @@ struct PSInput
     float3 posWorld : POSITION;
     float4 posProj : SV_POSITION;
     float3 normalWorld : NORMAL;
+    float3 tangentWorld : TANGENT;
     float2 texcoord : TEXCOORD;
 };

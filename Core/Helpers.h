@@ -30,7 +30,6 @@ using namespace DirectX;
 struct GuiState {
 	bool isDrawNormals = false;
 	bool isWireframe = false;
-	bool isUseTextrue = true;
 	bool isMeshChanged = false;
 	string changedMeshKey = "";
 };
@@ -470,6 +469,8 @@ static void CreateTextureBuffer(
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
 	else if (filename.find("Specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
+	else if (filename.find("Normal") != std::string::npos)
+		newMesh->constsBufferData.normalIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 

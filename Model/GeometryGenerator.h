@@ -21,4 +21,6 @@ public:
 	static MeshData MakeSphere(
 		const float radius, 
 		const int numSlices, const int numStacks);
+	static void CalculateTangents(MeshData& meshData);
+
 };

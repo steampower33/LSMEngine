@@ -240,5 +240,8 @@
     <Image Include="Assets\Winter_Color.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\Bricks075A_4K-JPG_NormalDX.jpg">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

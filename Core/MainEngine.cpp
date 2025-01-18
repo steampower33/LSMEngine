@@ -49,8 +49,9 @@ void MainEngine::Initialize()
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
+		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
+		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
 
-		meshData.colorFilename = "./Assets/ChessBoard_Color.png";
 		shared_ptr<Model> square = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -61,19 +62,21 @@ void MainEngine::Initialize()
 	{
 		float radius = 1.0f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
+		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
+		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
 
-		meshData.colorFilename = "./Assets/Earth_Color.jpg";
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(-2.0f, 0.0f, 0.0f, 0.0f));
 		sphere->m_key = "sphere";
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
+		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
+		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
 
-		meshData.colorFilename = "./Assets/BlackWall_Color.jpg";
 		shared_ptr<Model> box = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
@@ -121,15 +124,7 @@ void MainEngine::Update(float dt)
 		m_models[guiState.changedMeshKey]->OnlyCallConstsMemcpy();
 	}
 
-	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
-
-	for (int i = 0; i < MAX_LIGHTS; i++)
-	{
-		if (i != m_lightType)
-			m_globalConstsBufferData.lights[i].strength = { 0.0f, 0.0f, 0.0f };
-		else
-			m_globalConstsBufferData.lights[i] = m_lightFromGUI;
-	}
+	m_globalConstsBufferData.lights[1] = m_lightFromGUI;
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
@@ -155,7 +150,13 @@ void MainEngine::UpdateGUI()
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
-	ImGui::Checkbox("Use Texture", &guiState.isUseTextrue);
+	ImGui::Checkbox("Use Texture", &m_globalConstsBufferData.isUseTexture);
+	ImGui::Checkbox("Use NormalMap", &m_globalConstsBufferData.isUseNormalMap);
+
+	ImGui::Separator();
+	ImGui::Text("Light");
+
+	ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
 
 	for (const auto& model : m_models)
 	{

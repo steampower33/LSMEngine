@@ -20,12 +20,20 @@ void TextureManager::LoadTextures(
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	// ETC
+	// Color
 	if (CheckDuplcateFilename(m_textureIdx, meshData.colorFilename, newMesh, cubemapIndexConstsBufferData))
 		CreateMipMapTextureBuffer(
-			device, commandList, 
-			meshData.colorFilename, newMesh, 
-			m_heapStartCpu, m_textures, m_texturesUploadHeap, 
+			device, commandList,
+			meshData.colorFilename, newMesh,
+			m_heapStartCpu, m_textures, m_texturesUploadHeap,
+			m_normaltextureCnt, m_textureIdx);
+
+	// NormalMap
+	if (CheckDuplcateFilename(m_textureIdx, meshData.normalFilename, newMesh, cubemapIndexConstsBufferData))
+		CreateTextureBuffer(
+			device, commandList,
+			meshData.normalFilename, newMesh,
+			m_heapStartCpu, m_textures, m_texturesUploadHeap,
 			m_normaltextureCnt, m_textureIdx);
 
 	// DDS
@@ -81,6 +89,8 @@ bool TextureManager::CheckDuplcateFilename(
 				newMesh->constsBufferData.diffuseIndex = f->second;
 			else if (filename.find("Specular") != std::string::npos)
 				newMesh->constsBufferData.specularIndex = f->second;
+			else if (filename.find("Normal") != std::string::npos)
+				newMesh->constsBufferData.normalIndex = f->second;
 		}
 
 		printf("Duplicated texture : %s, location is %d\n", f->first.c_str(), f->second);
