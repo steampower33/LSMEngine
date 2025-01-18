@@ -40,7 +40,11 @@ float4 main(PSInput input) : SV_TARGET
     
     if (isUseTexture)
     {
-        diffuse *= g_texture[diffuseIndex].Sample(g_sampler, input.texcoord);
+        float dist = length(eyeWorld - input.posWorld);
+        float distMin = 10.0;
+        float distMax = 50.0;
+        float lod = 10.0 * saturate(dist / (distMax - distMin));
+        diffuse *= g_texture[diffuseIndex].SampleLevel(g_sampler, input.texcoord, lod);
     }
     
     return diffuse + specular;

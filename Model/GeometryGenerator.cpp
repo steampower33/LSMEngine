@@ -1,16 +1,16 @@
 #include "GeometryGenerator.h"
 
-MeshData GeometryGenerator::MakeSquare() {
+MeshData GeometryGenerator::MakeSquare(const float scale) {
 	
 	MeshData meshData;
 
 	meshData.vertices =
 	{
 		// front
-		{ -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f },
-		{ -1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-		{  1.0f,  1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-		{  1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		{ -scale, -scale, 0.0f, 0.0f, scale, 0.0f, 0.0f, -1.0f },
+		{ -scale,  scale, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  scale,  scale, 0.0f, scale, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  scale, -scale, 0.0f, scale, scale, 0.0f, 0.0f, -1.0f },
 	};
 
 	meshData.indices = {
@@ -26,40 +26,40 @@ MeshData GeometryGenerator::MakeBox(const float scale) {
 	meshData.vertices =
 	{
 		// front
-		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f },
-		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
-		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		{ -scale, -scale, -scale, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f },
+		{ -scale,  scale, -scale, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  scale,  scale, -scale, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f },
+		{  scale, -scale, -scale, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f },
 
 		// back
-		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, 0.0f, 0.0f,  1.0f },
-		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, 0.0f, 0.0f,  1.0f },
-		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f, 0.0f, 0.0f,  1.0f },
-		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f, 0.0f, 0.0f,  1.0f },
+		{  scale, -scale,  scale, 0.0f, 1.0f, 0.0f, 0.0f,  1.0f },
+		{  scale,  scale,  scale, 0.0f, 0.0f, 0.0f, 0.0f,  1.0f },
+		{ -scale,  scale,  scale, 1.0f, 0.0f, 0.0f, 0.0f,  1.0f },
+		{ -scale, -scale,  scale, 1.0f, 1.0f, 0.0f, 0.0f,  1.0f },
 
 		// top
-		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 1.0f, 0.0f,  1.0f, 0.0f },
-		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, 0.0f,  1.0f, 0.0f },
-		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f, 0.0f,  1.0f, 0.0f },
-		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 1.0f, 0.0f,  1.0f, 0.0f },
+		{ -scale,  scale, -scale, 0.0f, 1.0f, 0.0f,  1.0f, 0.0f },
+		{ -scale,  scale,  scale, 0.0f, 0.0f, 0.0f,  1.0f, 0.0f },
+		{  scale,  scale,  scale, 1.0f, 0.0f, 0.0f,  1.0f, 0.0f },
+		{  scale,  scale, -scale, 1.0f, 1.0f, 0.0f,  1.0f, 0.0f },
 
 		// bottom
-		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
-		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
-		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
+		{ -scale, -scale,  scale, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f },
+		{ -scale, -scale, -scale, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+		{  scale, -scale, -scale, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f },
+		{  scale, -scale,  scale, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f },
 
 		// left
-		{ -1.0f * scale, -1.0f * scale,  1.0f * scale, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f * scale,  1.0f * scale,  1.0f * scale, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f * scale,  1.0f * scale, -1.0f * scale, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
-		{ -1.0f * scale, -1.0f * scale, -1.0f * scale, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
+		{ -scale, -scale,  scale, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f },
+		{ -scale,  scale,  scale, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+		{ -scale,  scale, -scale, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f },
+		{ -scale, -scale, -scale, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f },
 
 		// right
-		{  1.0f * scale, -1.0f * scale, -1.0f * scale, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f },
-		{  1.0f * scale,  1.0f * scale, -1.0f * scale, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f },
-		{  1.0f * scale,  1.0f * scale,  1.0f * scale, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f },
-		{  1.0f * scale, -1.0f * scale,  1.0f * scale, 1.0f, 1.0f,  1.0f, 0.0f, 0.0f },
+		{  scale, -scale, -scale, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f },
+		{  scale,  scale, -scale, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f },
+		{  scale,  scale,  scale, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f },
+		{  scale, -scale,  scale, 1.0f, 1.0f,  1.0f, 0.0f, 0.0f },
 	};
 
 	meshData.indices = {

@@ -28,8 +28,23 @@ void MainEngine::Initialize()
 		m_cursorSphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		m_cursorSphere->m_meshConstsBufferData.material.diffuse = XMFLOAT3(1.0f, 1.0f, 0.0f);
-		m_cursorSphere->m_meshConstsBufferData.material.specular = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	}
+
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+
+		meshData.diffuseFilename = "./Assets/chess_board_diffuse.png";
+		m_board = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		float degrees = 90.0f;
+		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
+		XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
+		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
+
+		XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
+		m_board->Update(quaternion, translation);
 	}
 
 	{
@@ -44,16 +59,16 @@ void MainEngine::Initialize()
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
-	{
-		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 
-		meshData.diffuseFilename = "./Assets/wall_black_diffuse.jpg";
-		shared_ptr<Model> box = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
-		box->m_key = "box";
-		m_models.insert({ box->m_key, box });
-	}
+	//	meshData.diffuseFilename = "./Assets/wall_black_diffuse.jpg";
+	//	shared_ptr<Model> box = make_shared<Model>(
+	//		m_device, m_commandList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+	//	box->m_key = "box";
+	//	m_models.insert({ box->m_key, box });
+	//}
 
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
@@ -88,6 +103,12 @@ void MainEngine::Update(float dt)
 	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
 
 	UpdateMouseControl(view, proj);
+
+	if (guiState.isMeshChanged)
+	{
+		guiState.isMeshChanged = false;
+		m_models[guiState.changedMeshKey]->OnlyCallConstsMemcpy();
+	}
 
 	m_globalConstsBufferData.isUseTexture = guiState.isUseTextrue;
 
@@ -129,19 +150,24 @@ void MainEngine::UpdateGUI()
 	{
 		ImGui::PushID(model.first.c_str());
 
-		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-
-		if (ImGui::CollapsingHeader(model.first.c_str(), true)) {
-			ImGui::SliderFloat3("Ambient", &model.second.get()->m_meshConstsBufferData.material.ambient.x, 0.0f, 1.0f, "%.1f");
-			ImGui::SliderFloat3("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse.x, 0.0f, 1.0f, "%.1f");
-			ImGui::SliderFloat3("Specular", &model.second.get()->m_meshConstsBufferData.material.specular.x, 0.0f, 1.0f, "%.1f");
-			ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f");
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (ImGui::TreeNode(model.first.c_str())) {
+			if (ImGui::SliderFloat("Ambient", &model.second.get()->m_meshConstsBufferData.material.ambient, 0.0f, 1.0f, "%.1f") ||
+				ImGui::SliderFloat("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse, 0.0f, 1.0f, "%.1f") ||
+				ImGui::SliderFloat("Specular", &model.second.get()->m_meshConstsBufferData.material.specular, 0.0f, 1.0f, "%.1f") ||
+				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f"))
+			{
+				guiState.isMeshChanged = true;
+				guiState.changedMeshKey = model.first;
+			}
+			ImGui::TreePop();
 		}
 
 		ImGui::PopID();
 	}
 
-	if (ImGui::CollapsingHeader("Post Process"))
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Post Process"))
 	{
 		if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f, "%.1f"))
 		{
@@ -152,6 +178,7 @@ void MainEngine::UpdateGUI()
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}
+		ImGui::TreePop();
 	}
 
 	ImGui::End();
@@ -187,6 +214,7 @@ void MainEngine::Render()
 	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
+	m_board->Render(m_device, m_commandList, m_textureHeap, guiState);
 
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
@@ -274,7 +302,7 @@ void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj)
 
 		if (m_selected)
 		{
-			cout << dist << endl;
+			//cout << dist << endl;
 
 			// 충돌 지점에 작은 구 그리기
 			XMVECTOR pickVec = XMVectorAdd(rayWorldNear, XMVectorScale(directionVec, dist));

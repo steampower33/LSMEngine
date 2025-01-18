@@ -148,10 +148,12 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Assets\chess_board_diffuse.jpg" />
     <Image Include="Assets\earth_diffuse.jpg" />
     <Image Include="Assets\park_ambient.dds" />
     <Image Include="Assets\park_diffuse.dds" />
     <Image Include="Assets\park_specular.dds" />
+    <Image Include="Assets\tree1_diffuse.png" />
     <Image Include="Assets\wall_black_diffuse.jpg" />
     <Image Include="Assets\winter_diffuse.dds" />
   </ItemGroup>

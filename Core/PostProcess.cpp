@@ -22,7 +22,7 @@ void PostProcess::Initialize(
 
 	CreateDescriptors(device);
 
-	MeshData square = GeometryGenerator::MakeSquare();
+	MeshData square = GeometryGenerator::MakeSquare(1.0f);
 
 	m_mesh = make_shared<Mesh>();
 	m_mesh->vertexBufferCount = static_cast<UINT>(square.vertices.size());

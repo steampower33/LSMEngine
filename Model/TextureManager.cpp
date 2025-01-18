@@ -22,7 +22,7 @@ void TextureManager::LoadTextures(
 {
 	// ETC
 	if (CheckDuplcateFilename(m_textureIdx, meshData.diffuseFilename, newMesh))
-		CreateTextureBuffer(
+		CreateMipMapTextureBuffer(
 			device, commandList, 
 			meshData.diffuseFilename, newMesh, 
 			m_heapStartCpu, m_textures, m_texturesUploadHeap, 

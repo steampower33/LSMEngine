@@ -10,27 +10,29 @@ using namespace DirectX;
 
 // 재질
 struct Material {
-	XMFLOAT3 ambient = { 0.1f, 0.1f, 0.1f };  // 12
-	float shininess = 1.0f;           // 4
-	XMFLOAT3 diffuse = { 0.5f, 0.5f, 0.5f };  // 12
-	float dummy1 = 0.0f;              // 4
-	XMFLOAT3 specular = { 0.5f, 0.5f, 0.5f }; // 12
-	float dummy2 = 0.0f;              // 4
-	XMFLOAT3 dummy3;						  // 12
-	float dummy4 = 0.0f;			  // 4
+	float ambient = 0.0f;
+	float diffuse = 1.0f;
+	float specular = 0.0f;
+	float shininess = 1.0f;
+	XMFLOAT4X3 d0;
+
+	XMFLOAT4X4 d1;
+
+	XMFLOAT4X4 d2;
+
+	XMFLOAT4X4 d3;
 };
 
 // 조명
 struct Light {
-	// 순서와 크기 관계 주의 (16 바이트 패딩)
-	XMFLOAT3 strength = { 1.0f, 1.0f, 1.0f };  // 12
-	float fallOffStart = 0.0f;                     // 4
-	XMFLOAT3 direction = { 0.0f, 0.0f, 1.0f }; // 12
-	float fallOffEnd = 10.0f;                      // 4
-	XMFLOAT3 position = { 0.0f, 0.0f, -2.0f }; // 12
-	float spotPower = 1.0f;                        // 4
-	XMFLOAT3 d1;							   // 12
-	float d2 = 0.0f;;									   // 4
+	XMFLOAT3 strength = { 1.0f, 1.0f, 1.0f };
+	float fallOffStart = 0.0f;
+	XMFLOAT3 direction = { 0.0f, 0.0f, 1.0f };
+	float fallOffEnd = 10.0f;
+	XMFLOAT3 position = { 0.0f, 0.0f, -2.0f };
+	float spotPower = 1.0f;
+	XMFLOAT3 d1;
+	float d2 = 0.0f;
 };
 
 __declspec(align(512)) struct GlobalConstants

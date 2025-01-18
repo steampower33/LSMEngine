@@ -7,14 +7,15 @@
 // 재질
 struct Material
 {
-    float3 ambient;
+    float ambient;
+    float diffuse;
+    float specular;
     float shininess;
-    float3 diffuse;
-    float dummy1;
-    float3 specular;
-    float dummy2;
-    float3 dummy3;
-    float dummy4;
+    float4x3 d0;
+    
+    float4x4 d1;
+    float4x4 d2;
+    float4x4 d3;
 };
 
 // 조명
@@ -36,18 +37,18 @@ float CalcAttenuation(float d, float falloffStart, float falloffEnd)
     return saturate((falloffEnd - d) / (falloffEnd - falloffStart));
 }
 
-float3 BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal,
+float BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal,
                    float3 toEye, Material mat)
 {
     float3 halfway = normalize(lightVec + -toEye);
     float ndoth = max(dot(normal, halfway), 0.0);
-    float3 specualr = mat.specular * pow(ndoth, mat.shininess);
+    float specualr = mat.specular * pow(ndoth, mat.shininess);
     
-    return mat.ambient + (mat.diffuse + specualr) * lightStrength;
+    return mat.ambient + length((mat.diffuse + specualr) * lightStrength) / 3;
 
 }
 
-float3 ComputeDirectionalLight(Light L, Material mat, float3 normal,
+float ComputeDirectionalLight(Light L, Material mat, float3 normal,
                                 float3 toEye)
 {
     float3 lightVec = -L.direction;
@@ -58,7 +59,7 @@ float3 ComputeDirectionalLight(Light L, Material mat, float3 normal,
 
 }
 
-float3 ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
+float ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
                           float3 toEye)
 {
     float3 lightVec = L.position - pos;
@@ -69,7 +70,7 @@ float3 ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
     // 너무 멀면 조명이 적용되지 않음
     if (d > L.fallOffEnd)
     {
-        return float3(0.0, 0.0, 0.0);
+        return 0.0;
     }
     else
     {
@@ -89,7 +90,7 @@ float3 ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
     }
 }
 
-float3 ComputeSpotLight(Light L, Material mat, float3 pos, float3 normal,
+float ComputeSpotLight(Light L, Material mat, float3 pos, float3 normal,
                          float3 toEye)
 {
     float3 lightVec = L.position - pos;
@@ -100,7 +101,7 @@ float3 ComputeSpotLight(Light L, Material mat, float3 pos, float3 normal,
     // 너무 멀면 조명이 적용되지 않음
     if (d > L.fallOffEnd)
     {
-        return float3(0.0f, 0.0f, 0.0f);
+        return 0.0;
     }
     else
     {
@@ -117,7 +118,6 @@ float3 ComputeSpotLight(Light L, Material mat, float3 pos, float3 normal,
         lightStrength *= spotFactor;
         
         return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
-
     }
     
     // if에 else가 없을 경우 경고 발생

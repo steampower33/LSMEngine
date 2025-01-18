@@ -40,6 +40,7 @@ private:
 
 	// Models
 	shared_ptr<Model> m_skybox;
+	shared_ptr<Model> m_board;
 	unordered_map<string, shared_ptr<Model>> m_models;
 	shared_ptr<BoundingSphere> m_boundingSphere;
 	shared_ptr<Model> m_cursorSphere;

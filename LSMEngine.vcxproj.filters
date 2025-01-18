@@ -234,5 +234,11 @@
     <Image Include="Assets\park_specular.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\tree1_diffuse.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\chess_board_diffuse.jpg">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>
