@@ -43,6 +43,7 @@ public:
 		GuiState& guiState);
 
 	void Update(XMVECTOR& q, XMVECTOR& dragTranslation);
+	void UpdateState();
 
 	void OnlyCallConstsMemcpy();
 
@@ -50,6 +51,10 @@ public:
 	XMFLOAT4 m_position;
 	XMFLOAT4X4 m_world;
 	string m_key;
+
+	bool m_isUseTexture = true;
+	bool m_isUseNormalMap = true;
+	bool m_isUseHeightMap = true;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;

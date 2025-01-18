@@ -80,6 +80,14 @@ void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 	OnlyCallConstsMemcpy();
 }
 
+void Model::UpdateState()
+{
+	m_meshConstsBufferData.isUseTexture = m_isUseTexture;
+	m_meshConstsBufferData.isUseNormalMap = m_isUseNormalMap;
+	m_meshConstsBufferData.isUseHeightMap = m_isUseHeightMap;
+	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
+}
+
 void Model::OnlyCallConstsMemcpy()
 {
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));

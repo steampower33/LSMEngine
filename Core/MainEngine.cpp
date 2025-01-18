@@ -121,7 +121,7 @@ void MainEngine::Update(float dt)
 	if (guiState.isMeshChanged)
 	{
 		guiState.isMeshChanged = false;
-		m_models[guiState.changedMeshKey]->OnlyCallConstsMemcpy();
+		m_models[guiState.changedMeshKey]->UpdateState();
 	}
 
 	m_globalConstsBufferData.lights[1] = m_lightFromGUI;
@@ -150,8 +150,6 @@ void MainEngine::UpdateGUI()
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
-	ImGui::Checkbox("Use Texture", &m_globalConstsBufferData.isUseTexture);
-	ImGui::Checkbox("Use NormalMap", &m_globalConstsBufferData.isUseNormalMap);
 
 	ImGui::Separator();
 	ImGui::Text("Light");
@@ -164,10 +162,14 @@ void MainEngine::UpdateGUI()
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Ambient", &model.second.get()->m_meshConstsBufferData.material.ambient, 0.0f, 1.0f, "%.1f") ||
+			if (ImGui::SliderFloat("Ambient", &model.second.get()->m_meshConstsBufferData.material.color, 0.0f, 1.0f, "%.1f") ||
 				ImGui::SliderFloat("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse, 0.0f, 1.0f, "%.1f") ||
 				ImGui::SliderFloat("Specular", &model.second.get()->m_meshConstsBufferData.material.specular, 0.0f, 1.0f, "%.1f") ||
-				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f"))
+				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f") ||
+				ImGui::Checkbox("Use Texture", &model.second.get()->m_isUseTexture) ||
+				ImGui::Checkbox("Use NormalMap", &model.second.get()->m_isUseNormalMap) ||
+				ImGui::Checkbox("Use HeightMap", &model.second.get()->m_isUseHeightMap)
+				)
 			{
 				guiState.isMeshChanged = true;
 				guiState.changedMeshKey = model.first;

@@ -10,17 +10,10 @@ using namespace DirectX;
 
 // 재질
 struct Material {
-	float ambient = 0.0f;
+	float color = 0.0f;
 	float diffuse = 1.0f;
 	float specular = 0.0f;
 	float shininess = 1.0f;
-	XMFLOAT4X3 d0;
-
-	XMFLOAT4X4 d1;
-
-	XMFLOAT4X4 d2;
-
-	XMFLOAT4X4 d3;
 };
 
 // 조명
@@ -43,15 +36,8 @@ __declspec(align(512)) struct GlobalConstants
 	XMFLOAT4X4 d2;
 
 	Light lights[MAX_LIGHTS];
-
 	XMFLOAT3 eyeWorld;
-	float d3;
-
-	alignas(4) bool isUseTexture = true;
-	alignas(4) bool isUseNormalMap = true;
-	float d4[2];
-
-	float d5[8];
+	float d3[13];
 };
 
 __declspec(align(256)) struct MeshConstants {
@@ -60,8 +46,12 @@ __declspec(align(256)) struct MeshConstants {
 	XMFLOAT4X4 worldIT;
 
 	Material material;
+	UINT isUseTexture = 1;
+	UINT isUseNormalMap = 1;
+	UINT isUseHeightMap = 1;
+	float d0[9];
 
-	XMFLOAT4X4 dummy1;
+	XMFLOAT4X4 d1;
 };
 
 __declspec(align(256)) struct TextureIndexConstants {

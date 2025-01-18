@@ -28,10 +28,10 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
 struct GuiState {
+	string changedMeshKey = "";
 	bool isDrawNormals = false;
 	bool isWireframe = false;
 	bool isMeshChanged = false;
-	string changedMeshKey = "";
 };
 
 struct DirtyFlag {

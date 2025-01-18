@@ -11,11 +11,6 @@ struct Material
     float diffuse;
     float specular;
     float shininess;
-    float4x3 d0;
-    
-    float4x4 d1;
-    float4x4 d2;
-    float4x4 d3;
 };
 
 // Α¶Έν
@@ -132,15 +127,8 @@ cbuffer GlobalConstants : register(b0)
     float4x4 d02;
     
     Light lights[MAX_LIGHTS];
-    
     float3 eyeWorld;
-    float d03;
-    
-    bool isUseTexture;
-    bool isUseNormalMap;
-    float d04[2];
-    
-    float d05[8];
+    float d03[13];
 }
 
 cbuffer MeshConstants : register(b1)
@@ -150,6 +138,10 @@ cbuffer MeshConstants : register(b1)
     float4x4 worldIT;
     
     Material material;
+    bool isUseTexture;
+    bool isUseNormalMap;
+    bool isUseHeightMap;
+    float d10[9];
     
     float4x4 d11;
 }
