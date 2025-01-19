@@ -10,7 +10,7 @@ using namespace DirectX;
 
 // ÀçÁú
 struct Material {
-	float color = 0.0f;
+	float albedo = 0.0f;
 	float diffuse = 1.0f;
 	float specular = 0.0f;
 	float shininess = 1.0f;
@@ -49,17 +49,19 @@ __declspec(align(256)) struct MeshConstants {
 	UINT isUseTexture = 1;
 	UINT isUseNormalMap = 1;
 	UINT isUseHeightMap = 1;
-	float d0[9];
+	float heightScale = 0.0f;
+	float d0[8];
 
 	XMFLOAT4X4 d1;
 };
 
 __declspec(align(256)) struct TextureIndexConstants {
-	UINT colorIndex;
+	UINT albedoIndex;
 	UINT diffuseIndex;
 	UINT specularIndex;
 	UINT normalIndex;
-	float dummy[12];
+	UINT heightIndex;
+	float dummy[11];
 
 	XMFLOAT4X4 dummy1;
 
@@ -69,7 +71,7 @@ __declspec(align(256)) struct TextureIndexConstants {
 };
 
 __declspec(align(256)) struct CubemapIndexConstants {
-	UINT cubemapColorIndex;
+	UINT cubemapEnvIndex;
 	UINT cubemapDiffuseIndex;
 	UINT cubemapSpecularIndex;
 	float dummy[13];

@@ -37,7 +37,7 @@ private:
 	int m_lightType = 0;
 
 	float threshold = 0.0f;
-	float strength = 0.5f;
+	float strength = 0.0f;
 
 	// Models
 	shared_ptr<Model> m_skybox;

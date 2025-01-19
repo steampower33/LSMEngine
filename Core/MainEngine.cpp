@@ -15,9 +15,10 @@ void MainEngine::Initialize()
 		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-		skybox.ddsColorFilename = "./Assets/Park_Color.dds";
-		skybox.ddsDiffuseFilename = "./Assets/Park_Diffuse.dds";
-		skybox.ddsSpecularFilename = "./Assets/Park_Specular.dds";
+		skybox.cubeEnvFilename = "./Assets/DaySky/DaySkyHDRIEnvHDR.dds";
+		skybox.cubeDiffuseFilename = "./Assets/DaySky/DaySkyHDRIDiffuseHDR.dds";
+		skybox.cubeSpecularFilename = "./Assets/DaySky/DaySkyHDRISpecularHDR.dds";
+
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -33,7 +34,7 @@ void MainEngine::Initialize()
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		meshData.colorFilename = "./Assets/ChessBoard_Color.png";
+		meshData.albedoFilename = "./Assets/ChessBoard_Albedo.png";
 		m_board = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -47,23 +48,25 @@ void MainEngine::Initialize()
 		m_board->Update(quaternion, translation);
 	}
 
-	{
+	/*{
 		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
-		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
-		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
+		meshData.albedoFilename = "./Assets/grey_porous_rock_40_56_Albedo.jpg";
+		meshData.normalFilename = "./Assets/grey_porous_rock_40_56_Normal.jpg";
+		meshData.heightFilename = "./Assets/grey_porous_rock_40_56_Height.jpg";
 
 		shared_ptr<Model> square = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		square->m_key = "square";
 		m_models.insert({ square->m_key, square });
-	}
+	}*/
 
 	{
 		float radius = 1.0f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
-		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
-		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
+		meshData.albedoFilename = "./Assets/grey_porous_rock_40_56_Albedo.jpg";
+		meshData.normalFilename = "./Assets/grey_porous_rock_40_56_Normal.jpg";
+		meshData.heightFilename = "./Assets/grey_porous_rock_40_56_Height.jpg";
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -72,9 +75,10 @@ void MainEngine::Initialize()
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
+	/*
 	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
-		meshData.colorFilename = "./Assets/Bricks075A_4K-JPG_Color.jpg";
+		meshData.albedoFilename = "./Assets/Bricks075A_4K-JPG_Albedo.jpg";
 		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
 
 		shared_ptr<Model> box = make_shared<Model>(
@@ -82,7 +86,7 @@ void MainEngine::Initialize()
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
 		box->m_key = "box";
 		m_models.insert({ box->m_key, box });
-	}
+	}*/
 
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
@@ -162,13 +166,14 @@ void MainEngine::UpdateGUI()
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Ambient", &model.second.get()->m_meshConstsBufferData.material.color, 0.0f, 1.0f, "%.1f") ||
-				ImGui::SliderFloat("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse, 0.0f, 1.0f, "%.1f") ||
-				ImGui::SliderFloat("Specular", &model.second.get()->m_meshConstsBufferData.material.specular, 0.0f, 1.0f, "%.1f") ||
-				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f, "%.1f") ||
+			if (ImGui::SliderFloat("Albedo", &model.second.get()->m_meshConstsBufferData.material.albedo, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Specular", &model.second.get()->m_meshConstsBufferData.material.specular, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f) ||
 				ImGui::Checkbox("Use Texture", &model.second.get()->m_isUseTexture) ||
 				ImGui::Checkbox("Use NormalMap", &model.second.get()->m_isUseNormalMap) ||
-				ImGui::Checkbox("Use HeightMap", &model.second.get()->m_isUseHeightMap)
+				ImGui::Checkbox("Use HeightMap", &model.second.get()->m_isUseHeightMap) ||
+				ImGui::SliderFloat("Height Scale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f)
 				)
 			{
 				guiState.isMeshChanged = true;
@@ -183,12 +188,12 @@ void MainEngine::UpdateGUI()
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
-		if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f, "%.1f"))
+		if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f))
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}
 
-		if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f, "%.1f"))
+		if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f))
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}

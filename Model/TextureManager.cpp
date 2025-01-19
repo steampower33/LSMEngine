@@ -2,14 +2,56 @@
 
 TextureManager::TextureManager(
 	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList, 
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12DescriptorHeap>& textureHeap)
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(textureHeap->GetCPUDescriptorHandleForHeapStart());
 
 	m_heapStartCpu = heapStartCpu;
 
-	CreateEmptyTexture(device, commandList, heapStartCpu, m_textures, m_texturesUploadHeap, m_normaltextureCnt);
+	CreateEmptyTexture(device, commandList, heapStartCpu, m_textures, m_texturesUploadHeap, m_textureCnt);
+}
+
+void TextureManager::CreateMipMapTexture(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	string filename,
+	shared_ptr<Mesh>& newMesh,
+	CubemapIndexConstants& cubemapIndexConstsBufferData)
+{
+	if (CheckDuplcateFilename(m_textureIdx, filename, newMesh, cubemapIndexConstsBufferData))
+	{
+		if (filename.find(".exr") != std::string::npos)
+			CreateEXRTextureBuffer(
+				device, commandList,
+				filename, newMesh,
+				m_heapStartCpu, m_textures, m_texturesUploadHeap,
+				m_textureCnt, m_textureIdx);
+		else
+			CreateMipMapTextureBuffer(
+				device, commandList,
+				filename, newMesh,
+				m_heapStartCpu, m_textures, m_texturesUploadHeap,
+				m_textureCnt, m_textureIdx);
+	}
+}
+
+void TextureManager::CreateCubeTexture(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12CommandQueue>& commandQueue,
+	string filename,
+	shared_ptr<Mesh>& newMesh,
+	CubemapIndexConstants& cubemapIndexConstsBufferData)
+{
+	if (CheckDuplcateFilename(m_textureIdx, filename, newMesh, cubemapIndexConstsBufferData))
+	{
+		CreateDDSTextureBuffer(
+			device, commandQueue,
+			filename, newMesh,
+			m_heapStartCpu, m_textures,
+			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
+	}
 }
 
 void TextureManager::LoadTextures(
@@ -20,43 +62,16 @@ void TextureManager::LoadTextures(
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	// Color
-	if (CheckDuplcateFilename(m_textureIdx, meshData.colorFilename, newMesh, cubemapIndexConstsBufferData))
-		CreateMipMapTextureBuffer(
-			device, commandList,
-			meshData.colorFilename, newMesh,
-			m_heapStartCpu, m_textures, m_texturesUploadHeap,
-			m_normaltextureCnt, m_textureIdx);
+	CreateMipMapTexture(device, commandList, meshData.albedoFilename, newMesh, cubemapIndexConstsBufferData);
+	CreateMipMapTexture(device, commandList, meshData.normalFilename, newMesh, cubemapIndexConstsBufferData);
+	CreateMipMapTexture(device, commandList, meshData.heightFilename, newMesh, cubemapIndexConstsBufferData);
 
-	// NormalMap
-	if (CheckDuplcateFilename(m_textureIdx, meshData.normalFilename, newMesh, cubemapIndexConstsBufferData))
-		CreateTextureBuffer(
-			device, commandList,
-			meshData.normalFilename, newMesh,
-			m_heapStartCpu, m_textures, m_texturesUploadHeap,
-			m_normaltextureCnt, m_textureIdx);
-
-	// DDS
-	if (CheckDuplcateFilename(m_textureIdx, meshData.ddsColorFilename, newMesh, cubemapIndexConstsBufferData))
-		CreateDDSTextureBuffer(
-			device, commandQueue, 
-			meshData.ddsColorFilename, newMesh, 
-			m_heapStartCpu, m_textures, 
-			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
-
-	if (CheckDuplcateFilename(m_textureIdx, meshData.ddsDiffuseFilename, newMesh, cubemapIndexConstsBufferData))
-		CreateDDSTextureBuffer(
-			device, commandQueue, 
-			meshData.ddsDiffuseFilename, 
-			newMesh, m_heapStartCpu, m_textures, 
-			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
-
-	if (CheckDuplcateFilename(m_textureIdx, meshData.ddsSpecularFilename, newMesh, cubemapIndexConstsBufferData))
-		CreateDDSTextureBuffer(
-			device, commandQueue, 
-			meshData.ddsSpecularFilename, 
-			newMesh, m_heapStartCpu, m_textures, 
-			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
+	CreateCubeTexture(device, commandList, commandQueue,
+		meshData.cubeEnvFilename, newMesh, cubemapIndexConstsBufferData);
+	CreateCubeTexture(device, commandList, commandQueue,
+		meshData.cubeDiffuseFilename, newMesh, cubemapIndexConstsBufferData);
+	CreateCubeTexture(device, commandList, commandQueue,
+		meshData.cubeSpecularFilename, newMesh, cubemapIndexConstsBufferData);
 }
 
 bool TextureManager::CheckDuplcateFilename(
@@ -74,8 +89,8 @@ bool TextureManager::CheckDuplcateFilename(
 		// Check DDS
 		if (f->first.find(".dds") != std::string::npos)
 		{
-			if (filename.find("Color") != std::string::npos)
-				cubemapIndexConstsBufferData.cubemapColorIndex = f->second;
+			if (filename.find("Env") != std::string::npos)
+				cubemapIndexConstsBufferData.cubemapEnvIndex = f->second;
 			else if (filename.find("Diffuse") != std::string::npos)
 				cubemapIndexConstsBufferData.cubemapDiffuseIndex = f->second;
 			else if (filename.find("Specular") != std::string::npos)
@@ -83,13 +98,15 @@ bool TextureManager::CheckDuplcateFilename(
 		}
 		else // Check Others
 		{
-			if (filename.find("Color") != std::string::npos)
-				newMesh->constsBufferData.colorIndex = f->second;
+			if (filename.find("Albedo") != std::string::npos)
+				newMesh->constsBufferData.albedoIndex = f->second;
 			else if (filename.find("Diffuse") != std::string::npos)
 				newMesh->constsBufferData.diffuseIndex = f->second;
 			else if (filename.find("Specular") != std::string::npos)
 				newMesh->constsBufferData.specularIndex = f->second;
 			else if (filename.find("Normal") != std::string::npos)
+				newMesh->constsBufferData.normalIndex = f->second;
+			else if (filename.find("Height") != std::string::npos)
 				newMesh->constsBufferData.normalIndex = f->second;
 		}
 

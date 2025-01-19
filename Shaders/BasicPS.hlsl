@@ -54,13 +54,13 @@ float4 main(PSInput input) : SV_TARGET
     specular *= pow((specular.x + specular.y + specular.z) / 3.0, material.shininess);
     specular.xyz *= material.specular;
     
-    if (isUseTexture && colorIndex != 0)
+    if (isUseTexture && albedoIndex != 0)
     {
         float dist = length(eyeWorld - input.posWorld);
         float distMin = 10.0;
         float distMax = 50.0;
         float lod = 10.0 * saturate(dist / (distMax - distMin));
-        diffuse *= g_texture[colorIndex].SampleLevel(g_sampler, input.texcoord, lod);
+        diffuse *= g_texture[albedoIndex].SampleLevel(g_sampler, input.texcoord, lod);
     }
     
     return diffuse + specular;

@@ -138,21 +138,23 @@ cbuffer MeshConstants : register(b1)
     float4x4 worldIT;
     
     Material material;
-    bool isUseTexture;
-    bool isUseNormalMap;
-    bool isUseHeightMap;
-    float d10[9];
+    uint isUseTexture;
+    uint isUseNormalMap;
+    uint isUseHeightMap;
+    float heightScale;
+    float d10[8];
     
     float4x4 d11;
 }
 
 cbuffer TextureIndexConstants : register(b2)
 {
-    uint colorIndex;
+    uint albedoIndex;
     uint diffuseIndex;
     uint specularIndex;
     uint normalIndex;
-    float d21[12];
+    uint heightIndex;
+    float d21[11];
     
     float4x4 d22;
     
@@ -163,7 +165,7 @@ cbuffer TextureIndexConstants : register(b2)
 
 cbuffer CubemapIndexConstants : register(b3)
 {
-    uint cubemapColorIndex;
+    uint cubemapEnvIndex;
     uint cubemapDiffuseIndex;
     uint cubemapSpecularIndex;
     float d31[13];

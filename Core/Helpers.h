@@ -23,6 +23,8 @@
 #include "directxtk12\DDSTextureLoader.h"
 #include "directxtk12\ResourceUploadBatch.h"
 
+#include "DirectXTexEXR.h"
+
 using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -204,7 +206,6 @@ inline wstring StringToWString(const string& str) {
 	return wstring(str.begin(), str.end());
 }
 
-
 static void CreateDDSTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
@@ -261,8 +262,8 @@ static void CreateDDSTextureBuffer(
 	// 리소스 관리
 	textures.push_back(tex);
 
-	if (filename.find("Color") != std::string::npos)
-		cubemapIndexConstsBufferData.cubemapColorIndex = textureCnt;
+	if (filename.find("Env") != std::string::npos)
+		cubemapIndexConstsBufferData.cubemapEnvIndex = textureCnt;
 	else if (filename.find("Diffuse") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
 	else if (filename.find("Specular") != std::string::npos)
@@ -274,6 +275,92 @@ static void CreateDDSTextureBuffer(
 	textureCnt++;
 
 	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
+}
+
+static void CreateEXRTextureBuffer(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	const string& filename,
+	shared_ptr<Mesh>& newMesh,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+	vector<ComPtr<ID3D12Resource>>& textures,
+	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	UINT& textureCnt,
+	unordered_map<string, int>& textureIdx)
+{
+	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	textureHandle.Offset(size * textureCnt);
+
+	ComPtr<ID3D12Resource> texture;
+
+	wstring wideFilename = StringToWString(filename);
+	DirectX::TexMetadata metaData;
+	auto image = make_unique<ScratchImage>();
+	ThrowIfFailed(LoadFromEXRFile(wideFilename.c_str(), &metaData, *image));
+
+	ThrowIfFailed(CreateTexture(device.Get(), metaData, &texture));
+
+	vector<D3D12_SUBRESOURCE_DATA> subresources;
+	ThrowIfFailed(PrepareUpload(
+		device.Get(), 
+		image.get()->GetImages(), 
+		image.get()->GetImageCount(), 
+		metaData, 
+		subresources));
+
+	// upload is implemented by application developer. Here's one solution using <d3dx12.h>
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, static_cast<unsigned int>(subresources.size()));
+
+	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	auto uploadHeapdesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+	ComPtr<ID3D12Resource> texUploadHeap;
+	ThrowIfFailed(device->CreateCommittedResource(
+		&uploadHeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&uploadHeapdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&texUploadHeap)));
+
+	UpdateSubresources(
+		commandList.Get(), texture.Get(), texUploadHeap.Get(),
+		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
+
+	SetBarrier(commandList, texture,
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = metaData.format; // 텍스처의 포맷
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	device->CreateShaderResourceView(
+		texture.Get(), // 텍스처 리소스
+		&srvDesc, // SRV 설명
+		textureHandle // 디스크립터 힙의 핸들
+	);
+
+	textures.push_back(texture);
+	texturesUploadHeap.push_back(texUploadHeap);
+
+	if (filename.find("Albedo") != std::string::npos)
+		newMesh->constsBufferData.albedoIndex = textureCnt;
+	else if (filename.find("Diffuse") != std::string::npos)
+		newMesh->constsBufferData.diffuseIndex = textureCnt;
+	else if (filename.find("Specular") != std::string::npos)
+		newMesh->constsBufferData.specularIndex = textureCnt;
+	else if (filename.find("Normal") != std::string::npos)
+		newMesh->constsBufferData.normalIndex = textureCnt;
+	else if (filename.find("Height") != std::string::npos)
+		newMesh->constsBufferData.heightIndex = textureCnt;
+	else
+		assert(false && "Texture file does not exist!");
+
+	textureIdx.insert({ filename, textureCnt });
+	textureCnt++;
+
+	wprintf(L"Successfully loaded EXR texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
 }
 
 static void CreateMipMapTextureBuffer(
@@ -384,12 +471,16 @@ static void CreateMipMapTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("Color") != std::string::npos)
-		newMesh->constsBufferData.colorIndex = textureCnt;
+	if (filename.find("Albedo") != std::string::npos)
+		newMesh->constsBufferData.albedoIndex = textureCnt;
 	else if (filename.find("Diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
 	else if (filename.find("Specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
+	else if (filename.find("Normal") != std::string::npos)
+		newMesh->constsBufferData.normalIndex = textureCnt;
+	else if (filename.find("Height") != std::string::npos)
+		newMesh->constsBufferData.heightIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 
@@ -463,14 +554,16 @@ static void CreateTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("Color") != std::string::npos)
-		newMesh->constsBufferData.colorIndex = textureCnt;
+	if (filename.find("Albedo") != std::string::npos)
+		newMesh->constsBufferData.albedoIndex = textureCnt;
 	else if (filename.find("Diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
 	else if (filename.find("Specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
 	else if (filename.find("Normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
+	else if (filename.find("Height") != std::string::npos)
+		newMesh->constsBufferData.heightIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 

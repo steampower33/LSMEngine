@@ -77,7 +77,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[4].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[4].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[5].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[6].InitAsDescriptorTable(1, filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
@@ -92,7 +92,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 	sampler.MinLOD = 0.0f;
 	sampler.MaxLOD = D3D12_FLOAT32_MAX;
-	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler,
@@ -230,7 +230,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	basicSolidPSODesc.SampleMask = UINT_MAX;
 	basicSolidPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	basicSolidPSODesc.NumRenderTargets = 1;
-	basicSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	basicSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSolidPSODesc, IID_PPV_ARGS(&basicSolidPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicWirePSODesc = basicSolidPSODesc;
@@ -257,17 +257,14 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurXPSODesc = samplingPSODesc;
 	blurXPSODesc.PS = { blurXPS->GetBufferPointer(), blurXPS->GetBufferSize() };
-	blurXPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurXPSODesc, IID_PPV_ARGS(&blurXPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurYPSODesc = samplingPSODesc;
 	blurYPSODesc.PS = { blurYPS->GetBufferPointer(), blurYPS->GetBufferSize() };
-	blurYPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurYPSODesc, IID_PPV_ARGS(&blurYPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurCombinePSODesc = samplingPSODesc;
 	blurCombinePSODesc.PS = { blurCombinePS->GetBufferPointer(), blurCombinePS->GetBufferSize() };
-	blurCombinePSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurCombinePSODesc, IID_PPV_ARGS(&blurCombinePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;

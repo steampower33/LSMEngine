@@ -7,7 +7,7 @@
     },
     {
       "name": "directxtex",
-      "features": [ "dx12" ]
+      "features": [ "dx12", "openexr", "tools" ]
     },
     {
       "name": "assimp"

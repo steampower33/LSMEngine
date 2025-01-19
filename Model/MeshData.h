@@ -9,12 +9,13 @@ struct MeshData
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 	
-	std::string colorFilename;
+	std::string albedoFilename;
 	std::string diffuseFilename;
 	std::string specularFilename;
 	std::string normalFilename;
+	std::string heightFilename;
 
-	std::string ddsColorFilename;
-	std::string ddsDiffuseFilename;
-	std::string ddsSpecularFilename;
+	std::string cubeEnvFilename;
+	std::string cubeDiffuseFilename;
+	std::string cubeSpecularFilename;
 };

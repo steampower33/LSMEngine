@@ -32,6 +32,21 @@ public:
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
+	void CreateMipMapTexture(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		string filename,
+		shared_ptr<Mesh>& newMesh,
+		CubemapIndexConstants& cubemapIndexConstsBufferData);
+
+	void CreateCubeTexture(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12CommandQueue>& commandQueue,
+		string filename,
+		shared_ptr<Mesh>& newMesh,
+		CubemapIndexConstants& cubemapIndexConstsBufferData);
+
 private:
 	vector<ComPtr<ID3D12Resource>> m_textures;
 	vector<ComPtr<ID3D12Resource>> m_texturesUploadHeap;
@@ -39,7 +54,7 @@ private:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_heapStartCpu = {};
 	
 	unordered_map<string, int> m_textureIdx;
-	UINT m_normaltextureCnt = 0;
+	UINT m_textureCnt = 0;
 	UINT m_cubeTextureCnt = 10;
 
 private:

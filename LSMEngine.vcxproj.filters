@@ -215,33 +215,4 @@
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="Assets\BlackWall_Color.jpg">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Bricks075A_4K-JPG_Color.jpg">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\ChessBoard_Color.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Earth_Color.jpg">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Park_Color.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Park_Diffuse.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Park_Specular.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Winter_Color.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Bricks075A_4K-JPG_NormalDX.jpg">
-      <Filter>Assets</Filter>
-    </Image>
-  </ItemGroup>
 </Project>
