@@ -9,11 +9,23 @@ struct SamplingPSInput
     float2 texcoord : TEXCOORD;
 };
 
+float3 LinearToneMapping(float3 color)
+{
+    float3 invGamma = float3(1, 1, 1) / gamma;
+
+    color = clamp(exposure * color, 0., 1.);
+    color = pow(color, invGamma);
+    return color;
+}
+
 float4 main(SamplingPSInput input) : SV_TARGET
 {
-    float4 color1 = g_texture[hightIndex].Sample(g_sampler, input.texcoord);
-    float4 color2 = g_texture[lowIndex].Sample(g_sampler, input.texcoord);
+    float3 color0 = g_texture[0].Sample(g_sampler, input.texcoord).xyz;
+    float3 color1 = g_texture[1].Sample(g_sampler, input.texcoord).xyz;
     
-    return color1 + color2 * strength;
-
+    float3 combined = (1.0 - strength) * color0 + strength * color1;
+    
+    combined = LinearToneMapping(combined);
+    
+    return float4(combined, 1.0f);
 }

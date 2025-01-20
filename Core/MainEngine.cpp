@@ -90,7 +90,7 @@ void MainEngine::Initialize()
 
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
-			m_device, m_commandList, m_width, m_height);
+			m_device, m_commandList, m_width, m_height, i);
 
 	ThrowIfFailed(m_commandList->Close());
 
@@ -133,13 +133,11 @@ void MainEngine::Update(float dt)
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
 
-	m_postProcess[m_frameIndex]->UpdateIndex(m_frameIndex);
-
 	if (dirtyFlag.isPostProcessFlag)
 	{
 		dirtyFlag.isPostProcessFlag = false;
 		for (int i = 0; i < FrameCount; i++)
-			m_postProcess[i]->Update(threshold, strength);
+			m_postProcess[i]->Update(m_combineConsts);
 	}
 }
 
@@ -156,9 +154,12 @@ void MainEngine::UpdateGUI()
 	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 
 	ImGui::Separator();
+	
 	ImGui::Text("Light");
 
 	ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+	
+	ImGui::Separator();
 
 	for (const auto& model : m_models)
 	{
@@ -188,12 +189,16 @@ void MainEngine::UpdateGUI()
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
-		if (ImGui::SliderFloat("threshold", &threshold, 0.0f, 1.0f))
+		if (ImGui::SliderFloat("strength", &m_combineConsts.strength, 0.0f, 3.0f))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
+		if (ImGui::SliderFloat("exposure", &m_combineConsts.exposure, 0.0f, 10.0f))
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}
 
-		if (ImGui::SliderFloat("strength", &strength, 0.0f, 3.0f))
+		if (ImGui::SliderFloat("gamma", &m_combineConsts.gamma, 0.0f, 5.0f))
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}
@@ -211,14 +216,11 @@ void MainEngine::Render()
 	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
 
-	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
@@ -241,12 +243,32 @@ void MainEngine::Render()
 	if (m_selected && (m_leftButton || m_rightButton) )
 		m_cursorSphere->Render(m_device, m_commandList, m_textureHeap, guiState);
 
+	SetBarrier(m_commandList, m_floatBuffers[m_frameIndex],
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+
+	m_commandList->ResolveSubresource(
+		m_resolvedBuffers[m_frameIndex].Get(),   // Resolve 대상 (단일 샘플 텍스처)
+		0,                      // 대상 서브리소스 인덱스
+		m_floatBuffers[m_frameIndex].Get(),       // Resolve 소스 (MSAA 텍스처)
+		0,                      // 소스 서브리소스 인덱스
+		m_floatBuffers[m_frameIndex]->GetDesc().Format // Resolve 포맷
+	);
+
+	SetBarrier(m_commandList, m_floatBuffers[m_frameIndex],
+		D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	SetBarrier(m_commandList, m_resolvedBuffers[m_frameIndex],
+		D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 	SetBarrier(m_commandList, m_renderTargets[m_frameIndex],
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// PostProcess
 	m_postProcess[m_frameIndex]->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
-		m_rtvHeap, m_srvHeap, m_dsvHeap, m_frameIndex);
+		m_rtvHeap, m_resolvedSRVHeap, m_dsvHeap, m_frameIndex);
+
+	SetBarrier(m_commandList, m_resolvedBuffers[m_frameIndex],
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 
 	ID3D12DescriptorHeap* imguiHeap[] = { m_imguiHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(imguiHeap), imguiHeap);

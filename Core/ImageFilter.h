@@ -15,9 +15,7 @@ public:
 		UINT width, UINT height, UINT index);
 	~ImageFilter() {}
 
-	void Update(float threshold, float strength);
-	void UpdateIndex(UINT frameIndex);
-	void UpdateBlurCombineIndex(UINT hightIndex, UINT lowIndex);
+	void Update(SamplingConstants& m_combineConsts);
 
 	void Render(
 		ComPtr<ID3D12GraphicsCommandList>& commandList,

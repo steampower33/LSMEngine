@@ -21,9 +21,8 @@ namespace Graphics
 	ComPtr<IDxcBlob> samplingVS;
 	ComPtr<IDxcBlob> samplingPS;
 
-	ComPtr<IDxcBlob> blurXPS;
-	ComPtr<IDxcBlob> blurYPS;
-	ComPtr<IDxcBlob> blurCombinePS;
+	ComPtr<IDxcBlob> bloomDownPS;
+	ComPtr<IDxcBlob> bloomUpPS;
 
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
@@ -41,10 +40,11 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> skyboxPSO;
 	ComPtr<ID3D12PipelineState> samplingPSO;
-	ComPtr<ID3D12PipelineState> blurXPSO;
-	ComPtr<ID3D12PipelineState> blurYPSO;
-	ComPtr<ID3D12PipelineState> blurCombinePSO;
+	ComPtr<ID3D12PipelineState> bloomDownPSO;
+	ComPtr<ID3D12PipelineState> bloomUpPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
+
+	UINT bloomLevels;
 }
 
 void Graphics::InitDXC()
@@ -69,8 +69,9 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 10, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
+	bloomLevels = 3;
 	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges[1];
-	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + 3 + 3, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + bloomLevels, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
@@ -108,42 +109,40 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 {
 	// Basic
 	const wchar_t basicVSFilename[] = L"./Shaders/BasicVS.hlsl";
-	const wchar_t basicPSFilename[] = L"./Shaders/BasicPS.hlsl";
 	CreateShader(device, basicVSFilename, L"vs_6_0", basicVS);
+	const wchar_t basicPSFilename[] = L"./Shaders/BasicPS.hlsl";
 	CreateShader(device, basicPSFilename, L"ps_6_0", basicPS);
 
 	// Normal
 	const wchar_t normalVSFilename[] = L"./Shaders/NormalVS.hlsl";
-	const wchar_t normalGSFilename[] = L"./Shaders/NormalGS.hlsl";
-	const wchar_t normalPSFilename[] = L"./Shaders/NormalPS.hlsl";
 	CreateShader(device, normalVSFilename, L"vs_6_0", normalVS);
+	const wchar_t normalGSFilename[] = L"./Shaders/NormalGS.hlsl";
 	CreateShader(device, normalGSFilename, L"gs_6_0", normalGS);
+	const wchar_t normalPSFilename[] = L"./Shaders/NormalPS.hlsl";
 	CreateShader(device, normalPSFilename, L"ps_6_0", normalPS);
 
 	// Skybox
 	const wchar_t skyboxVSFilename[] = L"./Shaders/SkyboxVS.hlsl";
-	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
 	CreateShader(device, skyboxVSFilename, L"vs_6_0", skyboxVS);
+	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
 	CreateShader(device, skyboxPSFilename, L"ps_6_0", skyboxPS);
 
 	// Samplingfilter
 	const wchar_t samplingVSFilename[] = L"./Shaders/SamplingVS.hlsl";
-	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
 	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
+	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
 	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
 
-	// BlurX, BlurY, BlurCombine
-	const wchar_t blurXPSFilename[] = L"./Shaders/BlurXPS.hlsl";
-	const wchar_t blurYPSFilename[] = L"./Shaders/BlurYPS.hlsl";
-	const wchar_t blurCombineFilename[] = L"./Shaders/BlurCombinePS.hlsl";
-	CreateShader(device, blurXPSFilename, L"ps_6_0", blurXPS);
-	CreateShader(device, blurYPSFilename, L"ps_6_0", blurYPS);
-	CreateShader(device, blurCombineFilename, L"ps_6_0", blurCombinePS);
+	// BloomDown, BloomUp
+	const wchar_t bloomDownPSFilename[] = L"./Shaders/BloomDownPS.hlsl";
+	CreateShader(device, bloomDownPSFilename, L"ps_6_0", bloomDownPS);
+	const wchar_t bloomUpPSFilename[] = L"./Shaders/BloomUpPS.hlsl";
+	CreateShader(device, bloomUpPSFilename, L"ps_6_0", bloomUpPS);
 
 	// CombineFilter
 	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
-	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
 	CreateShader(device, combineVSFilename, L"vs_6_0", combineVS);
+	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
 	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
 }
 
@@ -216,7 +215,8 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 	};
 
-	// Describe and create the graphcis pipeline state object (PSO).
+	UINT sampleCount = 4;
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSolidPSODesc = {};
 	basicSolidPSODesc.InputLayout = { basicIE, _countof(basicIE) };
 	basicSolidPSODesc.pRootSignature = rootSignature.Get();
@@ -226,7 +226,8 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	basicSolidPSODesc.BlendState = disabledBlend;
 	basicSolidPSODesc.DepthStencilState = readWriteDS;
 	basicSolidPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	basicSolidPSODesc.SampleDesc.Count = 1;
+	basicSolidPSODesc.SampleDesc.Count = sampleCount;
+	basicSolidPSODesc.SampleDesc.Quality = 0;
 	basicSolidPSODesc.SampleMask = UINT_MAX;
 	basicSolidPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	basicSolidPSODesc.NumRenderTargets = 1;
@@ -252,24 +253,22 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC samplingPSODesc = basicSolidPSODesc;
 	samplingPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
 	samplingPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
-	samplingPSODesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	samplingPSODesc.SampleDesc.Count = 1;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&samplingPSODesc, IID_PPV_ARGS(&samplingPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurXPSODesc = samplingPSODesc;
-	blurXPSODesc.PS = { blurXPS->GetBufferPointer(), blurXPS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurXPSODesc, IID_PPV_ARGS(&blurXPSO)));
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC bloomDownPSODesc = samplingPSODesc;
+	bloomDownPSODesc.PS = { bloomDownPS->GetBufferPointer(), bloomDownPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&bloomDownPSODesc, IID_PPV_ARGS(&bloomDownPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurYPSODesc = samplingPSODesc;
-	blurYPSODesc.PS = { blurYPS->GetBufferPointer(), blurYPS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurYPSODesc, IID_PPV_ARGS(&blurYPSO)));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC blurCombinePSODesc = samplingPSODesc;
-	blurCombinePSODesc.PS = { blurCombinePS->GetBufferPointer(), blurCombinePS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&blurCombinePSODesc, IID_PPV_ARGS(&blurCombinePSO)));
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC bloomUpPSODesc = samplingPSODesc;
+	bloomUpPSODesc.PS = { bloomUpPS->GetBufferPointer(), bloomUpPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&bloomUpPSODesc, IID_PPV_ARGS(&bloomUpPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
 	combinePSODesc.PS = { combinePS->GetBufferPointer(), combinePS->GetBufferSize() };
+	combinePSODesc.SampleDesc.Count = 1;
+	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
 
 }

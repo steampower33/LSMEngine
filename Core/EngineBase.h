@@ -60,22 +60,39 @@ public:
 	ComPtr<ID3D12Device> m_device;
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<IDXGISwapChain3> m_swapChain;
+
+	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	ComPtr<ID3D12Resource> m_dsBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+
+	ComPtr<ID3D12Resource> m_resolvedBuffers[FrameCount];
+	ComPtr<ID3D12DescriptorHeap> m_resolvedRTVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_resolvedSRVHeap;
+	ComPtr<ID3D12Resource> m_resolvedDSBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_resolvedDSVHeap;
+
+	ComPtr<ID3D12Resource> m_floatBuffers[FrameCount];
+	ComPtr<ID3D12DescriptorHeap> m_floatRTVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_floatSRVHeap;
+	ComPtr<ID3D12Resource> m_floatDSBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_floatDSVHeap;
+
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
-	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 	UINT m_rtvDescriptorSize = 0;
 	UINT m_cbvDescriptorSize = 0;
 
-	ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 protected:
 	void LoadPipeline();
+	void InitializeDX12CoreComponents();
+	void InitializeDescriptorHeaps();
+	void InitializeCommandResources();
 	void LoadGUI();
 	void WaitForPreviousFrame();
 

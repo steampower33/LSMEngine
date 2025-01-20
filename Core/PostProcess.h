@@ -16,7 +16,7 @@ class PostProcess
 public:
 	PostProcess(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-		float width, float height);
+		float width, float height, UINT frameIndex);
 
 	~PostProcess();
 
@@ -25,8 +25,7 @@ public:
 		float width, float height
 	);
 
-	void Update(float threshold, float strength);
-	void UpdateIndex(UINT frameIndex);
+	void Update(SamplingConstants& m_combineConsts);
 
 	void Render(
 		ComPtr<ID3D12Device>& device,
@@ -38,28 +37,31 @@ public:
 		UINT frameIndex);
 
 private:
-	UINT rtvSize;
-	UINT srvSize;
-
+	UINT m_frameIndex;
 	UINT m_bloomLevels;
 	UINT m_bufferSize;
 
+	UINT rtvSize;
+	UINT srvSize;
+
 	shared_ptr<Mesh> m_mesh;
 
-	vector<shared_ptr<ImageFilter>> m_filters;
-	vector<shared_ptr<ImageFilter>> m_blurXFilters;
-	vector<shared_ptr<ImageFilter>> m_blurYFilters;
-	vector<shared_ptr<ImageFilter>> m_blurCombineFilters;
+	shared_ptr<ImageFilter> m_copyFilter;
+	vector<shared_ptr<ImageFilter>> m_bloomDownFilters;
+	vector<shared_ptr<ImageFilter>> m_bloomUpFilters;
 	shared_ptr<ImageFilter> m_combineFilter;
 
-	vector<ComPtr<ID3D12Resource>> m_pingPong;
-	ComPtr<ID3D12DescriptorHeap> m_pingPongRtvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_pingPongSrvHeap;
+	vector<ComPtr<ID3D12Resource>> m_buffer;
+	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	
+	ComPtr<ID3D12Resource> m_dsBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 
 	void CreateTex2D(
 		ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& texture,
 		UINT width, UINT height, UINT index,
 		ComPtr<ID3D12DescriptorHeap>& rtvHeap, ComPtr<ID3D12DescriptorHeap>& srvHeap);
 
-	void CreateDescriptors(ComPtr<ID3D12Device>& device);
+	void CreateDescriptors(ComPtr<ID3D12Device>& device, float width, float height);
 };

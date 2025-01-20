@@ -199,19 +199,16 @@
     <FxCompile Include="Shaders\SamplingPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\BlurXPS.hlsl">
+    <FxCompile Include="Shaders\BloomUpPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\BlurYPS.hlsl">
+    <FxCompile Include="Shaders\BloomDownPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\CombinePS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\CombineVS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\BlurCombinePS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

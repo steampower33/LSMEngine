@@ -21,9 +21,6 @@ void ImageFilter::Initialize(
 	m_samplingConstsBufferData.dx = 1.0f / width;
 	m_samplingConstsBufferData.dy = 1.0f / height;
 
-	m_samplingConstsBufferData.threshold = 0.0f;
-	m_samplingConstsBufferData.strength = 0.0f;
-
 	m_samplingConstsBufferData.index = index;
 
 	CreateConstUploadBuffer(
@@ -31,23 +28,11 @@ void ImageFilter::Initialize(
 		m_samplingConstsUploadHeap, m_samplingConstsBufferData, m_samplingConstsBufferDataBegin);
 }
 
-void ImageFilter::Update(float threshold, float strength)
+void ImageFilter::Update(SamplingConstants& m_combineConsts)
 {
-	m_samplingConstsBufferData.threshold = threshold;
-	m_samplingConstsBufferData.strength = strength;
-	memcpy(m_samplingConstsBufferDataBegin, &m_samplingConstsBufferData, sizeof(m_samplingConstsBufferData));
-}
-
-void ImageFilter::UpdateIndex(UINT frameIndex)
-{
-	m_samplingConstsBufferData.index = frameIndex;
-	memcpy(m_samplingConstsBufferDataBegin, &m_samplingConstsBufferData, sizeof(m_samplingConstsBufferData));
-}
-
-void ImageFilter::UpdateBlurCombineIndex(UINT hightIndex, UINT lowIndex)
-{
-	m_samplingConstsBufferData.hightIndex = hightIndex;
-	m_samplingConstsBufferData.lowIndex = lowIndex;
+	m_samplingConstsBufferData.strength = m_combineConsts.strength;
+	m_samplingConstsBufferData.exposure = m_combineConsts.exposure;
+	m_samplingConstsBufferData.gamma = m_combineConsts.gamma;
 	memcpy(m_samplingConstsBufferDataBegin, &m_samplingConstsBufferData, sizeof(m_samplingConstsBufferData));
 }
 

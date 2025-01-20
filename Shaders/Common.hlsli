@@ -181,13 +181,14 @@ cbuffer SamplingConstants : register(b4)
 {
     float dx;
     float dy;
-    float threshold;
     float strength;
+    float exposure;
+    float gamma;
     
     uint index;
     uint hightIndex;
     uint lowIndex;
-    uint d40[9];
+    uint d40[8];
     
     float4x4 d42;
     

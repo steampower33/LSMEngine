@@ -36,8 +36,7 @@ private:
 	Light m_lightFromGUI;
 	int m_lightType = 0;
 
-	float threshold = 0.0f;
-	float strength = 0.0f;
+	SamplingConstants m_combineConsts;
 
 	// Models
 	shared_ptr<Model> m_skybox;

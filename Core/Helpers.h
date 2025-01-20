@@ -79,6 +79,82 @@ static void SetBarrier(
 	commandList->ResourceBarrier(1, &barrier);
 }
 
+
+static void CreateBuffer(
+	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer,
+	UINT width, UINT height, UINT index, UINT sampleCount, 
+	DXGI_FORMAT format, D3D12_SRV_DIMENSION srvDimension, D3D12_RESOURCE_STATES initState,
+	ComPtr<ID3D12DescriptorHeap>& rtvHeap, ComPtr<ID3D12DescriptorHeap>& srvHeap)
+{
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels = {};
+	msaaLevels.Format = format;
+	msaaLevels.SampleCount = sampleCount;
+	msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+	msaaLevels.NumQualityLevels = 0;
+
+	ThrowIfFailed(device->CheckFeatureSupport(
+		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
+		&msaaLevels,
+		sizeof(msaaLevels)
+	));
+
+	if (msaaLevels.NumQualityLevels == 0) {
+		throw std::runtime_error("The specified sample count is not supported for the given format.");
+	}
+
+	auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+	auto texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		format, // 텍스처 포맷
+		width,                          // 화면 너비
+		height,                         // 화면 높이
+		1,                              // arraySize
+		1,                              // mipLevels
+		sampleCount,                    // sampleCount
+		0,                              // sampleQuality
+		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET // RT로 사용할 예정이면 플래그 설정
+	);
+
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = format; // 텍스처의 포맷
+	clearValue.Color[0] = 0.0f; // Red
+	clearValue.Color[1] = 0.2f; // Green
+	clearValue.Color[2] = 1.0f; // Blue
+	clearValue.Color[3] = 1.0f; // Alpha
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		initState,
+		&clearValue,
+		IID_PPV_ARGS(&buffer)
+	));
+
+	UINT rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	UINT srvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * index);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(srvHeap->GetCPUDescriptorHandleForHeapStart(), srvSize * index);
+
+	// Create a RTV for each frame
+	device->CreateRenderTargetView(buffer.Get(), nullptr, rtvHandle);
+
+	// Create a SRV for each frame
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = srvDimension;
+	srvDesc.Texture2D.MipLevels = buffer->GetDesc().MipLevels;
+	srvDesc.Texture2DMS.UnusedField_NothingToDefine = 0; // 필드 없음
+
+	device->CreateShaderResourceView(
+		buffer.Get(),
+		&srvDesc,
+		srvHandle
+	);
+}
+
 static void CreateVertexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,

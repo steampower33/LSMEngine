@@ -37,9 +37,8 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> samplingVS;
 	extern ComPtr<IDxcBlob> samplingPS;
 
-	extern ComPtr<IDxcBlob> blurXPS;
-	extern ComPtr<IDxcBlob> blurYPS;
-	extern ComPtr<IDxcBlob> blurCombinePS;
+	extern ComPtr<IDxcBlob> bloomDownPS;
+	extern ComPtr<IDxcBlob> bloomUpPS;
 
 	extern ComPtr<IDxcBlob> combineVS;
 	extern ComPtr<IDxcBlob> combinePS;
@@ -57,10 +56,11 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> normalPSO;
 	extern ComPtr<ID3D12PipelineState> skyboxPSO;
 	extern ComPtr<ID3D12PipelineState> samplingPSO;
-	extern ComPtr<ID3D12PipelineState> blurXPSO;
-	extern ComPtr<ID3D12PipelineState> blurYPSO;
-	extern ComPtr<ID3D12PipelineState> blurCombinePSO;
+	extern ComPtr<ID3D12PipelineState> bloomDownPSO;
+	extern ComPtr<ID3D12PipelineState> bloomUpPSO;
 	extern ComPtr<ID3D12PipelineState> combinePSO;
+
+	extern UINT bloomLevels;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();
