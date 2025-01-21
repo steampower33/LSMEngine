@@ -219,7 +219,6 @@ void EngineBase::InitializeDescriptorHeaps()
 		m_device->CreateDepthStencilView(m_dsBuffer.Get(), &dsvDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 	}
 
-
 	// Resolved
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -233,7 +232,7 @@ void EngineBase::InitializeDescriptorHeaps()
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_resolvedSRVHeap)));
-		
+
 		UINT sampleCount = 1;
 		for (UINT i = 0; i < FrameCount; i++)
 		{
@@ -342,6 +341,7 @@ void EngineBase::InitializeDescriptorHeaps()
 
 		m_device->CreateDepthStencilView(m_floatDSBuffer.Get(), &dsvDesc, m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
 	}
+
 
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};

@@ -21,4 +21,5 @@ struct MeshData
 	std::string cubeEnvFilename;
 	std::string cubeDiffuseFilename;
 	std::string cubeSpecularFilename;
+	std::string cubeBrdfFilename;
 };

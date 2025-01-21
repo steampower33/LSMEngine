@@ -45,6 +45,8 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> combinePSO;
 
 	UINT bloomLevels;
+	UINT textureSize = 20;
+	UINT cubeTextureSize = 10;
 }
 
 void Graphics::InitDXC()
@@ -82,21 +84,50 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	rootParameters[5].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[6].InitAsDescriptorTable(1, filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	// Static Sampler 설정
-	D3D12_STATIC_SAMPLER_DESC sampler = {};
-	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	sampler.MipLODBias = 0.0f;
-	sampler.MaxAnisotropy = 16;
-	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	sampler.MinLOD = 0.0f;
-	sampler.MaxLOD = D3D12_FLOAT32_MAX;
-	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	// 디스크립터 힙 생성
+	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
+	samplerHeapDesc.NumDescriptors = 2; // 샘플러 개수
+	samplerHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+	samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // 셰이더에서 접근 가능
+	samplerHeapDesc.NodeMask = 0;
+
+	ComPtr<ID3D12DescriptorHeap> samplerHeap;
+	HRESULT hr = device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&samplerHeap));
+	if (FAILED(hr)) {
+		throw std::runtime_error("Failed to create sampler descriptor heap.");
+	}
+
+	// 샘플러 상태 정의
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
+
+	// 첫 번째 정적 샘플러 (Wrap 모드)
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // 필터링 방식
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // U축 주소 모드
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // V축 주소 모드
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // W축 주소 모드
+	staticSamplers[0].MipLODBias = 0.0f;
+	staticSamplers[0].MaxAnisotropy = 1;
+	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	staticSamplers[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	staticSamplers[0].MinLOD = 0.0f;
+	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplers[0].ShaderRegister = 0; // s0에서 참조
+	staticSamplers[0].RegisterSpace = 0;
+	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	// 두 번째 정적 샘플러 (Clamp 모드)
+	staticSamplers[1] = staticSamplers[0]; // 기본 값 복사
+	staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // U축 주소 모드 변경
+	staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // V축 주소 모드 변경
+	staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // W축 주소 모드 변경
+	staticSamplers[1].ShaderRegister = 1; // s1에서 참조
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler,
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),  // 루트 매개변수 개수
+		rootParameters,            // 루트 매개변수 배열
+		_countof(staticSamplers),  // 정적 샘플러 개수
+		staticSamplers,            // 정적 샘플러 배열
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	ComPtr<ID3DBlob> signature;

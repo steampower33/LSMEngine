@@ -36,7 +36,7 @@ void TextureManager::CreateMipMapTexture(
 	}
 }
 
-void TextureManager::CreateCubeTexture(
+void TextureManager::CreateDDSTexture(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
@@ -46,11 +46,18 @@ void TextureManager::CreateCubeTexture(
 {
 	if (CheckDuplcateFilename(m_textureIdx, filename, newMesh, cubemapIndexConstsBufferData))
 	{
-		CreateDDSTextureBuffer(
-			device, commandQueue,
-			filename, newMesh,
-			m_heapStartCpu, m_textures,
-			m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData);
+		if (filename.find("Brdf") != std::string::npos)
+			CreateDDSTextureBuffer(
+				device, commandQueue,
+				filename, newMesh,
+				m_heapStartCpu, m_textures,
+				m_textureCnt, m_textureIdx, cubemapIndexConstsBufferData, false);
+		else
+			CreateDDSTextureBuffer(
+				device, commandQueue,
+				filename, newMesh,
+				m_heapStartCpu, m_textures,
+				m_cubeTextureCnt, m_textureIdx, cubemapIndexConstsBufferData, true);
 	}
 }
 
@@ -69,12 +76,14 @@ void TextureManager::LoadTextures(
 	CreateMipMapTexture(device, commandList, meshData.metallicFilename, newMesh, cubemapIndexConstsBufferData);
 	CreateMipMapTexture(device, commandList, meshData.roughnessFilename, newMesh, cubemapIndexConstsBufferData);
 
-	CreateCubeTexture(device, commandList, commandQueue,
+	CreateDDSTexture(device, commandList, commandQueue,
 		meshData.cubeEnvFilename, newMesh, cubemapIndexConstsBufferData);
-	CreateCubeTexture(device, commandList, commandQueue,
+	CreateDDSTexture(device, commandList, commandQueue,
 		meshData.cubeDiffuseFilename, newMesh, cubemapIndexConstsBufferData);
-	CreateCubeTexture(device, commandList, commandQueue,
+	CreateDDSTexture(device, commandList, commandQueue,
 		meshData.cubeSpecularFilename, newMesh, cubemapIndexConstsBufferData);
+	CreateDDSTexture(device, commandList, commandQueue,
+		meshData.cubeBrdfFilename, newMesh, cubemapIndexConstsBufferData);
 }
 
 bool TextureManager::CheckDuplcateFilename(
@@ -98,6 +107,8 @@ bool TextureManager::CheckDuplcateFilename(
 				cubemapIndexConstsBufferData.cubemapDiffuseIndex = f->second;
 			else if (filename.find("Specular") != std::string::npos)
 				cubemapIndexConstsBufferData.cubemapSpecularIndex = f->second;
+			else if (filename.find("Brdf") != std::string::npos)
+				newMesh->constsBufferData.brdfIndex = f->second;
 		}
 		else // Check Others
 		{

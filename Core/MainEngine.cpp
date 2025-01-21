@@ -31,22 +31,24 @@ void MainEngine::Initialize()
 			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
-	{
-		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		meshData.albedoFilename = "./Assets/chessboard-albedo.png";
-		m_board = make_shared<Model>(
-			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	//	meshData.albedoFilename = "./Assets/chessboard-albedo.png";
+	//	m_board = make_shared<Model>(
+	//		m_device, m_commandList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 
-		float degrees = 90.0f;
-		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
-		XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
-		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
+	//	float degrees = 90.0f;
+	//	float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
+	//	XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
+	//	XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
 
-		XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
-		m_board->Update(quaternion, translation);
-	}
+	//	XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
+	//	m_board->Update(quaternion, translation);
+	//	m_board->m_key = "board";
+	//	m_models.insert({ m_board->m_key, m_board });
+	//}
 
 	/*{
 		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
@@ -70,7 +72,7 @@ void MainEngine::Initialize()
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(-2.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		sphere->m_key = "sphere";
 		m_models.insert({ sphere->m_key, sphere });
 	}
@@ -126,7 +128,7 @@ void MainEngine::Update(float dt)
 		m_models[guiState.changedMeshKey]->UpdateState();
 	}
 
-	m_globalConstsBufferData.lights[1] = m_lightFromGUI;
+	m_globalConstsBufferData.light[1] = m_lightFromGUI;
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
@@ -165,9 +167,9 @@ void MainEngine::UpdateGUI()
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallic, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughness, 0.0f, 1.0f) ||
-				ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoTexture) ||
+			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.material.metallic, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.material.roughness, 0.0f, 1.0f) ||
+				ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoMap) ||
 				ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
 				ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
 				ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
@@ -234,7 +236,7 @@ void MainEngine::Render()
 	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
-	m_board->Render(m_device, m_commandList, m_textureHeap, guiState);
+	//m_board->Render(m_device, m_commandList, m_textureHeap, guiState);s
 
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);

@@ -61,6 +61,8 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> combinePSO;
 
 	extern UINT bloomLevels;
+	extern UINT textureSize;
+	extern UINT cubeTextureSize;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();

@@ -52,7 +52,7 @@ public:
 	XMFLOAT4X4 m_world;
 	string m_key;
 
-	bool m_useAlbedoTexture = false;
+	bool m_useAlbedoMap = true;
 	bool m_useNormalMap = false;
 	bool m_useHeightMap = false;
 	bool m_useAOMap = false;
@@ -61,7 +61,7 @@ public:
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
-	MeshConstants m_meshConstsBufferData;
+	MeshConstants m_meshConstsBufferData = {};
 	UINT8* m_meshConstsBufferDataBegin;
 
 	shared_ptr<BoundingSphere> m_boundingSphere;

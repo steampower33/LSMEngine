@@ -291,7 +291,8 @@ static void CreateDDSTextureBuffer(
 	vector<ComPtr<ID3D12Resource>>& textures,
 	UINT& textureCnt,
 	unordered_map<string, int>& textureIdx,
-	CubemapIndexConstants& cubemapIndexConstsBufferData)
+	CubemapIndexConstants& cubemapIndexConstsBufferData,
+	bool isCubeMap)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
@@ -305,7 +306,6 @@ static void CreateDDSTextureBuffer(
 	// DDS 텍스처 로드
 	ComPtr<ID3D12Resource> tex;
 	DDS_ALPHA_MODE alphaMode;
-	bool isCubeMap = true;
 
 	ThrowIfFailed(CreateDDSTextureFromFileEx(
 		device.Get(),
@@ -326,7 +326,7 @@ static void CreateDDSTextureBuffer(
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = tex->GetDesc().Format;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.ViewDimension = isCubeMap ? D3D12_SRV_DIMENSION_TEXTURECUBE : D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = tex->GetDesc().MipLevels;
 
 	device->CreateShaderResourceView(
@@ -344,6 +344,8 @@ static void CreateDDSTextureBuffer(
 		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
 	else if (filename.find("Specular") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
+	else if (filename.find("Brdf") != std::string::npos)
+		newMesh->constsBufferData.brdfIndex = textureCnt;
 	else
 		assert(false && "DDS Texture file does not exist!");
 

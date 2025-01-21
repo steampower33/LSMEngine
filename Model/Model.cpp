@@ -82,7 +82,7 @@ void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
 
 void Model::UpdateState()
 {
-	m_meshConstsBufferData.useAlbedoTexture = m_useAlbedoTexture;
+	m_meshConstsBufferData.useAlbedoMap = m_useAlbedoMap;
 	m_meshConstsBufferData.useNormalMap = m_useNormalMap;
 	m_meshConstsBufferData.useHeightMap = m_useHeightMap;
 	m_meshConstsBufferData.useAOMap = m_useAOMap;

@@ -11,6 +11,7 @@
 #include "MeshData.h"
 #include "Helpers.h"
 #include "ConstantBuffers.h"
+#include "GraphicsCommon.h"
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -39,7 +40,7 @@ public:
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
-	void CreateCubeTexture(
+	void CreateDDSTexture(
 		ComPtr<ID3D12Device>& device,
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12CommandQueue>& commandQueue,

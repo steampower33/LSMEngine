@@ -8,16 +8,24 @@ using namespace DirectX;
 
 #define MAX_LIGHTS 3
 
+struct Material
+{
+	XMFLOAT3 albedo = { 1.0f, 1.0f, 1.0f };
+	float metallic = 0.0f;
+	float roughness = 0.0f;
+};
+
 // Α¶Έν
-struct Light {
-	XMFLOAT3 strength = { 1.0f, 1.0f, 1.0f };
+struct Light
+{
+	XMFLOAT3 radiance = { 1.0f, 1.0f, 1.0f };
 	float fallOffStart = 0.0f;
 	XMFLOAT3 direction = { 0.0f, 0.0f, 1.0f };
-	float fallOffEnd = 10.0f;
+	float fallOffEnd = 20.0f;
 	XMFLOAT3 position = { 0.0f, 0.0f, -2.0f };
-	float spotPower = 1.0f;
+	float spotPower = 100.0f;
 	XMFLOAT3 d1;
-	float d2 = 0.0f;
+	float d2;
 };
 
 __declspec(align(512)) struct GlobalConstants
@@ -27,9 +35,9 @@ __declspec(align(512)) struct GlobalConstants
 	XMFLOAT4X4 d1;
 	XMFLOAT4X4 d2;
 
-	Light lights[MAX_LIGHTS];
+	Light light[MAX_LIGHTS];
 	XMFLOAT3 eyeWorld;
-	float d3[13];
+	float d3[3];
 };
 
 __declspec(align(256)) struct MeshConstants {
@@ -37,16 +45,16 @@ __declspec(align(256)) struct MeshConstants {
 
 	XMFLOAT4X4 worldIT;
 
-	float metallic = 0.0f;
-	float roughness = 0.0f;
+	Material material;
 	float heightScale = 0.0f;
-	UINT useAlbedoTexture = 0;
+	UINT useAlbedoMap = 1;
 	UINT useNormalMap = 0;
 	UINT useHeightMap = 0;
 	UINT useAOMap = 0;
 	UINT useMetallicMap = 0;
 	UINT useRoughnessMap = 0;
-	float d0[7];
+	UINT invertNormalMapY = 0;
+	float d0[3];
 
 	XMFLOAT4X4 d1;
 };
@@ -60,7 +68,8 @@ __declspec(align(256)) struct TextureIndexConstants {
 	UINT aoIndex;
 	UINT metallicIndex;
 	UINT roughnessIndex;
-	float dummy[8];
+	UINT brdfIndex;
+	float dummy[7];
 
 	XMFLOAT4X4 dummy1;
 

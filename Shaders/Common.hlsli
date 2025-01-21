@@ -4,17 +4,24 @@
 #define NUM_POINT_LIGHTS 1
 #define NUM_SPOT_LIGHTS 1
 
+struct Material
+{
+    float3 albedo;
+    float metallic;
+    float roughness;
+};
+
 // Α¶Έν
 struct Light
 {
-    float3 strength;
+    float3 radiance;
     float fallOffStart;
     float3 direction;
     float fallOffEnd;
     float3 position;
     float spotPower;
-    float3 dummy1;
-    float dummy2;
+    float3 d1;
+    float d2;
 };
 
 cbuffer GlobalConstants : register(b0)
@@ -24,7 +31,7 @@ cbuffer GlobalConstants : register(b0)
     float4x4 d01;
     float4x4 d02;
     
-    Light lights[MAX_LIGHTS];
+    Light light[MAX_LIGHTS];
     float3 eyeWorld;
     float d03[13];
 }
@@ -35,16 +42,16 @@ cbuffer MeshConstants : register(b1)
     
     float4x4 worldIT;
     
-    float metallic = 0.0f;
-    float roughness = 0.0f;
-    float heightScale = 0.0f;
-    uint useAlbedoTexture = 0;
-    uint useNormalMap = 0;
-    uint useHeightMap = 0;
-    uint useAOMap = 0;
-    uint useMetallicMap = 0;
-    uint useRoughnessMap = 0;
-    float d10[7];
+    Material material;
+    float heightScale;
+    uint useAlbedoMap;
+    uint useNormalMap;
+    uint useHeightMap;
+    uint useAOMap;
+    uint useMetallicMap;
+    uint useRoughnessMap;
+    uint invertNormalMapY;
+    float d10[3];
     
     float4x4 d11;
 }
@@ -59,7 +66,8 @@ cbuffer TextureIndexConstants : register(b2)
     uint aoIndex;
     uint metallicIndex;
     uint roughnessIndex;
-    float d21[8];
+    uint brdfIndex;
+    float d21[7];
     
     float4x4 d22;
     
