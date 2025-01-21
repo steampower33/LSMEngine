@@ -14,6 +14,9 @@ struct MeshData
 	std::string specularFilename;
 	std::string normalFilename;
 	std::string heightFilename;
+	std::string aoFilename;
+	std::string metallicFilename;
+	std::string roughnessFilename;
 
 	std::string cubeEnvFilename;
 	std::string cubeDiffuseFilename;

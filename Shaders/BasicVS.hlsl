@@ -17,14 +17,6 @@ PSInput main(VSInput input)
     float4 pos = float4(input.posModel, 1.0f);
     pos = mul(pos, world);
     
-    if (isUseHeightMap && heightIndex != 0)
-    {
-        float height = g_texture[heightIndex].SampleLevel(g_sampler, input.texcoord, 0).r;
-        height = 2.0 * height - 1.0;
-        
-        pos += float4(output.normalWorld * height * heightScale, 0.0);
-    }
-    
     output.posWorld = pos.xyz;
     
     pos = mul(pos, view);

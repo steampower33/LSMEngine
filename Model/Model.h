@@ -52,9 +52,12 @@ public:
 	XMFLOAT4X4 m_world;
 	string m_key;
 
-	bool m_isUseTexture = true;
-	bool m_isUseNormalMap = true;
-	bool m_isUseHeightMap = true;
+	bool m_useAlbedoTexture = false;
+	bool m_useNormalMap = false;
+	bool m_useHeightMap = false;
+	bool m_useAOMap = false;
+	bool m_useMetallicMap = false;
+	bool m_useRoughnessMap = false;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;

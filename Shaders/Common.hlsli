@@ -4,15 +4,6 @@
 #define NUM_POINT_LIGHTS 1
 #define NUM_SPOT_LIGHTS 1
 
-// 재질
-struct Material
-{
-    float color;
-    float diffuse;
-    float specular;
-    float shininess;
-};
-
 // 조명
 struct Light
 {
@@ -25,99 +16,6 @@ struct Light
     float3 dummy1;
     float dummy2;
 };
-
-float CalcAttenuation(float d, float falloffStart, float falloffEnd)
-{
-    // Linear falloff
-    return saturate((falloffEnd - d) / (falloffEnd - falloffStart));
-}
-
-float BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal,
-                   float3 toEye, Material mat)
-{
-    float3 halfway = normalize(lightVec + -toEye);
-    float ndoth = max(dot(normal, halfway), 0.0);
-    float specualr = mat.specular * pow(ndoth, mat.shininess);
-    
-    return mat.color + length((mat.diffuse + specualr) * lightStrength) / 3;
-
-}
-
-float ComputeDirectionalLight(Light L, Material mat, float3 normal,
-                                float3 toEye)
-{
-    float3 lightVec = -L.direction;
-    
-    float ndotl = max(dot(normal, lightVec), 0.0f);
-    float3 lightStrength = L.strength * ndotl;
-    return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
-
-}
-
-float ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
-                          float3 toEye)
-{
-    float3 lightVec = L.position - pos;
-
-    // 쉐이딩할 지점부터 조명까지의 거리 계산
-    float d = length(lightVec);
-
-    // 너무 멀면 조명이 적용되지 않음
-    if (d > L.fallOffEnd)
-    {
-        return 0.0;
-    }
-    else
-    {
-        lightVec /= d;
-        
-        float ndotl = max(dot(lightVec, normal), 0.0f);
-        float3 lightStrength = L.strength * ndotl;
-        
-        float att = CalcAttenuation(d, L.fallOffStart, L.fallOffEnd);
-        lightStrength *= att;
-        
-        float spotFactor = pow(max(dot(-lightVec, L.direction), 0.0f), L.spotPower);
-        lightStrength *= spotFactor;
-        
-        return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
-
-    }
-}
-
-float ComputeSpotLight(Light L, Material mat, float3 pos, float3 normal,
-                         float3 toEye)
-{
-    float3 lightVec = L.position - pos;
-
-    // 쉐이딩할 지점부터 조명까지의 거리 계산
-    float d = length(lightVec);
-
-    // 너무 멀면 조명이 적용되지 않음
-    if (d > L.fallOffEnd)
-    {
-        return 0.0;
-    }
-    else
-    {
-        // TODO:
-        lightVec /= d;
-        
-        float ndotl = max(dot(lightVec, normal), 0.0f);
-        float3 lightStrength = L.strength * ndotl;
-        
-        float att = CalcAttenuation(d, L.fallOffStart, L.fallOffEnd);
-        lightStrength *= att;
-        
-        float spotFactor = pow(max(dot(-lightVec, L.direction), 0.0f), L.spotPower);
-        lightStrength *= spotFactor;
-        
-        return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
-    }
-    
-    // if에 else가 없을 경우 경고 발생
-    // warning X4000: use of potentially uninitialized variable
-}
 
 cbuffer GlobalConstants : register(b0)
 {
@@ -137,12 +35,16 @@ cbuffer MeshConstants : register(b1)
     
     float4x4 worldIT;
     
-    Material material;
-    uint isUseTexture;
-    uint isUseNormalMap;
-    uint isUseHeightMap;
-    float heightScale;
-    float d10[8];
+    float metallic = 0.0f;
+    float roughness = 0.0f;
+    float heightScale = 0.0f;
+    uint useAlbedoTexture = 0;
+    uint useNormalMap = 0;
+    uint useHeightMap = 0;
+    uint useAOMap = 0;
+    uint useMetallicMap = 0;
+    uint useRoughnessMap = 0;
+    float d10[7];
     
     float4x4 d11;
 }
@@ -154,7 +56,10 @@ cbuffer TextureIndexConstants : register(b2)
     uint specularIndex;
     uint normalIndex;
     uint heightIndex;
-    float d21[11];
+    uint aoIndex;
+    uint metallicIndex;
+    uint roughnessIndex;
+    float d21[8];
     
     float4x4 d22;
     

@@ -345,7 +345,7 @@ static void CreateDDSTextureBuffer(
 	else if (filename.find("Specular") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
 	else
-		assert(false && "Texture file does not exist!");
+		assert(false && "DDS Texture file does not exist!");
 
 	textureIdx.insert({ filename, textureCnt });
 	textureCnt++;
@@ -420,18 +420,24 @@ static void CreateEXRTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("Albedo") != std::string::npos)
+	if (filename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("Diffuse") != std::string::npos)
+	else if (filename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("Specular") != std::string::npos)
+	else if (filename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("Normal") != std::string::npos)
+	else if (filename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("Height") != std::string::npos)
+	else if (filename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
+	else if (filename.find("ao") != std::string::npos)
+		newMesh->constsBufferData.aoIndex = textureCnt;
+	else if (filename.find("metallic") != std::string::npos)
+		newMesh->constsBufferData.metallicIndex = textureCnt;
+	else if (filename.find("roughness") != std::string::npos)
+		newMesh->constsBufferData.roughnessIndex = textureCnt;
 	else
-		assert(false && "Texture file does not exist!");
+		assert(false && "EXR Texture file does not exist!");
 
 	textureIdx.insert({ filename, textureCnt });
 	textureCnt++;
@@ -448,7 +454,7 @@ static void CreateMipMapTextureBuffer(
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
 	UINT& textureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, int>& textureIdx, const bool useSRGB)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
@@ -456,9 +462,8 @@ static void CreateMipMapTextureBuffer(
 	auto image = make_unique<ScratchImage>();
 
 	wstring wideFilename = StringToWString(filename);
-	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
-
-	DirectX::TexMetadata metaData = image.get()->GetMetadata();
+	DirectX::TexMetadata metaData;
+	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, &metaData, *image));
 
 	// 최대 밉맵 레벨 계산
 	size_t minLevel = 1;
@@ -485,7 +490,7 @@ static void CreateMipMapTextureBuffer(
 	textureDesc.Height = static_cast<UINT>(metaData.height);
 	textureDesc.DepthOrArraySize = static_cast<UINT16>(metaData.arraySize);
 	textureDesc.MipLevels = static_cast<UINT16>(mipLevels);
-	textureDesc.Format = metaData.format;
+	textureDesc.Format = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : metaData.format;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
@@ -533,7 +538,7 @@ static void CreateMipMapTextureBuffer(
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = metaData.format; // 텍스처의 포맷
+	srvDesc.Format = textureDesc.Format;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = mipLevels;
 	srvDesc.Texture2D.MostDetailedMip = 0;
@@ -547,18 +552,24 @@ static void CreateMipMapTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("Albedo") != std::string::npos)
+	if (filename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("Diffuse") != std::string::npos)
+	else if (filename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("Specular") != std::string::npos)
+	else if (filename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("Normal") != std::string::npos)
+	else if (filename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("Height") != std::string::npos)
+	else if (filename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
+	else if (filename.find("ao") != std::string::npos)
+		newMesh->constsBufferData.aoIndex = textureCnt;
+	else if (filename.find("metallic") != std::string::npos)
+		newMesh->constsBufferData.metallicIndex = textureCnt;
+	else if (filename.find("roughness") != std::string::npos)
+		newMesh->constsBufferData.roughnessIndex = textureCnt;
 	else
-		assert(false && "Texture file does not exist!");
+		assert(false && "MipMap texture file does not exist!");
 
 	textureIdx.insert({ filename, textureCnt });
 	textureCnt++;
@@ -630,16 +641,22 @@ static void CreateTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("Albedo") != std::string::npos)
+	if (filename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("Diffuse") != std::string::npos)
+	else if (filename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("Specular") != std::string::npos)
+	else if (filename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("Normal") != std::string::npos)
+	else if (filename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("Height") != std::string::npos)
+	else if (filename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
+	else if (filename.find("ao") != std::string::npos)
+		newMesh->constsBufferData.aoIndex = textureCnt;
+	else if (filename.find("metallic") != std::string::npos)
+		newMesh->constsBufferData.metallicIndex = textureCnt;
+	else if (filename.find("roughness") != std::string::npos)
+		newMesh->constsBufferData.roughnessIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 

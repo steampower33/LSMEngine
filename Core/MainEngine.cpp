@@ -34,7 +34,7 @@ void MainEngine::Initialize()
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		meshData.albedoFilename = "./Assets/ChessBoard_Albedo.png";
+		meshData.albedoFilename = "./Assets/chessboard-albedo.png";
 		m_board = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -50,9 +50,6 @@ void MainEngine::Initialize()
 
 	/*{
 		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
-		meshData.albedoFilename = "./Assets/grey_porous_rock_40_56_Albedo.jpg";
-		meshData.normalFilename = "./Assets/grey_porous_rock_40_56_Normal.jpg";
-		meshData.heightFilename = "./Assets/grey_porous_rock_40_56_Height.jpg";
 
 		shared_ptr<Model> square = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -64,9 +61,12 @@ void MainEngine::Initialize()
 	{
 		float radius = 1.0f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
-		meshData.albedoFilename = "./Assets/grey_porous_rock_40_56_Albedo.jpg";
-		meshData.normalFilename = "./Assets/grey_porous_rock_40_56_Normal.jpg";
-		meshData.heightFilename = "./Assets/grey_porous_rock_40_56_Height.jpg";
+		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";
+		meshData.normalFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_normal-dx.png";
+		meshData.heightFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_height.png";
+		meshData.aoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_ao.png";
+		meshData.metallicFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_metallic.png";
+		meshData.roughnessFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_roughness.png";
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -78,8 +78,6 @@ void MainEngine::Initialize()
 	/*
 	{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
-		meshData.albedoFilename = "./Assets/Bricks075A_4K-JPG_Albedo.jpg";
-		meshData.normalFilename = "./Assets/Bricks075A_4K-JPG_NormalDX.jpg";
 
 		shared_ptr<Model> box = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -167,14 +165,15 @@ void MainEngine::UpdateGUI()
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Albedo", &model.second.get()->m_meshConstsBufferData.material.albedo, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Diffuse", &model.second.get()->m_meshConstsBufferData.material.diffuse, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Specular", &model.second.get()->m_meshConstsBufferData.material.specular, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Shininess", &model.second.get()->m_meshConstsBufferData.material.shininess, 0.0f, 1.0f) ||
-				ImGui::Checkbox("Use Texture", &model.second.get()->m_isUseTexture) ||
-				ImGui::Checkbox("Use NormalMap", &model.second.get()->m_isUseNormalMap) ||
-				ImGui::Checkbox("Use HeightMap", &model.second.get()->m_isUseHeightMap) ||
-				ImGui::SliderFloat("Height Scale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f)
+			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallic, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughness, 0.0f, 1.0f) ||
+				ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoTexture) ||
+				ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
+				ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
+				ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
+				ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
+				ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
+				ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap)
 				)
 			{
 				guiState.isMeshChanged = true;

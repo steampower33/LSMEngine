@@ -8,14 +8,6 @@ using namespace DirectX;
 
 #define MAX_LIGHTS 3
 
-// 재질
-struct Material {
-	float albedo = 0.0f;
-	float diffuse = 1.0f;
-	float specular = 0.0f;
-	float shininess = 1.0f;
-};
-
 // 조명
 struct Light {
 	XMFLOAT3 strength = { 1.0f, 1.0f, 1.0f };
@@ -45,12 +37,16 @@ __declspec(align(256)) struct MeshConstants {
 
 	XMFLOAT4X4 worldIT;
 
-	Material material;
-	UINT isUseTexture = 1;
-	UINT isUseNormalMap = 1;
-	UINT isUseHeightMap = 1;
+	float metallic = 0.0f;
+	float roughness = 0.0f;
 	float heightScale = 0.0f;
-	float d0[8];
+	UINT useAlbedoTexture = 0;
+	UINT useNormalMap = 0;
+	UINT useHeightMap = 0;
+	UINT useAOMap = 0;
+	UINT useMetallicMap = 0;
+	UINT useRoughnessMap = 0;
+	float d0[7];
 
 	XMFLOAT4X4 d1;
 };
@@ -61,7 +57,10 @@ __declspec(align(256)) struct TextureIndexConstants {
 	UINT specularIndex;
 	UINT normalIndex;
 	UINT heightIndex;
-	float dummy[11];
+	UINT aoIndex;
+	UINT metallicIndex;
+	UINT roughnessIndex;
+	float dummy[8];
 
 	XMFLOAT4X4 dummy1;
 
