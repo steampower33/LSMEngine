@@ -12,12 +12,13 @@ void MainEngine::Initialize()
 	m_textureManager = make_shared<TextureManager>(m_device, m_commandList, m_textureHeap);
 
 	{
-		MeshData skybox = GeometryGenerator::MakeBox(100.0f);
+		MeshData skybox = GeometryGenerator::MakeBox(40.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
 		skybox.cubeEnvFilename = "./Assets/DaySky/DaySkyHDRIEnvHDR.dds";
 		skybox.cubeDiffuseFilename = "./Assets/DaySky/DaySkyHDRIDiffuseHDR.dds";
 		skybox.cubeSpecularFilename = "./Assets/DaySky/DaySkyHDRISpecularHDR.dds";
+		skybox.cubeBrdfFilename = "./Assets/DaySky/DaySkyHDRIBrdf.dds";
 
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -50,19 +51,19 @@ void MainEngine::Initialize()
 	//	m_models.insert({ m_board->m_key, m_board });
 	//}
 
-	/*{
-		MeshData meshData = GeometryGenerator::MakeSquare(1.0f);
+	{
+		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/DamagedHelmet/", "DamagedHelmet.gltf");
 
-		shared_ptr<Model> square = make_shared<Model>(
+		shared_ptr<Model> helmet = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		square->m_key = "square";
-		m_models.insert({ square->m_key, square });
-	}*/
+			meshDatas, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+		helmet->m_key = "helmet";
+		m_models.insert({ helmet->m_key, helmet });
+	}
 
 	{
 		float radius = 1.0f;
-		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100);
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, {2.0f, 2.0f});
 		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";
 		meshData.normalFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_normal-dx.png";
 		meshData.heightFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_height.png";
@@ -175,7 +176,8 @@ void MainEngine::UpdateGUI()
 				ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
 				ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
 				ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
-				ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap)
+				ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap) ||
+				ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap)
 				)
 			{
 				guiState.isMeshChanged = true;
@@ -190,7 +192,7 @@ void MainEngine::UpdateGUI()
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
-		if (ImGui::SliderFloat("strength", &m_combineConsts.strength, 0.0f, 3.0f))
+		if (ImGui::SliderFloat("strength", &m_combineConsts.strength, 0.0f, 1.0f))
 		{
 			dirtyFlag.isPostProcessFlag = true;
 		}

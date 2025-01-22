@@ -286,6 +286,7 @@ static void CreateDDSTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
 	const string& filename,
+	const string& lowerFilename,
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
@@ -338,14 +339,14 @@ static void CreateDDSTextureBuffer(
 	// 리소스 관리
 	textures.push_back(tex);
 
-	if (filename.find("Env") != std::string::npos)
+	if (lowerFilename.find("env") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapEnvIndex = textureCnt;
-	else if (filename.find("Diffuse") != std::string::npos)
+	else if (lowerFilename.find("diffuse") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
-	else if (filename.find("Specular") != std::string::npos)
+	else if (lowerFilename.find("specular") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
-	else if (filename.find("Brdf") != std::string::npos)
-		newMesh->constsBufferData.brdfIndex = textureCnt;
+	else if (lowerFilename.find("brdf") != std::string::npos)
+		cubemapIndexConstsBufferData.brdfIndex = textureCnt;
 	else
 		assert(false && "DDS Texture file does not exist!");
 
@@ -359,6 +360,7 @@ static void CreateEXRTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const string& filename,
+	const string& lowerFilename,
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
@@ -422,22 +424,24 @@ static void CreateEXRTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("albedo") != std::string::npos)
+	if (lowerFilename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	else if (lowerFilename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (lowerFilename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("normal") != std::string::npos)
+	else if (lowerFilename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("height") != std::string::npos)
+	else if (lowerFilename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
-	else if (filename.find("ao") != std::string::npos)
+	else if (lowerFilename.find("ao") != std::string::npos)
 		newMesh->constsBufferData.aoIndex = textureCnt;
-	else if (filename.find("metallic") != std::string::npos)
+	else if (lowerFilename.find("metallic") != std::string::npos)
 		newMesh->constsBufferData.metallicIndex = textureCnt;
-	else if (filename.find("roughness") != std::string::npos)
+	else if (lowerFilename.find("roughness") != std::string::npos)
 		newMesh->constsBufferData.roughnessIndex = textureCnt;
+	else if (lowerFilename.find("emissive") != std::string::npos)
+		newMesh->constsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "EXR Texture file does not exist!");
 
@@ -451,6 +455,7 @@ static void CreateMipMapTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const string& filename,
+	const string& lowerFilename,
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
@@ -492,7 +497,7 @@ static void CreateMipMapTextureBuffer(
 	textureDesc.Height = static_cast<UINT>(metaData.height);
 	textureDesc.DepthOrArraySize = static_cast<UINT16>(metaData.arraySize);
 	textureDesc.MipLevels = static_cast<UINT16>(mipLevels);
-	textureDesc.Format = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : metaData.format;
+	textureDesc.Format = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
@@ -554,22 +559,24 @@ static void CreateMipMapTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("albedo") != std::string::npos)
+	if (lowerFilename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	else if (lowerFilename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (lowerFilename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("normal") != std::string::npos)
+	else if (lowerFilename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("height") != std::string::npos)
+	else if (lowerFilename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
-	else if (filename.find("ao") != std::string::npos)
+	else if (lowerFilename.find("ao") != std::string::npos)
 		newMesh->constsBufferData.aoIndex = textureCnt;
-	else if (filename.find("metallic") != std::string::npos)
+	else if (lowerFilename.find("metallic") != std::string::npos)
 		newMesh->constsBufferData.metallicIndex = textureCnt;
-	else if (filename.find("roughness") != std::string::npos)
+	else if (lowerFilename.find("roughness") != std::string::npos)
 		newMesh->constsBufferData.roughnessIndex = textureCnt;
+	else if (lowerFilename.find("emissive") != std::string::npos)
+		newMesh->constsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "MipMap texture file does not exist!");
 
@@ -580,10 +587,21 @@ static void CreateMipMapTextureBuffer(
 
 }
 
+static string TransformToLower(string str)
+{
+	std::string newStr(str.size(), '\0'); // str의 크기만큼 초기화
+	// std::transform을 이용해 문자열을 소문자로 변환
+	std::transform(str.begin(), str.end(), newStr.begin(), [](unsigned char c) {
+		return std::tolower(c);
+		});
+	return newStr;
+}
+
 static void CreateTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const string& filename,
+	const string& lowerFilename,
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
@@ -643,22 +661,24 @@ static void CreateTextureBuffer(
 	textures.push_back(texture);
 	texturesUploadHeap.push_back(texUploadHeap);
 
-	if (filename.find("albedo") != std::string::npos)
+	if (lowerFilename.find("albedo") != std::string::npos)
 		newMesh->constsBufferData.albedoIndex = textureCnt;
-	else if (filename.find("diffuse") != std::string::npos)
+	else if (lowerFilename.find("diffuse") != std::string::npos)
 		newMesh->constsBufferData.diffuseIndex = textureCnt;
-	else if (filename.find("specular") != std::string::npos)
+	else if (lowerFilename.find("specular") != std::string::npos)
 		newMesh->constsBufferData.specularIndex = textureCnt;
-	else if (filename.find("normal") != std::string::npos)
+	else if (lowerFilename.find("normal") != std::string::npos)
 		newMesh->constsBufferData.normalIndex = textureCnt;
-	else if (filename.find("height") != std::string::npos)
+	else if (lowerFilename.find("height") != std::string::npos)
 		newMesh->constsBufferData.heightIndex = textureCnt;
-	else if (filename.find("ao") != std::string::npos)
+	else if (lowerFilename.find("ao") != std::string::npos)
 		newMesh->constsBufferData.aoIndex = textureCnt;
-	else if (filename.find("metallic") != std::string::npos)
+	else if (lowerFilename.find("metallic") != std::string::npos)
 		newMesh->constsBufferData.metallicIndex = textureCnt;
-	else if (filename.find("roughness") != std::string::npos)
+	else if (lowerFilename.find("roughness") != std::string::npos)
 		newMesh->constsBufferData.roughnessIndex = textureCnt;
+	else if (lowerFilename.find("emissive") != std::string::npos)
+		newMesh->constsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 
@@ -725,7 +745,7 @@ static void CreateEmptyTexture(
 	ComPtr<ID3D12Resource> texture;
 
 	// 1x1 검정 텍스처 데이터 (RGBA)
-	unsigned char blackPixel[4] = { 255, 255, 255, 255 };
+	unsigned char blackPixel[4] = { 0, 0, 0, 0 };
 
 	// 텍스처 리소스 생성 (GPU 기본 힙)
 	auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(

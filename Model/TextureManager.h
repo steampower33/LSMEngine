@@ -56,12 +56,13 @@ private:
 	
 	unordered_map<string, int> m_textureIdx;
 	UINT m_textureCnt = 0;
-	UINT m_cubeTextureCnt = 10;
+	UINT m_cubeTextureCnt = 50;
 
 private:
 	bool CheckDuplcateFilename(
 		unordered_map<string, int>& textureIdx,
 		const string& filename,
+		const string& lowerFilename,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 };

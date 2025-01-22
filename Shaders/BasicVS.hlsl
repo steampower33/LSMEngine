@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2D g_texture[10] : register(t0, space0);
+Texture2D g_texture[50] : register(t0, space0);
 SamplerState samplerWrap : register(s0, space0);
 
 PSInput main(VSInput input)

@@ -88,6 +88,7 @@ void Model::UpdateState()
 	m_meshConstsBufferData.useAOMap = m_useAOMap;
 	m_meshConstsBufferData.useMetallicMap = m_useMetallicMap;
 	m_meshConstsBufferData.useRoughnessMap = m_useRoughnessMap;
+	m_meshConstsBufferData.useEmissiveMap = m_useEmissiveMap;
 	memcpy(m_meshConstsBufferDataBegin, &m_meshConstsBufferData, sizeof(m_meshConstsBufferData));
 }
 

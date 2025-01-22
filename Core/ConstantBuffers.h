@@ -45,7 +45,7 @@ __declspec(align(256)) struct MeshConstants {
 
 	XMFLOAT4X4 worldIT;
 
-	Material material;
+	Material material; // 20
 	float heightScale = 0.0f;
 	UINT useAlbedoMap = 1;
 	UINT useNormalMap = 0;
@@ -53,8 +53,9 @@ __declspec(align(256)) struct MeshConstants {
 	UINT useAOMap = 0;
 	UINT useMetallicMap = 0;
 	UINT useRoughnessMap = 0;
+	UINT useEmissiveMap = 0;
 	UINT invertNormalMapY = 0;
-	float d0[3];
+	float d0[2];
 
 	XMFLOAT4X4 d1;
 };
@@ -68,7 +69,7 @@ __declspec(align(256)) struct TextureIndexConstants {
 	UINT aoIndex;
 	UINT metallicIndex;
 	UINT roughnessIndex;
-	UINT brdfIndex;
+	UINT emissiveIndex;
 	float dummy[7];
 
 	XMFLOAT4X4 dummy1;
@@ -82,7 +83,8 @@ __declspec(align(256)) struct CubemapIndexConstants {
 	UINT cubemapEnvIndex;
 	UINT cubemapDiffuseIndex;
 	UINT cubemapSpecularIndex;
-	float dummy[13];
+	UINT brdfIndex;
+	float dummy[12];
 
 	XMFLOAT4X4 dummy1;
 

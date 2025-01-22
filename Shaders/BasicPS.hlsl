@@ -1,11 +1,11 @@
 #include "Common.hlsli"
 
-Texture2D texture[10] : register(t0, space0);
-TextureCube skyboxTexture[10] : register(t10, space0);
+Texture2D texture[50] : register(t0, space0);
+TextureCube skyboxTexture[10] : register(t50, space0);
 SamplerState wrapSampler : register(s0, space0);
 SamplerState clampSampler : register(s1, space0);
 
-static const uint textureSizeOffset = 10;
+static const uint textureSizeOffset = 50;
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
 
 float3 GetNormal(PSInput input)
@@ -34,9 +34,7 @@ float3 GetNormal(PSInput input)
 
 float3 SchlickFresnel(float3 F0, float NdotH)
 {
-    // TODO: 방정식 (5)
     return F0 + (1.0 - F0) * pow(2, (-5.55473 * NdotH - 6.98316 * NdotH));
-
 }
 
 float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
@@ -55,11 +53,11 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
 float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
                    float metallic, float roughness)
 {
-    // TODO: 슬라이드 Environment BRDF
     float2 specularBRDF = texture[brdfIndex].Sample(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness)).rg;
+    float3 specularIrradiance = skyboxTexture[cubemapSpecularIndex - textureSizeOffset].
+        SampleLevel(wrapSampler, reflect(-pixelToEye, normalWorld), roughness * 5.0f).rgb;
     
     // 앞에서 사용했던 방법과 동일
-    float3 specularIrradiance = skyboxTexture[cubemapSpecularIndex - textureSizeOffset].SampleLevel(wrapSampler, reflect(-pixelToEye, normalWorld), roughness * 10.0f).rgb;
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
     float3 F0 = lerp(Fdielectric, albedo, metallic);
 
@@ -109,14 +107,16 @@ float4 main(PSInput input) : SV_TARGET
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
     
-    float3 albedo = useAlbedoMap ? texture[albedoIndex].SampleLevel(wrapSampler, input.texcoord, 0.0).rgb 
+    float3 albedo = useAlbedoMap ? texture[albedoIndex].Sample(wrapSampler, input.texcoord).rgb 
                                  : material.albedo;
     float ao = useAOMap ? texture[aoIndex].SampleLevel(wrapSampler, input.texcoord, 0.0).r : 1.0;
-    float metallic = useMetallicMap ? texture[metallicIndex].SampleLevel(wrapSampler, input.texcoord, 0.0).r 
+    float metallic = useMetallicMap ? texture[metallicIndex].Sample(wrapSampler, input.texcoord).r
                                     : material.metallic;
-    float roughness = useRoughnessMap ? texture[roughnessIndex].SampleLevel(wrapSampler, input.texcoord, 0.0).r 
+    float roughness = useRoughnessMap ? texture[roughnessIndex].Sample(wrapSampler, input.texcoord).g
                                       : material.roughness;
-
+    float3 emission = useEmissiveMap ? texture[emissiveIndex].Sample(wrapSampler, input.texcoord).rgb 
+                                     : float3(0, 0, 0);
+    
     float3 ambientLighting = AmbientLightingByIBL(albedo, normalWorld, pixelToEye, ao,
                                                   metallic, roughness);
     
@@ -149,7 +149,7 @@ float4 main(PSInput input) : SV_TARGET
         directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
     }
     
-    float4 pixelColor = float4(ambientLighting + directLighting, 1.0);
+    float4 pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
     pixelColor = clamp(pixelColor, 0.0, 1000.0);
     
     return pixelColor;

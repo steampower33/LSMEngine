@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vertex.h"
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -17,6 +18,7 @@ struct MeshData
 	std::string aoFilename;
 	std::string metallicFilename;
 	std::string roughnessFilename;
+	std::string emissiveFilename;
 
 	std::string cubeEnvFilename;
 	std::string cubeDiffuseFilename;

@@ -20,7 +20,7 @@ public:
 		int sliceCount);
 	static MeshData MakeSphere(
 		const float radius, 
-		const int numSlices, const int numStacks);
+		const int numSlices, const int numStacks, const XMFLOAT2 texScale = {1.0f, 1.0f});
 	static void CalculateTangents(MeshData& meshData);
 
 };

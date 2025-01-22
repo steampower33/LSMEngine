@@ -50,8 +50,9 @@ cbuffer MeshConstants : register(b1)
     uint useAOMap;
     uint useMetallicMap;
     uint useRoughnessMap;
+    uint useEmissiveMap;
     uint invertNormalMapY;
-    float d10[3];
+    float d10[2];
     
     float4x4 d11;
 }
@@ -66,7 +67,7 @@ cbuffer TextureIndexConstants : register(b2)
     uint aoIndex;
     uint metallicIndex;
     uint roughnessIndex;
-    uint brdfIndex;
+    uint emissiveIndex;
     float d21[7];
     
     float4x4 d22;
@@ -81,7 +82,8 @@ cbuffer CubemapIndexConstants : register(b3)
     uint cubemapEnvIndex;
     uint cubemapDiffuseIndex;
     uint cubemapSpecularIndex;
-    float d31[13];
+    uint brdfIndex;
+    float d31[12];
     
     float4x4 d32;
     

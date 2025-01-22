@@ -58,6 +58,7 @@ public:
 	bool m_useAOMap = false;
 	bool m_useMetallicMap = false;
 	bool m_useRoughnessMap = false;
+	bool m_useEmissiveMap = false;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;

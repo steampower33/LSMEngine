@@ -35,6 +35,11 @@ vector<MeshData> GeometryGenerator::ReadFromFile(string basePath, string filenam
 		}
 	}
 
+	for (auto& mesh : meshes)
+	{
+		CalculateTangents(mesh);
+	}
+
 	return meshes;
 }
 
@@ -185,7 +190,7 @@ MeshData GeometryGenerator::MakeCylinder(
 }
 
 MeshData GeometryGenerator::MakeSphere(const float radius,
-	const int numSlices, const int numStacks) {
+	const int numSlices, const int numStacks, const XMFLOAT2 texScale) {
 
 	const float dTheta = -XM_2PI / float(numSlices);
 	const float dPhi = -XM_PI / float(numStacks);
@@ -211,7 +216,7 @@ MeshData GeometryGenerator::MakeSphere(const float radius,
 
 			XMStoreFloat3(&v.normal, XMVector3Normalize(position));
 
-			v.texcoord = { float(i) / numSlices, 1.0f - float(j) / numStacks };
+			v.texcoord = { float(i) / numSlices * texScale.x, 1.0f - float(j) / numStacks * texScale.y };
 
 			vertices.push_back(v);
 		}

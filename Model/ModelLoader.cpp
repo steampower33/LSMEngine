@@ -1,12 +1,14 @@
 #include "ModelLoader.h"
 
-#include <filesystem>
-
 void ModelLoader::Load(std::string basePath, std::string filename)
 {
 	this->basePath = basePath;
 
 	Assimp::Importer importer;
+
+	if (GetExtension(filename) == ".gltf") {
+		m_isGLTF = true;
+	}
 
 	const aiScene* pScene = importer.ReadFile(
 		this->basePath + filename,
@@ -14,8 +16,7 @@ void ModelLoader::Load(std::string basePath, std::string filename)
 
 	if (!pScene || !pScene->mRootNode)
 	{
-		std::cerr << "Assimp failed: " << importer.GetErrorString() << std::endl;
-		return;
+		assert(false && "Model Node does not exist!");
 	}
 
 	// 초기 변환 행렬(단위 행렬)
@@ -76,6 +77,11 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, XMMATRIX paren
 	}
 }
 
+string ModelLoader::GetExtension(const string filename) {
+	string ext(filesystem::path(filename).extension().string());
+	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	return ext;
+}
 
 MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 {
@@ -98,11 +104,19 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 		// Normal
 		if (mesh->mNormals)
 		{
-			XMFLOAT3 normal(
-				mesh->mNormals[i].x,
-				mesh->mNormals[i].y,
-				mesh->mNormals[i].z
-			);
+			XMFLOAT3 normal;
+
+			normal.x = mesh->mNormals[i].x;
+
+			if (m_isGLTF) {
+				normal.y = mesh->mNormals[i].z;
+				normal.z = -mesh->mNormals[i].y;
+			}
+			else {
+				normal.y = mesh->mNormals[i].y;
+				normal.z = mesh->mNormals[i].z;
+			}
+
 			// 정규화
 			XMVECTOR n = XMLoadFloat3(&normal);
 			n = XMVector3Normalize(n);
@@ -138,7 +152,29 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-		newMesh.diffuseFilename = ReadFilename(material, aiTextureType_DIFFUSE);
+		newMesh.albedoFilename =
+			ReadFilename(material, aiTextureType_BASE_COLOR);
+		if (newMesh.albedoFilename.empty()) {
+			newMesh.albedoFilename =
+				ReadFilename(material, aiTextureType_DIFFUSE);
+		}
+
+		newMesh.normalFilename =
+			ReadFilename(material, aiTextureType_NORMALS);
+		newMesh.heightFilename =
+			ReadFilename(material, aiTextureType_HEIGHT);
+		newMesh.aoFilename =
+			ReadFilename(material, aiTextureType_AMBIENT_OCCLUSION);
+		if (newMesh.aoFilename.empty()) {
+			newMesh.aoFilename =
+				ReadFilename(material, aiTextureType_LIGHTMAP);
+		}
+		newMesh.metallicFilename =
+			ReadFilename(material, aiTextureType_METALNESS);
+		newMesh.roughnessFilename =
+			ReadFilename(material, aiTextureType_DIFFUSE_ROUGHNESS);
+		newMesh.emissiveFilename =
+			ReadFilename(material, aiTextureType_EMISSIVE);
 	}
 
 	return newMesh;
