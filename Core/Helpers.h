@@ -34,6 +34,7 @@ struct GuiState {
 	bool isDrawNormals = false;
 	bool isWireframe = false;
 	bool isMeshChanged = false;
+	bool isLightMove = false;
 };
 
 struct DirtyFlag {
@@ -425,23 +426,23 @@ static void CreateEXRTextureBuffer(
 	texturesUploadHeap.push_back(texUploadHeap);
 
 	if (lowerFilename.find("albedo") != std::string::npos)
-		newMesh->constsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
 	else if (lowerFilename.find("diffuse") != std::string::npos)
-		newMesh->constsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
 	else if (lowerFilename.find("specular") != std::string::npos)
-		newMesh->constsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
 	else if (lowerFilename.find("normal") != std::string::npos)
-		newMesh->constsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
 	else if (lowerFilename.find("height") != std::string::npos)
-		newMesh->constsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
 	else if (lowerFilename.find("ao") != std::string::npos)
-		newMesh->constsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
 	else if (lowerFilename.find("metallic") != std::string::npos)
-		newMesh->constsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
 	else if (lowerFilename.find("roughness") != std::string::npos)
-		newMesh->constsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
 	else if (lowerFilename.find("emissive") != std::string::npos)
-		newMesh->constsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "EXR Texture file does not exist!");
 
@@ -560,23 +561,23 @@ static void CreateMipMapTextureBuffer(
 	texturesUploadHeap.push_back(texUploadHeap);
 
 	if (lowerFilename.find("albedo") != std::string::npos)
-		newMesh->constsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
 	else if (lowerFilename.find("diffuse") != std::string::npos)
-		newMesh->constsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
 	else if (lowerFilename.find("specular") != std::string::npos)
-		newMesh->constsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
 	else if (lowerFilename.find("normal") != std::string::npos)
-		newMesh->constsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
 	else if (lowerFilename.find("height") != std::string::npos)
-		newMesh->constsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
 	else if (lowerFilename.find("ao") != std::string::npos)
-		newMesh->constsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
 	else if (lowerFilename.find("metallic") != std::string::npos)
-		newMesh->constsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
 	else if (lowerFilename.find("roughness") != std::string::npos)
-		newMesh->constsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
 	else if (lowerFilename.find("emissive") != std::string::npos)
-		newMesh->constsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "MipMap texture file does not exist!");
 
@@ -662,23 +663,23 @@ static void CreateTextureBuffer(
 	texturesUploadHeap.push_back(texUploadHeap);
 
 	if (lowerFilename.find("albedo") != std::string::npos)
-		newMesh->constsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
 	else if (lowerFilename.find("diffuse") != std::string::npos)
-		newMesh->constsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
 	else if (lowerFilename.find("specular") != std::string::npos)
-		newMesh->constsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
 	else if (lowerFilename.find("normal") != std::string::npos)
-		newMesh->constsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
 	else if (lowerFilename.find("height") != std::string::npos)
-		newMesh->constsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
 	else if (lowerFilename.find("ao") != std::string::npos)
-		newMesh->constsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
 	else if (lowerFilename.find("metallic") != std::string::npos)
-		newMesh->constsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
 	else if (lowerFilename.find("roughness") != std::string::npos)
-		newMesh->constsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
 	else if (lowerFilename.find("emissive") != std::string::npos)
-		newMesh->constsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 
@@ -708,7 +709,7 @@ static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 		&bufferDesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(&mesh->constsBuffer)));
+		IID_PPV_ARGS(&mesh->textureIndexConstsBuffer)));
 
 	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 	ThrowIfFailed(device->CreateCommittedResource(
@@ -717,17 +718,17 @@ static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
 		&bufferDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&mesh->constsUploadHeap)));
+		IID_PPV_ARGS(&mesh->textureIndexConstsUploadHeap)));
 
 	CD3DX12_RANGE readRange(0, 0);
-	ThrowIfFailed(mesh->constsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&mesh->constsBufferDataBegin)));
-	memcpy(mesh->constsBufferDataBegin, &mesh->constsBufferData, sizeof(mesh->constsBufferData));
-	mesh->constsUploadHeap->Unmap(0, nullptr);
+	ThrowIfFailed(mesh->textureIndexConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&mesh->textureIndexConstsBufferDataBegin)));
+	memcpy(mesh->textureIndexConstsBufferDataBegin, &mesh->textureIndexConstsBufferData, sizeof(mesh->textureIndexConstsBufferData));
+	mesh->textureIndexConstsUploadHeap->Unmap(0, nullptr);
 
-	commandList->CopyBufferRegion(mesh->constsBuffer.Get(), 0, mesh->constsUploadHeap.Get(), 0, sizeof(mesh->constsBufferData));
+	commandList->CopyBufferRegion(mesh->textureIndexConstsBuffer.Get(), 0, mesh->textureIndexConstsUploadHeap.Get(), 0, sizeof(mesh->textureIndexConstsBufferData));
 
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		mesh->constsBuffer.Get(),
+		mesh->textureIndexConstsBuffer.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
 	);

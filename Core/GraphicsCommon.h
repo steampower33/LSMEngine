@@ -62,11 +62,14 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> stencilMaskPSO;
 	extern ComPtr<ID3D12PipelineState> reflectSolidPSO;
 	extern ComPtr<ID3D12PipelineState> reflectWirePSO;
+	extern ComPtr<ID3D12PipelineState> skyboxSolidPSO;
+	extern ComPtr<ID3D12PipelineState> skyboxWirePSO;
+	extern ComPtr<ID3D12PipelineState> skyboxReflectSolidPSO;
+	extern ComPtr<ID3D12PipelineState> skyboxReflectWirePSO;
 	extern ComPtr<ID3D12PipelineState> mirrorBlendSolidPSO;
 	extern ComPtr<ID3D12PipelineState> mirrorBlendWirePSO;
 
 	extern ComPtr<ID3D12PipelineState> normalPSO;
-	extern ComPtr<ID3D12PipelineState> skyboxPSO;
 	extern ComPtr<ID3D12PipelineState> samplingPSO;
 	extern ComPtr<ID3D12PipelineState> bloomDownPSO;
 	extern ComPtr<ID3D12PipelineState> bloomUpPSO;

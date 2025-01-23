@@ -46,10 +46,13 @@ private:
 	shared_ptr<Model> m_skybox;
 	shared_ptr<Model> m_board;
 	shared_ptr<Model> m_mirror;
+	float m_mirrorAlpha = 0.5f;
+	float m_blendFactor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	XMFLOAT4 m_mirrorPlane;
 	unordered_map<string, shared_ptr<Model>> m_models;
 	shared_ptr<BoundingSphere> m_boundingSphere;
 	shared_ptr<Model> m_cursorSphere;
+	shared_ptr<Model> m_lightSphere;
 
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess[FrameCount];

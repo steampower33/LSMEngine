@@ -52,7 +52,29 @@ void Model::Initialize(
 	}
 }
 
-void Model::Update(XMVECTOR& q, XMVECTOR& dragTranslation)
+void Model::Update(XMFLOAT3& pos)
+{
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_world);
+	XMMATRIX worldWithoutTranslation = worldMatrix;
+	worldWithoutTranslation.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
+	XMVECTOR translation = XMLoadFloat3(&pos);
+	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
+
+	XMMATRIX newWorld = worldWithoutTranslation * translationMatrix;
+	XMStoreFloat3(&m_boundingSphere->Center, newWorld.r[3]);
+	XMStoreFloat4x4(&m_world, newWorld);
+
+	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(newWorld));
+
+	newWorld.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMMATRIX worldInvTranspose = XMMatrixInverse(nullptr, newWorld);
+	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, worldInvTranspose);
+
+	OnlyCallConstsMemcpy();
+}
+
+void Model::UpdateQuaternionAndTranslation(XMVECTOR& q, XMVECTOR& dragTranslation)
 {
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_world);
 	XMVECTOR translation = worldMatrix.r[3];
@@ -99,16 +121,13 @@ void Model::OnlyCallConstsMemcpy()
 
 void Model::Render(
 	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12DescriptorHeap>& textureHeap,
-	GuiState& guiState)
+	ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootDescriptorTable(4, textureHeap->GetGPUDescriptorHandleForHeapStart());
 
 	for (const auto& mesh : m_meshes)
 	{
-		commandList->SetGraphicsRootConstantBufferView(2, mesh->constsBuffer.Get()->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootConstantBufferView(2, mesh->textureIndexConstsBuffer.Get()->GetGPUVirtualAddress());
 
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
@@ -120,13 +139,10 @@ void Model::Render(
 
 void Model::RenderSkybox(
 	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12DescriptorHeap>& textureHeap,
-	GuiState& guiState)
+	ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootConstantBufferView(2, m_meshes[0]->constsBuffer.Get()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootDescriptorTable(4, textureHeap->GetGPUDescriptorHandleForHeapStart());
+	commandList->SetGraphicsRootConstantBufferView(2, m_meshes[0]->textureIndexConstsBuffer.Get()->GetGPUVirtualAddress());
 
 	commandList->IASetVertexBuffers(0, 1, &m_meshes[0]->vertexBufferView);
 	commandList->IASetIndexBuffer(&m_meshes[0]->indexBufferView);

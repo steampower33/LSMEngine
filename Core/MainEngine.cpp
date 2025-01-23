@@ -27,10 +27,23 @@ void MainEngine::Initialize()
 	}
 
 	{
-		MeshData cursorSphere = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
 		m_cursorSphere = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
-			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
+		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
+		m_cursorSphere->Update(m_lightFromGUI.position);
+	}
+
+	{
+		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+		m_lightSphere = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		m_lightSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
+		m_lightSphere->m_meshConstsBufferData.useAlbedoMap = false;
+		m_lightSphere->Update(m_lightFromGUI.position);
 	}
 
 	{
@@ -47,7 +60,7 @@ void MainEngine::Initialize()
 		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
 
 		XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
-		m_board->Update(quaternion, translation);
+		m_board->UpdateQuaternionAndTranslation(quaternion, translation);
 		m_board->m_key = "board";
 		m_models.insert({ m_board->m_key, m_board });
 	}
@@ -58,6 +71,10 @@ void MainEngine::Initialize()
 		m_mirror = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 2.0f, 0.0f));
+		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.3f, 0.3f, 0.3f);
+		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_mirror->m_meshConstsBufferData.metallicFactor = 0.7f;
+		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.2f;
 		m_mirror->m_key = "mirror";
 
 		XMVECTOR pos{ 0.0f, 0.0f, 2.0f, 0.0f };
@@ -94,7 +111,6 @@ void MainEngine::Initialize()
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
-	
 	/*{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		shared_ptr<Model> box = make_shared<Model>(
@@ -116,6 +132,10 @@ void MainEngine::Initialize()
 	m_fenceValue[m_frameIndex] = 1;
 	WaitForPreviousFrame();
 
+	{
+		memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
+	}
+
 	LoadGUI();
 }
 
@@ -123,17 +143,40 @@ void MainEngine::Update(float dt)
 {
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-	XMMATRIX view = m_camera->GetViewMatrix();
-	XMMATRIX viewTrans = XMMatrixTranspose(view);
-	XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
+	{
+		XMMATRIX view = m_camera->GetViewMatrix();
+		XMMATRIX viewTrans = XMMatrixTranspose(view);
+		XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
 
-	XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
-	XMMATRIX projTrans = XMMatrixTranspose(proj);
-	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
+		XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
+		XMMATRIX projTrans = XMMatrixTranspose(proj);
+		XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
 	
-	m_globalConstsBufferData.eyeWorld = m_camera->GetEyePos();
+		m_globalConstsBufferData.eyeWorld = m_camera->GetEyePos();
 
-	UpdateMouseControl(view, proj);
+		UpdateMouseControl(view, proj);
+
+		m_globalConstsBufferData.light[1] = m_lightFromGUI;
+
+		memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
+
+		// Reflect
+		m_reflectGlobalConstsBufferData = m_globalConstsBufferData;
+
+		XMVECTOR plane = XMLoadFloat4(&m_mirrorPlane);
+		XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
+		XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
+		XMMATRIX reflectedViewMatrixTrans = XMMatrixTranspose(reflectedViewMatrix);
+		XMStoreFloat4x4(&m_reflectGlobalConstsBufferData.view, reflectedViewMatrixTrans);
+
+		memcpy(m_reflectGlobalConstsBufferDataBegin, &m_reflectGlobalConstsBufferData, sizeof(m_reflectGlobalConstsBufferData));
+	}
+
+	if (guiState.isLightMove)
+	{
+		guiState.isLightMove = false;
+		m_lightSphere->Update(m_lightFromGUI.position);
+	}
 
 	if (guiState.isMeshChanged)
 	{
@@ -141,28 +184,14 @@ void MainEngine::Update(float dt)
 		m_models[guiState.changedMeshKey]->UpdateState();
 	}
 
-	m_globalConstsBufferData.light[1] = m_lightFromGUI;
-
-	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
-	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
-
-	// Reflect
-	m_reflectGlobalConstsBufferData = m_globalConstsBufferData;
-
-	XMVECTOR plane = XMLoadFloat4(&m_mirrorPlane);
-	XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
-	XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
-	XMMATRIX reflectedViewMatrixTrans = XMMatrixTranspose(reflectedViewMatrix);
-	XMStoreFloat4x4(&m_reflectGlobalConstsBufferData.view, reflectedViewMatrixTrans);
-
-	memcpy(m_reflectGlobalConstsBufferDataBegin, &m_reflectGlobalConstsBufferData, sizeof(m_reflectGlobalConstsBufferData));
-
 	if (dirtyFlag.isPostProcessFlag)
 	{
 		dirtyFlag.isPostProcessFlag = false;
 		for (int i = 0; i < FrameCount; i++)
 			m_postProcess[i]->Update(m_combineConsts);
 	}
+
+	m_mirror->OnlyCallConstsMemcpy();
 }
 
 void MainEngine::UpdateGUI()
@@ -174,16 +203,70 @@ void MainEngine::UpdateGUI()
 
 	ImGui::Begin("Scene Control");
 	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
-	ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 
-	ImGui::Separator();
-	
-	ImGui::Text("Light");
+	if (ImGui::TreeNode("General"))
+	{
+		ImGui::Checkbox("Draw Normals", &guiState.isDrawNormals);
+		ImGui::Checkbox("Wireframe", &guiState.isWireframe);
 
-	ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("Env Map"))
+	{
+		ImGui::SliderFloat("Strength", &m_globalConstsBufferData.strengthIBL, 0.0f, 5.0f);
+		ImGui::RadioButton("Env", &m_globalConstsBufferData.choiceEnvMap, 0);
+		ImGui::SameLine();
+		ImGui::RadioButton("Irradiance", &m_globalConstsBufferData.choiceEnvMap, 1);
+		ImGui::SameLine();
+		ImGui::RadioButton("Specular", &m_globalConstsBufferData.choiceEnvMap, 2);
+		ImGui::SliderFloat("EnvLodBias", &m_globalConstsBufferData.envLodBias, 0.0f,
+			10.0f);
+		ImGui::TreePop();
+	}
+
+	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Post Process"))
+	{
+		if (ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
+		if (ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
+
+		if (ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f))
+		{
+			dirtyFlag.isPostProcessFlag = true;
+		}
+		ImGui::TreePop();
+	}
 	
-	ImGui::Separator();
+	if (ImGui::TreeNode("Mirror"))
+	{
+		ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
+		m_blendFactor[0] = m_mirrorAlpha;
+		m_blendFactor[1] = m_mirrorAlpha;
+		m_blendFactor[2] = m_mirrorAlpha;
+
+		ImGui::SliderFloat("Metallic",
+			&m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
+		ImGui::SliderFloat("Roughness",
+			&m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("Point Light"))
+	{
+		if (ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f))
+		{
+			guiState.isLightMove = true;
+		}
+		ImGui::TreePop();
+	}
 
 	for (const auto& model : m_models)
 	{
@@ -191,8 +274,8 @@ void MainEngine::UpdateGUI()
 
 		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.material.metallic, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.material.roughness, 0.0f, 1.0f) ||
+			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f) ||
+				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f) ||
 				ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoMap) ||
 				ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
 				ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
@@ -200,7 +283,8 @@ void MainEngine::UpdateGUI()
 				ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
 				ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
 				ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap) ||
-				ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap)
+				ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap) ||
+				ImGui::SliderFloat("MeshLodBias", &model.second.get()->m_meshConstsBufferData.meshLodBias, 0.0f, 10.0f)
 				)
 			{
 				guiState.isMeshChanged = true;
@@ -210,25 +294,6 @@ void MainEngine::UpdateGUI()
 		}
 
 		ImGui::PopID();
-	}
-
-	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Post Process"))
-	{
-		if (ImGui::SliderFloat("strength", &m_combineConsts.strength, 0.0f, 1.0f))
-		{
-			dirtyFlag.isPostProcessFlag = true;
-		}
-		if (ImGui::SliderFloat("exposure", &m_combineConsts.exposure, 0.0f, 10.0f))
-		{
-			dirtyFlag.isPostProcessFlag = true;
-		}
-
-		if (ImGui::SliderFloat("gamma", &m_combineConsts.gamma, 0.0f, 5.0f))
-		{
-			dirtyFlag.isPostProcessFlag = true;
-		}
-		ImGui::TreePop();
 	}
 
 	ImGui::End();
@@ -259,42 +324,64 @@ void MainEngine::Render()
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+	m_commandList->SetGraphicsRootDescriptorTable(5, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 
-	m_commandList->SetPipelineState(Graphics::skyboxPSO.Get());
-	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
-
-	if (guiState.isWireframe)
-		m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
-	else
-		m_commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
-	for (const auto& model : m_models)
-		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
-
-	if (guiState.isDrawNormals)
 	{
-		for (const auto& model : m_models)
-			model.second->RenderNormal(m_commandList);
+		if (guiState.isWireframe)
+			m_commandList->SetPipelineState(Graphics::skyboxWirePSO.Get());
+		else
+			m_commandList->SetPipelineState(Graphics::skyboxSolidPSO.Get());
+		m_skybox->RenderSkybox(m_device, m_commandList);
 	}
 
-	if (m_selected && (m_leftButton || m_rightButton) )
-		m_cursorSphere->Render(m_device, m_commandList, m_textureHeap, guiState);
+	{
+		if (guiState.isWireframe)
+			m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
+		else
+			m_commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
+		for (const auto& model : m_models)
+			model.second->Render(m_device, m_commandList);
+
+		m_lightSphere->Render(m_device, m_commandList);
+
+		if (m_selected && (m_leftButton || m_rightButton) )
+			m_cursorSphere->Render(m_device, m_commandList);
+
+		if (guiState.isDrawNormals)
+		{
+			for (const auto& model : m_models)
+				model.second->RenderNormal(m_commandList);
+		}
+	}
 
 	// Mirror
 	{
 		m_commandList->SetPipelineState(Graphics::stencilMaskPSO.Get());
 		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_mirror->Render(m_device, m_commandList, m_textureHeap, guiState);
+		m_mirror->Render(m_device, m_commandList);
 
-		m_commandList->SetPipelineState(Graphics::reflectSolidPSO.Get());
+		if (guiState.isWireframe)
+			m_commandList->SetPipelineState(Graphics::reflectWirePSO.Get());
+		else
+			m_commandList->SetPipelineState(Graphics::reflectSolidPSO.Get());
 		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
 		m_commandList->SetGraphicsRootConstantBufferView(0, m_reflectGlobalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 		m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		for (const auto& model : m_models)
-			model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
+			model.second->Render(m_device, m_commandList);
+
+		if (guiState.isWireframe)
+			m_commandList->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
+		else
+			m_commandList->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
+		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
+		m_skybox->RenderSkybox(m_device, m_commandList);
 
 		m_commandList->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
+		m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_commandList->OMSetBlendFactor(m_blendFactor);
 		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_mirror->Render(m_device, m_commandList, m_textureHeap, guiState);
+		m_mirror->Render(m_device, m_commandList);
 	}
 
 	SetBarrier(m_commandList, m_floatBuffers[m_frameIndex],
@@ -484,7 +571,7 @@ void MainEngine::UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj)
 				}
 			}
 
-			selectedModel->Update(q, dragTranslation);
+			selectedModel->UpdateQuaternionAndTranslation(q, dragTranslation);
 		}
 	}
 }

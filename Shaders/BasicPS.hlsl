@@ -7,7 +7,6 @@ SamplerState clampSampler : register(s1, space0);
 
 static const uint textureSizeOffset = 50;
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-static const float loadBias = 2.0f;
 
 float3 SchlickFresnel(float3 F0, float NdotH)
 {
@@ -20,7 +19,7 @@ float3 GetNormal(PSInput input)
     
     if (useNormalMap && normalIndex != 0) // NormalWorld를 교체
     {
-        float3 normal = texture[normalIndex].SampleLevel(wrapSampler, input.texcoord, loadBias).rgb;
+        float3 normal = texture[normalIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb;
         normal = 2.0 * normal - 1.0; // 범위 조절 [-1.0, 1.0]
 
         // OpenGL 용 노멀맵일 경우에는 y 방향을 뒤집어줍니다.
@@ -83,7 +82,7 @@ float NdfGGX(float NdotH, float roughness)
     float alpha = roughness * roughness;
     float alphaSq = alpha * alpha;
     float denum = (NdotH * NdotH) * (alphaSq - 1.0) + 1.0;
-    // TODO: 방정식 (3)
+    
     return alphaSq / (3.141592 * denum * denum);
 
 }
@@ -94,7 +93,6 @@ float SchlickG1(float NdotV, float k)
 
 }
 
-// TODO: 방정식 (4)
 float SchlickGGX(float NdotI, float NdotO, float roughness)
 {
     float r = roughness + 1.0;
@@ -108,54 +106,54 @@ float4 main(PSInput input) : SV_TARGET
 {
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
-    //normalWorld = faceforward(normalWorld, -pixelToEye, normalWorld);
     
-    float3 albedo = useAlbedoMap ? texture[albedoIndex].SampleLevel(wrapSampler, input.texcoord, loadBias).rgb * material.albedo
-                                 : material.albedo;
-    float ao = useAOMap ? texture[aoIndex].SampleLevel(wrapSampler, input.texcoord, 0.0).r : 1.0;
-    float metallic = useMetallicMap ? texture[metallicIndex].SampleLevel(wrapSampler, input.texcoord, loadBias).r * material.metallic
-                                    : material.metallic;
-    float roughness = useRoughnessMap ? texture[roughnessIndex].SampleLevel(wrapSampler, input.texcoord, loadBias).g * material.roughness
-                                      : material.roughness;
-    float3 emission = useEmissiveMap ? texture[emissiveIndex].SampleLevel(wrapSampler, input.texcoord, loadBias).rgb 
-                                     : float3(0, 0, 0);
+    float3 albedo = useAlbedoMap ? texture[albedoIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb * albedoFactor
+                                 : albedoFactor;
+    float ao = useAOMap ? texture[aoIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).r : 1.0;
+    float metallic = useMetallicMap ? texture[metallicIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).b * metallicFactor
+                                    : metallicFactor;
+    float roughness = useRoughnessMap ? texture[roughnessIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).g * roughnessFactor
+                                      : roughnessFactor;
+    float3 emission = useEmissiveMap ? texture[emissiveIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb 
+                                     : emissionFactor;
     
     float3 ambientLighting = AmbientLightingByIBL(albedo, normalWorld, pixelToEye, ao,
-                                                  metallic, roughness);
+                                                  metallic, roughness) * strengthIBL;
     
-    //float3 directLighting = float3(0, 0, 0);
-    //// 포인트 라이트만 먼저 구현
-    //[unroll]
-    //for (int i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
-    //{
-    //    float3 lightVec = light[i].position - input.posWorld;
-    //    float3 halfway = normalize(pixelToEye + lightVec);
+    float3 directLighting = float3(0, 0, 0);
+    // 포인트 라이트만 먼저 구현
+    [unroll]
+    for (int i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
+    {
+        float3 lightVec = light[i].position - input.posWorld;
+        float lightDist = length(lightVec);
+        lightVec /= lightDist;
+        float3 halfway = normalize(pixelToEye + lightVec);
         
-    //    float NdotI = max(0.0, dot(normalWorld, lightVec));
-    //    float NdotH = max(0.0, dot(normalWorld, halfway));
-    //    float NdotO = max(0.0, dot(normalWorld, pixelToEye));
+        float NdotI = max(0.0, dot(normalWorld, lightVec));
+        float NdotH = max(0.0, dot(normalWorld, halfway));
+        float NdotO = max(0.0, dot(normalWorld, pixelToEye));
         
-    //    const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-    //    float3 F0 = lerp(Fdielectric, albedo, metallic);
-    //    float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
-    //    float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
-    //    float3 diffuseBRDF = kd * albedo;
+        const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+        float3 F0 = lerp(Fdielectric, albedo, metallic);
+        float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
+        float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
+        float3 diffuseBRDF = kd * albedo;
 
-    //    float D = NdfGGX(NdotH, roughness);
-    //    float3 G = SchlickGGX(NdotI, NdotO, roughness);
-        
-    //    // 방정식 (2), 0으로 나누기 방지
-    //    float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
+        float D = NdfGGX(NdotH, roughness);
+        float3 G = SchlickGGX(NdotI, NdotO, roughness);
+        float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
 
-    //    float3 radiance = light[i].radiance * saturate((light[i].fallOffEnd - length(lightVec)) / (light[i].fallOffEnd - light[i].fallOffStart));
+        float att = saturate((light[i].fallOffEnd - lightDist)
+                                     / (light[i].fallOffEnd - light[i].fallOffStart));
+        float3 radiance = light[i].radiance * att;
 
-    //    directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
-    //}
+        directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+    }
     
-    //float4 pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
-    float4 pixelColor = float4(ambientLighting + emission, 1.0);
+    float4 pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
     pixelColor = clamp(pixelColor, 0.0, 1000.0);
     
-    return float4(ambientLighting, 1.0);
+    return pixelColor;
 
 }

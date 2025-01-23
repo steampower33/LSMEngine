@@ -53,7 +53,7 @@ void ImageFilter::Render(
 	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	commandList->RSSetViewports(1, &m_viewport);
-	commandList->SetGraphicsRootConstantBufferView(5, m_samplingConstsUploadHeap.Get()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(4, m_samplingConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->DrawIndexedInstanced(indexBufferCount, 1, 0, 0, 0);

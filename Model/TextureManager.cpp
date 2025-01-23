@@ -118,23 +118,23 @@ bool TextureManager::CheckDuplcateFilename(
 		else // Check Others
 		{
 			if (lowerFilename.find("albedo") != std::string::npos)
-				newMesh->constsBufferData.albedoIndex = f->second;
+				newMesh->textureIndexConstsBufferData.albedoIndex = f->second;
 			else if (lowerFilename.find("diffuse") != std::string::npos)
-				newMesh->constsBufferData.diffuseIndex = f->second;
+				newMesh->textureIndexConstsBufferData.diffuseIndex = f->second;
 			else if (lowerFilename.find("specular") != std::string::npos)
-				newMesh->constsBufferData.specularIndex = f->second;
+				newMesh->textureIndexConstsBufferData.specularIndex = f->second;
 			else if (lowerFilename.find("normal") != std::string::npos)
-				newMesh->constsBufferData.normalIndex = f->second;
+				newMesh->textureIndexConstsBufferData.normalIndex = f->second;
 			else if (lowerFilename.find("height") != std::string::npos)
-				newMesh->constsBufferData.heightIndex = f->second;
+				newMesh->textureIndexConstsBufferData.heightIndex = f->second;
 			else if (lowerFilename.find("ao") != std::string::npos)
-				newMesh->constsBufferData.aoIndex = f->second;
+				newMesh->textureIndexConstsBufferData.aoIndex = f->second;
 			else if (lowerFilename.find("metallic") != std::string::npos)
-				newMesh->constsBufferData.metallicIndex = f->second;
+				newMesh->textureIndexConstsBufferData.metallicIndex = f->second;
 			else if (lowerFilename.find("roughness") != std::string::npos)
-				newMesh->constsBufferData.roughnessIndex = f->second;
+				newMesh->textureIndexConstsBufferData.roughnessIndex = f->second;
 			else if (lowerFilename.find("emissive") != std::string::npos)
-				newMesh->constsBufferData.emissiveIndex = f->second;
+				newMesh->textureIndexConstsBufferData.emissiveIndex = f->second;
 		}
 
 		printf("Duplicated texture : %s, location is %d\n", f->first.c_str(), f->second);

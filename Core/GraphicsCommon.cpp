@@ -46,11 +46,14 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> stencilMaskPSO;
 	ComPtr<ID3D12PipelineState> reflectSolidPSO;
 	ComPtr<ID3D12PipelineState> reflectWirePSO;
+	ComPtr<ID3D12PipelineState> skyboxSolidPSO;
+	ComPtr<ID3D12PipelineState> skyboxWirePSO;
+	ComPtr<ID3D12PipelineState> skyboxReflectSolidPSO;
+	ComPtr<ID3D12PipelineState> skyboxReflectWirePSO;
 	ComPtr<ID3D12PipelineState> mirrorBlendSolidPSO;
 	ComPtr<ID3D12PipelineState> mirrorBlendWirePSO;
 
 	ComPtr<ID3D12PipelineState> normalPSO;
-	ComPtr<ID3D12PipelineState> skyboxPSO;
 	ComPtr<ID3D12PipelineState> samplingPSO;
 	ComPtr<ID3D12PipelineState> bloomDownPSO;
 	ComPtr<ID3D12PipelineState> bloomUpPSO;
@@ -92,8 +95,8 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[4].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[5].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[4].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[5].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[6].InitAsDescriptorTable(1, filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// 디스크립터 힙 생성
@@ -211,6 +214,9 @@ void Graphics::InitRasterizerStates()
 	solidCCWRS = solidRS;
 	solidCCWRS.FrontCounterClockwise = TRUE;
 
+	wireCCWRS = solidCCWRS;
+	wireCCWRS.FillMode = D3D12_FILL_MODE_WIREFRAME;
+
 	postProcessingRS = solidRS;
 	postProcessingRS.DepthClipEnable = FALSE;
 }
@@ -236,28 +242,31 @@ void Graphics::InitBlendStates()
 	}
 
 	{
-		D3D12_BLEND_DESC mirrorBlend = {};
-		mirrorBlend.AlphaToCoverageEnable = FALSE;
+		D3D12_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
+		rtBlendDesc.BlendEnable = TRUE;
+		rtBlendDesc.LogicOpEnable = FALSE;
+
+		// 알파 블렌드 설정 (BLEND_FACTOR 사용)
+		rtBlendDesc.SrcBlend = D3D12_BLEND_BLEND_FACTOR;
+		rtBlendDesc.DestBlend = D3D12_BLEND_INV_BLEND_FACTOR;
+		rtBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+
+		// 알파 채널 블렌드 설정
+		rtBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		rtBlendDesc.DestBlendAlpha = D3D12_BLEND_ONE;
+		rtBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+
+		// RGBA 전부 활성화
+		rtBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		mirrorBlend.AlphaToCoverageEnable = TRUE; // MSAA 활성화
 		mirrorBlend.IndependentBlendEnable = FALSE;
-
-		D3D12_RENDER_TARGET_BLEND_DESC mirrorBlendDesc = {};
-		mirrorBlendDesc.BlendEnable = TRUE;
-		mirrorBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		mirrorBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		mirrorBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-		mirrorBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-		mirrorBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-		mirrorBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		mirrorBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-		// 소스 알파 값을 반사 강도로 설정
-		// 이는 픽셀 셰이더에서 설정된 알파 값을 사용해야 함
-		mirrorBlend.RenderTarget[0] = mirrorBlendDesc;
+		mirrorBlend.RenderTarget[0] = rtBlendDesc;
 	}
 }
 
 void Graphics::InitDepthStencilStates()
-{
+{	
 	{
 		basicDS.DepthEnable = TRUE;
 		basicDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
@@ -349,6 +358,11 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	reflectSolidPSODesc.RasterizerState = solidCCWRS;
 	reflectSolidPSODesc.DepthStencilState = drawMaskedDS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&reflectSolidPSODesc, IID_PPV_ARGS(&reflectSolidPSO)));
+	
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC reflectWirePSODesc = basicSolidPSODesc;
+	reflectWirePSODesc.RasterizerState = wireCCWRS;
+	reflectWirePSODesc.DepthStencilState = drawMaskedDS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&reflectWirePSODesc, IID_PPV_ARGS(&reflectWirePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC mirrorBlendSolidPSODesc = basicSolidPSODesc;
 	mirrorBlendSolidPSODesc.BlendState = mirrorBlend;
@@ -362,10 +376,24 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	normalPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&normalPSODesc, IID_PPV_ARGS(&normalPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxPSODesc = basicSolidPSODesc;
-	skyboxPSODesc.VS = { skyboxVS->GetBufferPointer(), skyboxVS->GetBufferSize() };
-	skyboxPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxPSODesc, IID_PPV_ARGS(&skyboxPSO)));
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxSolidPSODesc = basicSolidPSODesc;
+	skyboxSolidPSODesc.VS = { skyboxVS->GetBufferPointer(), skyboxVS->GetBufferSize() };
+	skyboxSolidPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxSolidPSODesc, IID_PPV_ARGS(&skyboxSolidPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxWirePSODesc = skyboxSolidPSODesc;
+	skyboxWirePSODesc.RasterizerState = wireRS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxWirePSODesc, IID_PPV_ARGS(&skyboxWirePSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxReflectSolidPSODesc = skyboxSolidPSODesc;
+	skyboxReflectSolidPSODesc.RasterizerState = solidCCWRS;
+	skyboxReflectSolidPSODesc.DepthStencilState = drawMaskedDS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxReflectSolidPSODesc, IID_PPV_ARGS(&skyboxReflectSolidPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxReflectWirePSODesc = skyboxReflectSolidPSODesc;
+	skyboxReflectWirePSODesc.RasterizerState = wireCCWRS;
+	skyboxReflectWirePSODesc.DepthStencilState = drawMaskedDS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxReflectWirePSODesc, IID_PPV_ARGS(&skyboxReflectWirePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC samplingPSODesc = basicSolidPSODesc;
 	samplingPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };

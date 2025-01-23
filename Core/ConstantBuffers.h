@@ -8,13 +8,6 @@ using namespace DirectX;
 
 #define MAX_LIGHTS 3
 
-struct Material
-{
-	XMFLOAT3 albedo = { 1.0f, 1.0f, 1.0f };
-	float metallic = 1.0f;
-	float roughness = 1.0f;
-};
-
 // Α¶Έν
 struct Light
 {
@@ -36,8 +29,11 @@ __declspec(align(512)) struct GlobalConstants
 	XMFLOAT4X4 d2;
 
 	Light light[MAX_LIGHTS];
-	XMFLOAT3 eyeWorld;
-	float d3[13];
+	XMFLOAT3 eyeWorld = { 0.0f, 0.0f, 0.0f };
+	float strengthIBL = 1.0f;
+	int choiceEnvMap = 0;
+	float envLodBias = 0.0f;
+	float d03[10];
 };
 
 __declspec(align(256)) struct MeshConstants {
@@ -45,7 +41,10 @@ __declspec(align(256)) struct MeshConstants {
 
 	XMFLOAT4X4 worldIT;
 
-	Material material; // 20
+	XMFLOAT3 albedoFactor = { 1.0f, 1.0f, 1.0f };
+	float metallicFactor = 1.0f;
+	float roughnessFactor = 1.0f;
+	XMFLOAT3 emissionFactor = { 0.0f, 0.0f, 0.0f };
 	float heightScale = 0.0f;
 	UINT useAlbedoMap = 1;
 	UINT useNormalMap = 0;
@@ -54,22 +53,24 @@ __declspec(align(256)) struct MeshConstants {
 	UINT useMetallicMap = 0;
 	UINT useRoughnessMap = 0;
 	UINT useEmissiveMap = 0;
+
 	UINT invertNormalMapY = 0;
+	float meshLodBias = 0.0f;
 	float d0[2];
 
-	XMFLOAT4X4 d1;
+	XMFLOAT4X3 d1;
 };
 
 __declspec(align(256)) struct TextureIndexConstants {
-	UINT albedoIndex;
-	UINT diffuseIndex;
-	UINT specularIndex;
-	UINT normalIndex;
-	UINT heightIndex;
-	UINT aoIndex;
-	UINT metallicIndex;
-	UINT roughnessIndex;
-	UINT emissiveIndex;
+	UINT albedoIndex = 0;
+	UINT diffuseIndex = 0;
+	UINT specularIndex = 0;
+	UINT normalIndex = 0;
+	UINT heightIndex = 0;
+	UINT aoIndex = 0;
+	UINT metallicIndex = 0;
+	UINT roughnessIndex = 0;
+	UINT emissiveIndex = 0;
 	float dummy[7];
 
 	XMFLOAT4X4 dummy1;
@@ -80,10 +81,10 @@ __declspec(align(256)) struct TextureIndexConstants {
 };
 
 __declspec(align(256)) struct CubemapIndexConstants {
-	UINT cubemapEnvIndex;
-	UINT cubemapDiffuseIndex;
-	UINT cubemapSpecularIndex;
-	UINT brdfIndex;
+	UINT cubemapEnvIndex = 0;
+	UINT cubemapDiffuseIndex = 0;
+	UINT cubemapSpecularIndex = 0;
+	UINT brdfIndex = 0;
 	float dummy[12];
 
 	XMFLOAT4X4 dummy1;
@@ -94,15 +95,15 @@ __declspec(align(256)) struct CubemapIndexConstants {
 };
 
 __declspec(align(256)) struct SamplingConstants {
-	float dx;
-	float dy;
+	float dx = 0.0f;
+	float dy = 0.0f;
 	float strength = 0.0f;
 	float exposure = 1.0f;
 	float gamma = 2.2f;
 
-	UINT index;
-	UINT hightIndex;
-	UINT lowIndex;
+	UINT index = 0;
+	UINT hightIndex = 0;
+	UINT lowIndex = 0;
 	UINT d[8];
 
 	XMFLOAT4X4 dummy1;

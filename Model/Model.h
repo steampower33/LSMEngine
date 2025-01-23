@@ -32,19 +32,18 @@ public:
 
 	void Render(
 		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12DescriptorHeap>& textureHeap,
-		GuiState& guiState);
+		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
 	void RenderSkybox(
 		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12DescriptorHeap>& textureHeap,
-		GuiState& guiState);
+		ComPtr<ID3D12GraphicsCommandList>& commandList);
+
 	void RenderNormal(
 		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
-	void Update(XMVECTOR& q, XMVECTOR& dragTranslation);
+	void Update(XMFLOAT3& pos);
+	void UpdateQuaternionAndTranslation(
+		XMVECTOR& q, XMVECTOR& dragTranslation);
 	void UpdateState();
 
 	void OnlyCallConstsMemcpy();

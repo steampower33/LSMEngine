@@ -20,9 +20,9 @@ struct Mesh {
 	D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 	UINT indexBufferCount = 0;
 
-	ComPtr<ID3D12Resource> constsBuffer;
-	ComPtr<ID3D12Resource> constsUploadHeap;
-	TextureIndexConstants constsBufferData = {};
-	UINT8* constsBufferDataBegin = nullptr;
+	ComPtr<ID3D12Resource> textureIndexConstsBuffer;
+	ComPtr<ID3D12Resource> textureIndexConstsUploadHeap;
+	TextureIndexConstants textureIndexConstsBufferData = {};
+	UINT8* textureIndexConstsBufferDataBegin = nullptr;
 
 };

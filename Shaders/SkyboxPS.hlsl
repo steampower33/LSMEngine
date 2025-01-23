@@ -7,5 +7,5 @@ static const uint textureSizeOffset = 50;
 
 float4 main(PSInput input) : SV_TARGET
 {
-    return skyboxTexture[cubemapEnvIndex - textureSizeOffset].Sample(wrapSampler, input.posWorld);
+    return skyboxTexture[cubemapEnvIndex - textureSizeOffset + choiceEnvMap].SampleLevel(wrapSampler, input.posWorld, envLodBias) * strengthIBL;
 }

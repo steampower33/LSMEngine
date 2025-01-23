@@ -4,13 +4,6 @@
 #define NUM_POINT_LIGHTS 1
 #define NUM_SPOT_LIGHTS 1
 
-struct Material
-{
-    float3 albedo;
-    float metallic;
-    float roughness;
-};
-
 // Α¶Έν
 struct Light
 {
@@ -33,7 +26,10 @@ cbuffer GlobalConstants : register(b0)
     
     Light light[MAX_LIGHTS];
     float3 eyeWorld;
-    float d03[13];
+    float strengthIBL;
+    int choiceEnvMap;
+    float envLodBias;
+    float d03[10];
 }
 
 cbuffer MeshConstants : register(b1)
@@ -42,7 +38,10 @@ cbuffer MeshConstants : register(b1)
     
     float4x4 worldIT;
     
-    Material material;
+    float3 albedoFactor;
+    float metallicFactor;
+    float roughnessFactor;
+    float3 emissionFactor;
     float heightScale;
     uint useAlbedoMap;
     uint useNormalMap;
@@ -51,10 +50,11 @@ cbuffer MeshConstants : register(b1)
     uint useMetallicMap;
     uint useRoughnessMap;
     uint useEmissiveMap;
-    uint invertNormalMapY;
-    float d10[2];
     
-    float4x4 d11;
+    uint invertNormalMapY;
+    float meshLodBias;
+    float d10[2];
+    float4x3 d11;
 }
 
 cbuffer TextureIndexConstants : register(b2)

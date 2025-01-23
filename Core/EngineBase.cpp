@@ -7,7 +7,7 @@ class WinApp;
 HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
-	m_width(1280), m_height(800),
+	m_width(1920), m_height(1200),
 	m_mousePosX(m_width / 2),
 	m_mousePosY(m_height / 2),
 	m_aspectRatio(m_width / m_height)
