@@ -32,6 +32,7 @@ class Camera
 {
 public:
 	Camera(float aspectRatio);
+	XMFLOAT3 GetEyePos();
 	XMMATRIX GetViewMatrix();
 	XMMATRIX GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
 

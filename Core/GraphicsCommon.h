@@ -26,6 +26,7 @@ namespace Graphics
 
 	extern ComPtr<IDxcBlob> basicVS;
 	extern ComPtr<IDxcBlob> basicPS;
+	extern ComPtr<IDxcBlob> simplePS;
 
 	extern ComPtr<IDxcBlob> normalVS;
 	extern ComPtr<IDxcBlob> normalGS;
@@ -45,14 +46,25 @@ namespace Graphics
 
 	extern D3D12_RASTERIZER_DESC solidRS;
 	extern D3D12_RASTERIZER_DESC wireRS;
+	extern D3D12_RASTERIZER_DESC solidCCWRS;
+	extern D3D12_RASTERIZER_DESC wireCCWRS;
+	extern D3D12_RASTERIZER_DESC postProcessingRS;
 
 	extern D3D12_BLEND_DESC disabledBlend;
+	extern D3D12_BLEND_DESC mirrorBlend;
 
-	extern D3D12_DEPTH_STENCIL_DESC disabledDS;
-	extern D3D12_DEPTH_STENCIL_DESC readWriteDS;
+	extern D3D12_DEPTH_STENCIL_DESC basicDS;
+	extern D3D12_DEPTH_STENCIL_DESC maskDS;
+	extern D3D12_DEPTH_STENCIL_DESC drawMaskedDS;
 
 	extern ComPtr<ID3D12PipelineState> basicSolidPSO;
 	extern ComPtr<ID3D12PipelineState> basicWirePSO;
+	extern ComPtr<ID3D12PipelineState> stencilMaskPSO;
+	extern ComPtr<ID3D12PipelineState> reflectSolidPSO;
+	extern ComPtr<ID3D12PipelineState> reflectWirePSO;
+	extern ComPtr<ID3D12PipelineState> mirrorBlendSolidPSO;
+	extern ComPtr<ID3D12PipelineState> mirrorBlendWirePSO;
+
 	extern ComPtr<ID3D12PipelineState> normalPSO;
 	extern ComPtr<ID3D12PipelineState> skyboxPSO;
 	extern ComPtr<ID3D12PipelineState> samplingPSO;

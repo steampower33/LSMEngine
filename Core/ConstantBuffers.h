@@ -11,8 +11,8 @@ using namespace DirectX;
 struct Material
 {
 	XMFLOAT3 albedo = { 1.0f, 1.0f, 1.0f };
-	float metallic = 0.0f;
-	float roughness = 0.0f;
+	float metallic = 1.0f;
+	float roughness = 1.0f;
 };
 
 // Α¶Έν
@@ -37,7 +37,7 @@ __declspec(align(512)) struct GlobalConstants
 
 	Light light[MAX_LIGHTS];
 	XMFLOAT3 eyeWorld;
-	float d3[3];
+	float d3[13];
 };
 
 __declspec(align(256)) struct MeshConstants {

@@ -218,6 +218,13 @@ MeshData GeometryGenerator::MakeSphere(const float radius,
 
 			v.texcoord = { float(i) / numSlices * texScale.x, 1.0f - float(j) / numStacks * texScale.y };
 
+			XMVECTOR biTangent{ 0.0f, 1.0f, 0.0f };
+
+			XMVECTOR normalOrth = position - XMVectorMultiply(XMVector3Dot(biTangent, position), position);
+			normalOrth = XMVector3Normalize(normalOrth);
+
+			XMStoreFloat3(&v.tangentModel, XMVector3Normalize(XMVector3Cross(biTangent, normalOrth)));
+
 			vertices.push_back(v);
 		}
 	}
@@ -238,8 +245,6 @@ MeshData GeometryGenerator::MakeSphere(const float radius,
 			indices.push_back(offset + i + 1);
 		}
 	}
-
-	CalculateTangents(meshData);
 
 	return meshData;
 }

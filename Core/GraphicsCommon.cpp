@@ -10,6 +10,7 @@ namespace Graphics
 
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
+	ComPtr<IDxcBlob> simplePS;
 
 	ComPtr<IDxcBlob> normalVS;
 	ComPtr<IDxcBlob> normalGS;
@@ -29,14 +30,25 @@ namespace Graphics
 
 	D3D12_RASTERIZER_DESC solidRS;
 	D3D12_RASTERIZER_DESC wireRS;
+	D3D12_RASTERIZER_DESC solidCCWRS;
+	D3D12_RASTERIZER_DESC wireCCWRS;
+	D3D12_RASTERIZER_DESC postProcessingRS;
 
 	D3D12_BLEND_DESC disabledBlend;
+	D3D12_BLEND_DESC mirrorBlend;
 
-	D3D12_DEPTH_STENCIL_DESC disabledDS;
-	D3D12_DEPTH_STENCIL_DESC readWriteDS;
+	D3D12_DEPTH_STENCIL_DESC basicDS;
+	D3D12_DEPTH_STENCIL_DESC maskDS;
+	D3D12_DEPTH_STENCIL_DESC drawMaskedDS;
 
 	ComPtr<ID3D12PipelineState> basicSolidPSO;
 	ComPtr<ID3D12PipelineState> basicWirePSO;
+	ComPtr<ID3D12PipelineState> stencilMaskPSO;
+	ComPtr<ID3D12PipelineState> reflectSolidPSO;
+	ComPtr<ID3D12PipelineState> reflectWirePSO;
+	ComPtr<ID3D12PipelineState> mirrorBlendSolidPSO;
+	ComPtr<ID3D12PipelineState> mirrorBlendWirePSO;
+
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> skyboxPSO;
 	ComPtr<ID3D12PipelineState> samplingPSO;
@@ -143,6 +155,8 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, basicVSFilename, L"vs_6_0", basicVS);
 	const wchar_t basicPSFilename[] = L"./Shaders/BasicPS.hlsl";
 	CreateShader(device, basicPSFilename, L"ps_6_0", basicPS);
+	const wchar_t simplePSFilename[] = L"./Shaders/SimplePS.hlsl";
+	CreateShader(device, simplePSFilename, L"ps_6_0", simplePS);
 
 	// Normal
 	const wchar_t normalVSFilename[] = L"./Shaders/NormalVS.hlsl";
@@ -180,59 +194,116 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 void Graphics::InitRasterizerStates()
 {
 	solidRS.FillMode = D3D12_FILL_MODE_SOLID;
-	solidRS.CullMode = D3D12_CULL_MODE_NONE;
+	solidRS.CullMode = D3D12_CULL_MODE_BACK;
 	solidRS.FrontCounterClockwise = FALSE;
 	solidRS.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
 	solidRS.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
 	solidRS.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
 	solidRS.DepthClipEnable = TRUE;
-	solidRS.MultisampleEnable = FALSE;
+	solidRS.MultisampleEnable = TRUE;
 	solidRS.AntialiasedLineEnable = FALSE;
 	solidRS.ForcedSampleCount = 0;
 	solidRS.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
 	wireRS = solidRS;
 	wireRS.FillMode = D3D12_FILL_MODE_WIREFRAME;
+
+	solidCCWRS = solidRS;
+	solidCCWRS.FrontCounterClockwise = TRUE;
+
+	postProcessingRS = solidRS;
+	postProcessingRS.DepthClipEnable = FALSE;
 }
 
 void Graphics::InitBlendStates()
 {
-	disabledBlend.AlphaToCoverageEnable = FALSE;  // 멀티샘플링 알파 사용 여부
-	disabledBlend.IndependentBlendEnable = FALSE; // 모든 RenderTarget이 동일한 설정 사용
+	{
+		disabledBlend.AlphaToCoverageEnable = FALSE;  // 멀티샘플링 알파 사용 여부
+		disabledBlend.IndependentBlendEnable = FALSE; // 모든 RenderTarget이 동일한 설정 사용
 
-	D3D12_RENDER_TARGET_BLEND_DESC disabledBlendDesc = {};
-	disabledBlendDesc.BlendEnable = FALSE; // 기본적으로 블렌딩 비활성화
-	disabledBlendDesc.LogicOpEnable = FALSE; // 논리 연산 비활성화
-	disabledBlendDesc.SrcBlend = D3D12_BLEND_ONE; // 소스 색상 그대로 사용
-	disabledBlendDesc.DestBlend = D3D12_BLEND_ZERO; // 대상 색상 무시
-	disabledBlendDesc.BlendOp = D3D12_BLEND_OP_ADD; // 소스 + 대상
-	disabledBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE; // 알파값 그대로
-	disabledBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO; // 대상 알파값 무시
-	disabledBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD; // 알파 합산
-	disabledBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA 모두 쓰기 활성화
+		D3D12_RENDER_TARGET_BLEND_DESC disabledBlendDesc = {};
+		disabledBlendDesc.BlendEnable = FALSE; // 기본적으로 블렌딩 비활성화
+		disabledBlendDesc.LogicOpEnable = FALSE; // 논리 연산 비활성화
+		disabledBlendDesc.SrcBlend = D3D12_BLEND_ONE; // 소스 색상 그대로 사용
+		disabledBlendDesc.DestBlend = D3D12_BLEND_ZERO; // 대상 색상 무시
+		disabledBlendDesc.BlendOp = D3D12_BLEND_OP_ADD; // 소스 + 대상
+		disabledBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE; // 알파값 그대로
+		disabledBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO; // 대상 알파값 무시
+		disabledBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD; // 알파 합산
+		disabledBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA 모두 쓰기 활성화
 
-	disabledBlend.RenderTarget[0] = disabledBlendDesc;
+		disabledBlend.RenderTarget[0] = disabledBlendDesc;
+	}
+
+	{
+		D3D12_BLEND_DESC mirrorBlend = {};
+		mirrorBlend.AlphaToCoverageEnable = FALSE;
+		mirrorBlend.IndependentBlendEnable = FALSE;
+
+		D3D12_RENDER_TARGET_BLEND_DESC mirrorBlendDesc = {};
+		mirrorBlendDesc.BlendEnable = TRUE;
+		mirrorBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		mirrorBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		mirrorBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+		mirrorBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		mirrorBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		mirrorBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		mirrorBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		// 소스 알파 값을 반사 강도로 설정
+		// 이는 픽셀 셰이더에서 설정된 알파 값을 사용해야 함
+		mirrorBlend.RenderTarget[0] = mirrorBlendDesc;
+	}
 }
 
 void Graphics::InitDepthStencilStates()
 {
+	{
+		basicDS.DepthEnable = TRUE;
+		basicDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		basicDS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		basicDS.StencilEnable = FALSE;
+		basicDS.StencilReadMask = 0xFF;
+		basicDS.StencilWriteMask = 0xFF;
 
-	disabledDS.DepthEnable = FALSE;
-	disabledDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	disabledDS.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	disabledDS.StencilEnable = FALSE;
-	disabledDS.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
-	disabledDS.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
-	disabledDS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	disabledDS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	disabledDS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	disabledDS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	disabledDS.BackFace = disabledDS.FrontFace;
+		// FrontFace 설정
+		basicDS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		basicDS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		basicDS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		basicDS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
-	readWriteDS = disabledDS;
-	readWriteDS.DepthEnable = TRUE;
-	readWriteDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	readWriteDS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		basicDS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		basicDS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		basicDS.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		basicDS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	}
+
+	{
+		maskDS = basicDS;
+		maskDS.DepthEnable = TRUE;
+		maskDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		maskDS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		maskDS.StencilEnable = TRUE;
+		maskDS.StencilReadMask = 0xFF;
+		maskDS.StencilWriteMask = 0xFF;
+
+		// FrontFace 설정
+		maskDS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		maskDS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		maskDS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		maskDS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	}
+
+	{
+		drawMaskedDS = maskDS;
+		drawMaskedDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		drawMaskedDS.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+		drawMaskedDS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		drawMaskedDS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		drawMaskedDS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		drawMaskedDS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+	}
 }
 
 void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
@@ -255,7 +326,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	basicSolidPSODesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
 	basicSolidPSODesc.RasterizerState = solidRS;
 	basicSolidPSODesc.BlendState = disabledBlend;
-	basicSolidPSODesc.DepthStencilState = readWriteDS;
+	basicSolidPSODesc.DepthStencilState = basicDS;
 	basicSolidPSODesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	basicSolidPSODesc.SampleDesc.Count = sampleCount;
 	basicSolidPSODesc.SampleDesc.Quality = 0;
@@ -268,6 +339,21 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicWirePSODesc = basicSolidPSODesc;
 	basicWirePSODesc.RasterizerState = wireRS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicWirePSODesc, IID_PPV_ARGS(&basicWirePSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC stencilMaskPSODesc = basicSolidPSODesc;
+	stencilMaskPSODesc.DepthStencilState = maskDS;
+	stencilMaskPSODesc.PS = { simplePS->GetBufferPointer(), simplePS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&stencilMaskPSODesc, IID_PPV_ARGS(&stencilMaskPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC reflectSolidPSODesc = basicSolidPSODesc;
+	reflectSolidPSODesc.RasterizerState = solidCCWRS;
+	reflectSolidPSODesc.DepthStencilState = drawMaskedDS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&reflectSolidPSODesc, IID_PPV_ARGS(&reflectSolidPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC mirrorBlendSolidPSODesc = basicSolidPSODesc;
+	mirrorBlendSolidPSODesc.BlendState = mirrorBlend;
+	mirrorBlendSolidPSODesc.DepthStencilState = drawMaskedDS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&mirrorBlendSolidPSODesc, IID_PPV_ARGS(&mirrorBlendSolidPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC normalPSODesc = basicSolidPSODesc;
 	normalPSODesc.VS = { normalVS->GetBufferPointer(), normalVS->GetBufferSize() };
@@ -284,6 +370,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC samplingPSODesc = basicSolidPSODesc;
 	samplingPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
 	samplingPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
+	samplingPSODesc.RasterizerState = postProcessingRS;
 	samplingPSODesc.SampleDesc.Count = 1;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&samplingPSODesc, IID_PPV_ARGS(&samplingPSO)));
 
@@ -295,10 +382,9 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	bloomUpPSODesc.PS = { bloomUpPS->GetBufferPointer(), bloomUpPS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&bloomUpPSODesc, IID_PPV_ARGS(&bloomUpPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = basicSolidPSODesc;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = samplingPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
 	combinePSODesc.PS = { combinePS->GetBufferPointer(), combinePS->GetBufferSize() };
-	combinePSODesc.SampleDesc.Count = 1;
 	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
 

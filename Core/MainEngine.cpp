@@ -7,18 +7,19 @@ void MainEngine::Initialize()
 	LoadPipeline();
 
 	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
+	CreateConstUploadBuffer(m_device, m_commandList, m_reflectGlobalConstsUploadHeap, m_reflectGlobalConstsBufferData, m_reflectGlobalConstsBufferDataBegin);
 	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
 
 	m_textureManager = make_shared<TextureManager>(m_device, m_commandList, m_textureHeap);
 
 	{
-		MeshData skybox = GeometryGenerator::MakeBox(40.0f);
+		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-		skybox.cubeEnvFilename = "./Assets/DaySky/DaySkyHDRIEnvHDR.dds";
-		skybox.cubeDiffuseFilename = "./Assets/DaySky/DaySkyHDRIDiffuseHDR.dds";
-		skybox.cubeSpecularFilename = "./Assets/DaySky/DaySkyHDRISpecularHDR.dds";
-		skybox.cubeBrdfFilename = "./Assets/DaySky/DaySkyHDRIBrdf.dds";
+		skybox.cubeEnvFilename = "./Assets/IBL/IBLEnvHDR.dds";
+		skybox.cubeDiffuseFilename = "./Assets/IBL/IBLDiffuseHDR.dds";
+		skybox.cubeSpecularFilename = "./Assets/IBL/IBLSpecularHDR.dds";
+		skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
 
 		m_skybox = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
@@ -32,24 +33,39 @@ void MainEngine::Initialize()
 			vector{ cursorSphere }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
-	//{
-	//	MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-	//	meshData.albedoFilename = "./Assets/chessboard-albedo.png";
-	//	m_board = make_shared<Model>(
-	//		m_device, m_commandList, m_commandQueue,
-	//		vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		meshData.albedoFilename = "./Assets/chessboard-albedo.png";
+		m_board = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 
-	//	float degrees = 90.0f;
-	//	float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
-	//	XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
-	//	XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
+		float degrees = 90.0f;
+		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
+		XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
+		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
 
-	//	XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
-	//	m_board->Update(quaternion, translation);
-	//	m_board->m_key = "board";
-	//	m_models.insert({ m_board->m_key, m_board });
-	//}
+		XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
+		m_board->Update(quaternion, translation);
+		m_board->m_key = "board";
+		m_models.insert({ m_board->m_key, m_board });
+	}
+
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare(2.0f);
+
+		m_mirror = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 2.0f, 0.0f));
+		m_mirror->m_key = "mirror";
+
+		XMVECTOR pos{ 0.0f, 0.0f, 2.0f, 0.0f };
+		XMVECTOR planeNormal{ 0.0f, 0.0f, -1.0f, 0.0f };
+
+		XMVECTOR plane = XMPlaneFromPointNormal(pos, planeNormal);
+		XMStoreFloat4(&m_mirrorPlane, plane);
+	}
 
 	{
 		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/DamagedHelmet/", "DamagedHelmet.gltf");
@@ -78,10 +94,9 @@ void MainEngine::Initialize()
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
-	/*
-	{
+	
+	/*{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
-
 		shared_ptr<Model> box = make_shared<Model>(
 			m_device, m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
@@ -115,11 +130,8 @@ void MainEngine::Update(float dt)
 	XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
 	XMMATRIX projTrans = XMMatrixTranspose(proj);
 	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
-
-	XMVECTOR det;
-	XMMATRIX invView = XMMatrixInverse(&det, view);
-	XMVECTOR eyeWorld = XMVector3TransformCoord(XMVECTOR{ 0.0f, 0.0f, 0.0f }, invView);
-	XMStoreFloat3(&m_globalConstsBufferData.eyeWorld, eyeWorld);
+	
+	m_globalConstsBufferData.eyeWorld = m_camera->GetEyePos();
 
 	UpdateMouseControl(view, proj);
 
@@ -133,6 +145,17 @@ void MainEngine::Update(float dt)
 
 	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
 	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
+
+	// Reflect
+	m_reflectGlobalConstsBufferData = m_globalConstsBufferData;
+
+	XMVECTOR plane = XMLoadFloat4(&m_mirrorPlane);
+	XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
+	XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
+	XMMATRIX reflectedViewMatrixTrans = XMMatrixTranspose(reflectedViewMatrix);
+	XMStoreFloat4x4(&m_reflectGlobalConstsBufferData.view, reflectedViewMatrixTrans);
+
+	memcpy(m_reflectGlobalConstsBufferDataBegin, &m_reflectGlobalConstsBufferData, sizeof(m_reflectGlobalConstsBufferData));
 
 	if (dirtyFlag.isPostProcessFlag)
 	{
@@ -166,7 +189,7 @@ void MainEngine::UpdateGUI()
 	{
 		ImGui::PushID(model.first.c_str());
 
-		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(model.first.c_str())) {
 			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.material.metallic, 0.0f, 1.0f) ||
 				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.material.roughness, 0.0f, 1.0f) ||
@@ -189,7 +212,7 @@ void MainEngine::UpdateGUI()
 		ImGui::PopID();
 	}
 
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
 		if (ImGui::SliderFloat("strength", &m_combineConsts.strength, 0.0f, 1.0f))
@@ -228,7 +251,7 @@ void MainEngine::Render()
 
 	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
 
@@ -237,14 +260,42 @@ void MainEngine::Render()
 	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
+	m_commandList->SetPipelineState(Graphics::skyboxPSO.Get());
 	m_skybox->RenderSkybox(m_device, m_commandList, m_textureHeap, guiState);
-	//m_board->Render(m_device, m_commandList, m_textureHeap, guiState);s
 
+	if (guiState.isWireframe)
+		m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
+	else
+		m_commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
 	for (const auto& model : m_models)
 		model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
 
+	if (guiState.isDrawNormals)
+	{
+		for (const auto& model : m_models)
+			model.second->RenderNormal(m_commandList);
+	}
+
 	if (m_selected && (m_leftButton || m_rightButton) )
 		m_cursorSphere->Render(m_device, m_commandList, m_textureHeap, guiState);
+
+	// Mirror
+	{
+		m_commandList->SetPipelineState(Graphics::stencilMaskPSO.Get());
+		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
+		m_mirror->Render(m_device, m_commandList, m_textureHeap, guiState);
+
+		m_commandList->SetPipelineState(Graphics::reflectSolidPSO.Get());
+		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
+		m_commandList->SetGraphicsRootConstantBufferView(0, m_reflectGlobalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		for (const auto& model : m_models)
+			model.second->Render(m_device, m_commandList, m_textureHeap, guiState);
+
+		m_commandList->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
+		m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
+		m_mirror->Render(m_device, m_commandList, m_textureHeap, guiState);
+	}
 
 	SetBarrier(m_commandList, m_floatBuffers[m_frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);

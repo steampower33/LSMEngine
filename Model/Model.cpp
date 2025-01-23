@@ -106,11 +106,6 @@ void Model::Render(
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	commandList->SetGraphicsRootDescriptorTable(4, textureHeap->GetGPUDescriptorHandleForHeapStart());
 
-	if (guiState.isWireframe)
-		commandList->SetPipelineState(Graphics::basicWirePSO.Get());
-	else
-		commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
-
 	for (const auto& mesh : m_meshes)
 	{
 		commandList->SetGraphicsRootConstantBufferView(2, mesh->constsBuffer.Get()->GetGPUVirtualAddress());
@@ -120,13 +115,6 @@ void Model::Render(
 
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);
-
-		if (guiState.isDrawNormals)
-		{
-			commandList->SetPipelineState(Graphics::normalPSO.Get());
-			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-			commandList->DrawInstanced(mesh->vertexBufferCount, 1, 0, 0);
-		}
 	}
 }
 
@@ -143,7 +131,22 @@ void Model::RenderSkybox(
 	commandList->IASetVertexBuffers(0, 1, &m_meshes[0]->vertexBufferView);
 	commandList->IASetIndexBuffer(&m_meshes[0]->indexBufferView);
 
-	commandList->SetPipelineState(Graphics::skyboxPSO.Get());
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->DrawIndexedInstanced(m_meshes[0]->indexBufferCount, 1, 0, 0, 0);
+}
+
+void Model::RenderNormal(
+	ComPtr<ID3D12GraphicsCommandList>& commandList)
+{
+	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+	commandList->SetPipelineState(Graphics::normalPSO.Get());
+	for (const auto& mesh : m_meshes)
+	{
+		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
+		commandList->IASetIndexBuffer(&mesh->indexBufferView);
+
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+		commandList->DrawInstanced(mesh->vertexBufferCount, 1, 0, 0);
+	}
 }

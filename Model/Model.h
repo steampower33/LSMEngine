@@ -41,6 +41,8 @@ public:
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12DescriptorHeap>& textureHeap,
 		GuiState& guiState);
+	void RenderNormal(
+		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
 	void Update(XMVECTOR& q, XMVECTOR& dragTranslation);
 	void UpdateState();

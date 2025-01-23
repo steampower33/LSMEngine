@@ -106,6 +106,11 @@ void Camera::UpdateMouse(float deltaX, float deltaY, float dt)
 	XMStoreFloat3(&m_rightDir, rightDir);
 }
 
+XMFLOAT3 Camera::GetEyePos()
+{
+	return m_pos;
+}
+
 XMMATRIX Camera::GetViewMatrix()
 {
 	XMVECTOR pos = XMLoadFloat3(&m_pos);                      // 카메라 위치
