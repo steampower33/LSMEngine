@@ -145,3 +145,19 @@ bool TextureManager::CheckDuplcateFilename(
 		return true;
 }
 
+void TextureManager::CreateSRV(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12Resource>& depthOnlyDSBuffer,
+	D3D12_SHADER_RESOURCE_VIEW_DESC& srvDesc,
+	GlobalConstants& globalConstsData)
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_heapStartCpu);
+	handle.Offset(m_textureCnt * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	globalConstsData.depthOnlyIndex = m_textureCnt++;
+
+	device->CreateShaderResourceView(
+		depthOnlyDSBuffer.Get(),
+		&srvDesc,
+		handle
+	);
+}

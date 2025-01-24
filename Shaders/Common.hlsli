@@ -21,7 +21,7 @@ cbuffer GlobalConstants : register(b0)
 {
     float4x4 view;
     float4x4 proj;
-    float4x4 d01;
+    float4x4 invProj;
     float4x4 d02;
     
     Light light[MAX_LIGHTS];
@@ -29,7 +29,9 @@ cbuffer GlobalConstants : register(b0)
     float strengthIBL;
     int choiceEnvMap;
     float envLodBias;
-    float d03[10];
+    uint depthOnlyIndex;
+    float depthScale;
+    float d03[8];
 }
 
 cbuffer MeshConstants : register(b1)

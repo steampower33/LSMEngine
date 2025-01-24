@@ -6,12 +6,6 @@ void MainEngine::Initialize()
 {
 	LoadPipeline();
 
-	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
-	CreateConstUploadBuffer(m_device, m_commandList, m_reflectGlobalConstsUploadHeap, m_reflectGlobalConstsBufferData, m_reflectGlobalConstsBufferDataBegin);
-	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
-
-	m_textureManager = make_shared<TextureManager>(m_device, m_commandList, m_textureHeap);
-
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
@@ -96,7 +90,7 @@ void MainEngine::Initialize()
 
 	{
 		float radius = 1.0f;
-		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, {2.0f, 2.0f});
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
 		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";
 		meshData.normalFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_normal-dx.png";
 		meshData.heightFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_height.png";
@@ -119,6 +113,14 @@ void MainEngine::Initialize()
 		box->m_key = "box";
 		m_models.insert({ box->m_key, box });
 	}*/
+
+	// 후처리용 화면 사각형
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare();
+		m_screenSquare = make_shared<Model>(
+			m_device, m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
 
 	for (int i = 0; i < FrameCount; i++)
 		m_postProcess[i] = make_shared<PostProcess>(
@@ -151,7 +153,11 @@ void MainEngine::Update(float dt)
 		XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_aspectRatio, 0.1f, 1000.0f);
 		XMMATRIX projTrans = XMMatrixTranspose(proj);
 		XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
-	
+
+		XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
+		XMMATRIX invProjTrans = XMMatrixTranspose(invProj);
+		XMStoreFloat4x4(&m_globalConstsBufferData.invProj, invProjTrans);
+
 		m_globalConstsBufferData.eyeWorld = m_camera->GetEyePos();
 
 		UpdateMouseControl(view, proj);
@@ -225,6 +231,10 @@ void MainEngine::UpdateGUI()
 		ImGui::TreePop();
 	}
 
+	if (ImGui::TreeNode("Post Effects"))
+	{
+		ImGui::SliderFloat("Depth Scale", &m_globalConstsBufferData.depthScale, 0.0f, 1.0f);
+	}
 	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
@@ -243,7 +253,7 @@ void MainEngine::UpdateGUI()
 		}
 		ImGui::TreePop();
 	}
-	
+
 	if (ImGui::TreeNode("Mirror"))
 	{
 		ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
@@ -304,11 +314,37 @@ void MainEngine::UpdateGUI()
 
 void MainEngine::Render()
 {
-	ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
+	{
+		ThrowIfFailed(m_commandAllocator[m_frameIndex]->Reset());
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), nullptr));
 
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+		m_commandList->RSSetViewports(1, &m_viewport);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+		m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootDescriptorTable(5, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+	}
+
+	// DepthOnlyPass
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+		m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+		if (guiState.isWireframe)
+			m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
+		else
+			m_commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
+		for (const auto& model : m_models)
+			model.second->Render(m_device, m_commandList);
+		m_mirror->Render(m_device, m_commandList);
+	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
@@ -317,14 +353,6 @@ void MainEngine::Render()
 	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
-
-	ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
-	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	m_commandList->SetGraphicsRootConstantBufferView(0, m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	m_commandList->SetGraphicsRootConstantBufferView(3, m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	m_commandList->SetGraphicsRootDescriptorTable(5, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 
 	{
 		if (guiState.isWireframe)
@@ -344,7 +372,7 @@ void MainEngine::Render()
 
 		m_lightSphere->Render(m_device, m_commandList);
 
-		if (m_selected && (m_leftButton || m_rightButton) )
+		if (m_selected && (m_leftButton || m_rightButton))
 			m_cursorSphere->Render(m_device, m_commandList);
 
 		if (guiState.isDrawNormals)
@@ -405,8 +433,10 @@ void MainEngine::Render()
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// PostProcess
-	m_postProcess[m_frameIndex]->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
-		m_rtvHeap, m_resolvedSRVHeap, m_dsvHeap, m_frameIndex);
+	{
+		m_postProcess[m_frameIndex]->Render(m_device, m_commandList, m_renderTargets[m_frameIndex],
+			m_rtvHeap, m_resolvedSRVHeap, m_dsvHeap, m_frameIndex);
+	}
 
 	SetBarrier(m_commandList, m_resolvedBuffers[m_frameIndex],
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);

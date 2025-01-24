@@ -44,6 +44,8 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> combineVS;
 	extern ComPtr<IDxcBlob> combinePS;
 
+	extern ComPtr<IDxcBlob> postEffectsPS;
+
 	extern D3D12_RASTERIZER_DESC solidRS;
 	extern D3D12_RASTERIZER_DESC wireRS;
 	extern D3D12_RASTERIZER_DESC solidCCWRS;
@@ -74,6 +76,7 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> bloomDownPSO;
 	extern ComPtr<ID3D12PipelineState> bloomUpPSO;
 	extern ComPtr<ID3D12PipelineState> combinePSO;
+	extern ComPtr<ID3D12PipelineState> depthOnlyPSO;
 
 	extern UINT bloomLevels;
 	extern UINT textureSize;

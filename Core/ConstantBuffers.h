@@ -25,7 +25,7 @@ __declspec(align(512)) struct GlobalConstants
 {
 	XMFLOAT4X4 view;
 	XMFLOAT4X4 proj;
-	XMFLOAT4X4 d1;
+	XMFLOAT4X4 invProj;
 	XMFLOAT4X4 d2;
 
 	Light light[MAX_LIGHTS];
@@ -33,7 +33,9 @@ __declspec(align(512)) struct GlobalConstants
 	float strengthIBL = 1.0f;
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
-	float d03[10];
+	UINT depthOnlyIndex = 0;
+	float depthScale = 0.0f;
+	float d03[8];
 };
 
 __declspec(align(256)) struct MeshConstants {

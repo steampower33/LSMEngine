@@ -4,7 +4,6 @@
 
 #include "Model.h"
 #include "GeometryGenerator.h"
-#include "TextureManager.h"
 #include "PostProcess.h"
 #include "Ray.h"
 #include <DirectXCollision.h>
@@ -21,18 +20,6 @@ public:
 	virtual void UpdateGUI() override;
 
 private:
-	// Constants
-	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
-	GlobalConstants m_globalConstsBufferData = {};
-	UINT8* m_globalConstsBufferDataBegin = nullptr;
-
-	ComPtr<ID3D12Resource> m_reflectGlobalConstsUploadHeap;
-	GlobalConstants m_reflectGlobalConstsBufferData = {};
-	UINT8* m_reflectGlobalConstsBufferDataBegin = nullptr;
-
-	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
-	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
-	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	GuiState guiState;
 	DirtyFlag dirtyFlag;
@@ -54,11 +41,11 @@ private:
 	shared_ptr<Model> m_cursorSphere;
 	shared_ptr<Model> m_lightSphere;
 
+	shared_ptr<Model> m_screenSquare;
+
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess[FrameCount];
 
-	// Texture
-	shared_ptr<TextureManager> m_textureManager;
 
 private:
 	void UpdateMouseControl(XMMATRIX& view, XMMATRIX& proj);

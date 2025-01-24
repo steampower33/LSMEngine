@@ -16,6 +16,7 @@
 #include "GraphicsCommon.h"
 #include "ConstantBuffers.h"
 #include "Helpers.h"
+#include "TextureManager.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -41,6 +42,9 @@ public:
 
 	shared_ptr<Camera> m_camera;
 
+	// Texture
+	shared_ptr<TextureManager> m_textureManager;
+
 	float m_mousePosX = 0;
 	float m_mousePosY = 0;
 	float m_mouseDeltaX = 0;
@@ -53,6 +57,19 @@ public:
 	bool m_rightButton = false;
 	bool m_selected = false;
 	bool m_dragStartFlag = false;
+
+	// Constants
+	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
+	GlobalConstants m_globalConstsBufferData = {};
+	UINT8* m_globalConstsBufferDataBegin = nullptr;
+
+	ComPtr<ID3D12Resource> m_reflectGlobalConstsUploadHeap;
+	GlobalConstants m_reflectGlobalConstsBufferData = {};
+	UINT8* m_reflectGlobalConstsBufferDataBegin = nullptr;
+
+	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
+	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
+	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
@@ -78,6 +95,12 @@ public:
 	ComPtr<ID3D12DescriptorHeap> m_floatSRVHeap;
 	ComPtr<ID3D12Resource> m_floatDSBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_floatDSVHeap;
+
+	ComPtr<ID3D12Resource> m_fogBuffer[FrameCount];
+	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_fogSRVHeap;
+	ComPtr<ID3D12Resource> m_depthOnlyDSBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_depthOnlyDSVHeap;
 
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;

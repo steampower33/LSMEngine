@@ -28,6 +28,8 @@ namespace Graphics
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
 
+	ComPtr<IDxcBlob> postEffectsPS;
+
 	D3D12_RASTERIZER_DESC solidRS;
 	D3D12_RASTERIZER_DESC wireRS;
 	D3D12_RASTERIZER_DESC solidCCWRS;
@@ -58,6 +60,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> bloomDownPSO;
 	ComPtr<ID3D12PipelineState> bloomUpPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
+	ComPtr<ID3D12PipelineState> depthOnlyPSO;
 
 	UINT bloomLevels;
 	UINT textureSize = 20;
@@ -192,6 +195,10 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, combineVSFilename, L"vs_6_0", combineVS);
 	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
 	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
+
+	// DepthOnly
+	const wchar_t postEffectsPSFilename[] = L"./Shaders/PostEffectsPS.hlsl";
+	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -415,6 +422,10 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	combinePSODesc.PS = { combinePS->GetBufferPointer(), combinePS->GetBufferSize() };
 	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = samplingPSODesc;
+	depthOnlyPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthOnlyPSODesc, IID_PPV_ARGS(&depthOnlyPSO)));
 
 }
 

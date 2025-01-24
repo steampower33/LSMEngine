@@ -12,7 +12,7 @@ class GeometryGenerator {
 public:
 	static vector<MeshData> ReadFromFile(string basePath, string filename);
 
-	static MeshData MakeSquare(const float scale);
+	static MeshData MakeSquare(const float scale = 1.0f);
 	static MeshData MakeBox(const float scale);
 	static MeshData MakeCylinder(
 		const float bottomRadius,

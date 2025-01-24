@@ -45,8 +45,13 @@ EngineBase::~EngineBase()
 void EngineBase::LoadPipeline()
 {
 	InitializeDX12CoreComponents();
-	InitializeDescriptorHeaps();
 	InitializeCommandResources();
+
+	CreateConstUploadBuffer(m_device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
+	CreateConstUploadBuffer(m_device, m_commandList, m_reflectGlobalConstsUploadHeap, m_reflectGlobalConstsBufferData, m_reflectGlobalConstsBufferDataBegin);
+	CreateConstUploadBuffer(m_device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
+
+	InitializeDescriptorHeaps();
 	Graphics::Initialize(m_device);
 }
 
@@ -135,6 +140,23 @@ void EngineBase::InitializeDX12CoreComponents()
 
 void EngineBase::InitializeDescriptorHeaps()
 {
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
+		textureHeapDesc.NumDescriptors = 60;
+		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
+
+		m_textureManager = make_shared<TextureManager>(m_device, m_commandList, m_textureHeap);
+
+		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
+		imguiHeapDesc.NumDescriptors = 4;
+		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
+		m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
+	}
+
 	// Deafult
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -342,20 +364,78 @@ void EngineBase::InitializeDescriptorHeaps()
 		m_device->CreateDepthStencilView(m_floatDSBuffer.Get(), &dsvDesc, m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
 	}
 
-
+	// Fog
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-		textureHeapDesc.NumDescriptors = 60;
-		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = FrameCount;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_fogRTVHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
-		imguiHeapDesc.NumDescriptors = 4;
-		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
-		m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+		srvHeapDesc.NumDescriptors = FrameCount;
+		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_fogSRVHeap)));
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_fogSRVHeap->GetCPUDescriptorHandleForHeapStart());
+
+		for (UINT i = 0; i < FrameCount; i++)
+		{
+			CreateBuffer(m_device, m_fogBuffer[i], static_cast<UINT>(m_width), static_cast<UINT>(m_height), i, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D,
+				D3D12_RESOURCE_STATE_RENDER_TARGET, m_fogRTVHeap, m_fogSRVHeap);
+		}
+	}
+
+	// PostEffects DepthOnly
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+		dsvHeapDesc.NumDescriptors = 1; // 필요 시 증가
+		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_depthOnlyDSVHeap)));
+
+		D3D12_RESOURCE_DESC depthStencilDesc = {};
+		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		depthStencilDesc.Width = static_cast<UINT>(m_width);
+		depthStencilDesc.Height = static_cast<UINT>(m_height);
+		depthStencilDesc.DepthOrArraySize = 1;
+		depthStencilDesc.MipLevels = 1;
+		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		depthStencilDesc.SampleDesc.Count = 1; // MSAA 끔
+		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+		D3D12_CLEAR_VALUE clearValue = {};
+		clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+		clearValue.DepthStencil.Depth = 1.0f;
+		clearValue.DepthStencil.Stencil = 0;
+
+		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+		ThrowIfFailed(m_device->CreateCommittedResource(
+			&defaultHeapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&depthStencilDesc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&clearValue,
+			IID_PPV_ARGS(&m_depthOnlyDSBuffer)
+		));
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+		m_device->CreateDepthStencilView(m_depthOnlyDSBuffer.Get(), &dsvDesc, m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+
+		// TextureManager에서 관리
+		m_textureManager->CreateSRV(m_device, m_depthOnlyDSBuffer, srvDesc, m_globalConstsBufferData);
 	}
 }
 
@@ -418,11 +498,6 @@ void EngineBase::LoadGUI()
 
 void EngineBase::WaitForPreviousFrame()
 {
-	// WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-	// This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-	// sample illustrates how to use fences for efficient resource usage and to
-	// maximize GPU utilization.
-
 	// Signal and increment the fence value.
 	const UINT64 fence = m_fenceValue[m_frameIndex];
 	ThrowIfFailed(m_commandQueue->Signal(m_fence[m_frameIndex].Get(), fence));
