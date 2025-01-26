@@ -22,6 +22,7 @@
     <ClCompile Include="Core\Camera.cpp" />
     <ClCompile Include="Core\DescriptorHeapAllocator.cpp" />
     <ClCompile Include="Core\EngineBase.cpp" />
+    <ClCompile Include="Core\FrameResource.cpp" />
     <ClCompile Include="Core\ImageFilter.cpp" />
     <ClCompile Include="Core\main.cpp" />
     <ClCompile Include="Core\MainEngine.cpp" />
@@ -47,6 +48,7 @@
     <ClInclude Include="Core\d3dx12.h" />
     <ClInclude Include="Core\DescriptorHeapAllocator.h" />
     <ClInclude Include="Core\EngineBase.h" />
+    <ClInclude Include="Core\FrameResource.h" />
     <ClInclude Include="Core\Helpers.h" />
     <ClInclude Include="Core\ImageFilter.h" />
     <ClInclude Include="Core\MainEngine.h" />

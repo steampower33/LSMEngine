@@ -2,16 +2,14 @@
 
 PostProcess::PostProcess(
 	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-	float width, float height, UINT frameIndex)
+	float width, float height)
 {
 	m_bloomLevels = Graphics::bloomLevels;
-	m_frameIndex = frameIndex;
 	Initialize(device, commandList, width, height);
 }
 
 PostProcess::~PostProcess()
 {
-
 }
 
 void PostProcess::Initialize(
@@ -34,7 +32,7 @@ void PostProcess::Initialize(
 	m_buffer.resize(m_bufferSize);
 
 	// CopyFilter
-	m_copyFilter = make_shared<ImageFilter>(device, commandList, width, height, m_frameIndex);
+	m_copyFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
 	CreateTex2D(device, m_buffer[0], static_cast<UINT>(width), static_cast<UINT>(height), 0, m_rtvHeap, m_srvHeap);
 
 	// BloomDownFilter
@@ -95,7 +93,7 @@ void PostProcess::Render(
 		commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
 
 		commandList->SetPipelineState(Graphics::samplingPSO.Get());
-		m_copyFilter->Render(commandList, m_rtvHeap, 0, m_dsvHeap, resolvedSRV, m_mesh->indexBufferCount);
+		m_copyFilter->Render(commandList, m_rtvHeap, 0, m_dsvHeap, m_mesh->indexBufferCount);
 
 		SetBarrier(commandList, m_buffer[0],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -110,7 +108,7 @@ void PostProcess::Render(
 	commandList->SetPipelineState(Graphics::bloomDownPSO.Get());
 	for (UINT i = 1; i < m_bloomLevels + 1; i++)
 	{
-		m_bloomDownFilters[i - 1]->Render(commandList, m_rtvHeap, rtvSize * i, m_dsvHeap, m_srvHeap, m_mesh->indexBufferCount);
+		m_bloomDownFilters[i - 1]->Render(commandList, m_rtvHeap, rtvSize * i, m_dsvHeap, m_mesh->indexBufferCount);
 
 		SetBarrier(commandList, m_buffer[i],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -123,14 +121,14 @@ void PostProcess::Render(
 		SetBarrier(commandList, m_buffer[i],
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-		m_bloomUpFilters[m_bloomLevels - (i + 1)]->Render(commandList, m_rtvHeap, rtvSize * i, m_dsvHeap, m_srvHeap, m_mesh->indexBufferCount);
+		m_bloomUpFilters[m_bloomLevels - (i + 1)]->Render(commandList, m_rtvHeap, rtvSize * i, m_dsvHeap, m_mesh->indexBufferCount);
 
 		SetBarrier(commandList, m_buffer[i],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 
 	commandList->SetPipelineState(Graphics::combinePSO.Get());
-	m_combineFilter->Render(commandList, rtv, rtvSize * m_frameIndex, dsv, m_srvHeap, m_mesh->indexBufferCount);
+	m_combineFilter->Render(commandList, rtv, rtvSize * frameIndex, dsv, m_mesh->indexBufferCount);
 
 	for (UINT i = 0; i < m_bloomLevels + 1; i++)
 	{

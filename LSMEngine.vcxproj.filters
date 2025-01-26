@@ -81,6 +81,9 @@
     <ClCompile Include="Core\Ray.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\FrameResource.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -162,6 +165,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\Ray.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\FrameResource.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

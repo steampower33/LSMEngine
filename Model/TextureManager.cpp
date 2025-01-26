@@ -2,14 +2,18 @@
 
 TextureManager::TextureManager(
 	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12DescriptorHeap>& textureHeap)
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(textureHeap->GetCPUDescriptorHandleForHeapStart());
 
 	m_heapStartCpu = heapStartCpu;
+}
 
-	CreateEmptyTexture(device, commandList, heapStartCpu, m_textures, m_texturesUploadHeap, m_textureCnt);
+void TextureManager::Initialize(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList)
+{
+	CreateEmptyTexture(device, commandList, m_heapStartCpu, m_textures, m_texturesUploadHeap, m_textureCnt);
 }
 
 void TextureManager::CreateMipMapTexture(

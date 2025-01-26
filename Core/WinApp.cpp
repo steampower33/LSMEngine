@@ -51,6 +51,7 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 		}
 		else
 		{
+			pEngine->m_pCurrFR = pEngine->m_frameResources[pEngine->m_frameIndex].get();
 			pEngine->UpdateGUI();
 
 			float deltaTime = ImGui::GetIO().DeltaTime;
@@ -58,6 +59,8 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 			pEngine->Render();
 		}
 	}
+
+	pEngine->Destroy();
 
 	return static_cast<int>(msg.wParam);
 }
@@ -138,6 +141,7 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		if (wParam == VK_ESCAPE)
 		{
 			PostQuitMessage(0);
+			return 11;
 		}
 		pEngine->m_camera->KeyUp(wParam);
 		break;
@@ -147,8 +151,6 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	}
 	case WM_DESTROY:
 		PostQuitMessage(0);
-		return 0;
-
 		return 0;
 	}
 

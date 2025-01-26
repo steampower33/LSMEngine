@@ -17,6 +17,7 @@
 #include "ConstantBuffers.h"
 #include "Helpers.h"
 #include "TextureManager.h"
+#include "FrameResource.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -31,45 +32,16 @@ public:
 	virtual void Update(float dt) = 0;
 	virtual void Render() = 0;
 	virtual void UpdateGUI() = 0;
+	virtual void Destroy() = 0;
 
-	static HeapAllocator m_srvAlloc;
 
-	float m_width;
-	float m_height;
-
-	float m_aspectRatio;
-	static const UINT FrameCount = 3;
-
-	shared_ptr<Camera> m_camera;
-
-	// Texture
-	shared_ptr<TextureManager> m_textureManager;
-
-	float m_mousePosX = 0;
-	float m_mousePosY = 0;
-	float m_mouseDeltaX = 0;
-	float m_mouseDeltaY = 0;
-	float m_ndcX = 0;
-	float m_ndcY = 0;
-
-	bool m_isMouseMove = false;
-	bool m_leftButton = false;
-	bool m_rightButton = false;
-	bool m_selected = false;
-	bool m_dragStartFlag = false;
+	shared_ptr<FrameResource> m_frameResources[FrameCount];
+	FrameResource* m_pCurrFR;
 
 	// Constants
-	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
 	GlobalConstants m_globalConstsBufferData = {};
-	UINT8* m_globalConstsBufferDataBegin = nullptr;
-
-	ComPtr<ID3D12Resource> m_reflectGlobalConstsUploadHeap;
 	GlobalConstants m_reflectGlobalConstsBufferData = {};
-	UINT8* m_reflectGlobalConstsBufferDataBegin = nullptr;
-
-	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
 	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
-	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
@@ -84,46 +56,53 @@ public:
 	ComPtr<ID3D12Resource> m_dsBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 
-	ComPtr<ID3D12Resource> m_resolvedBuffers[FrameCount];
-	ComPtr<ID3D12DescriptorHeap> m_resolvedRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_resolvedSRVHeap;
-	ComPtr<ID3D12Resource> m_resolvedDSBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_resolvedDSVHeap;
-
-	ComPtr<ID3D12Resource> m_floatBuffers[FrameCount];
-	ComPtr<ID3D12DescriptorHeap> m_floatRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_floatSRVHeap;
-	ComPtr<ID3D12Resource> m_floatDSBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_floatDSVHeap;
-
-	ComPtr<ID3D12Resource> m_fogBuffer[FrameCount];
-	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_fogSRVHeap;
-	ComPtr<ID3D12Resource> m_depthOnlyDSBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_depthOnlyDSVHeap;
-
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
-	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
-	ComPtr<ID3D12GraphicsCommandList> m_commandList;
+
+	shared_ptr<Camera> m_camera;
+	shared_ptr<TextureManager> m_textureManager;
+
+	static HeapAllocator m_srvAlloc;
 
 	UINT m_rtvDescriptorSize = 0;
 	UINT m_cbvDescriptorSize = 0;
+
+	float m_width;
+	float m_height;
+
+	float m_aspectRatio;
+	UINT m_frameIndex = 0;
+
+	float m_mousePosX = 0;
+	float m_mousePosY = 0;
+	float m_mouseDeltaX = 0;
+	float m_mouseDeltaY = 0;
+	float m_ndcX = 0;
+	float m_ndcY = 0;
+
+	bool m_isMouseMove = false;
+	bool m_leftButton = false;
+	bool m_rightButton = false;
+	bool m_selected = false;
+	bool m_dragStartFlag = false;
 
 
 protected:
 	void LoadPipeline();
 	void InitializeDX12CoreComponents();
+	void InitializeFence();
 	void InitializeDescriptorHeaps();
-	void InitializeCommandResources();
 	void LoadGUI();
+
+	void WaitForGpu();
+	void MoveToNextFrame();
 	void WaitForPreviousFrame();
 
 	// Synchronization objects.
-	UINT m_frameIndex = 0;
 	HANDLE m_fenceEvent = nullptr;
-	ComPtr<ID3D12Fence> m_fence[FrameCount] = {};
-	UINT64 m_fenceValue[FrameCount] = {};
+	ComPtr<ID3D12Fence> m_fence;
+
+	bool multiFrame = true;
 
 	// Get Adapter
 	void GetHardwareAdapter(

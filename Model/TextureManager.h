@@ -21,9 +21,12 @@ class TextureManager
 public:
 	TextureManager(
 		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12DescriptorHeap>& textureHeap);
 	~TextureManager() {}
+
+	void Initialize(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
 	void LoadTextures(
 		ComPtr<ID3D12Device>& device,

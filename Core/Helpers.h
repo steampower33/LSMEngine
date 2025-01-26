@@ -25,6 +25,8 @@
 
 #include "DirectXTexEXR.h"
 
+static const UINT FrameCount = 3;
+
 using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -38,7 +40,7 @@ struct GuiState {
 };
 
 struct DirtyFlag {
-	bool isPostProcessFlag = false;
+	bool postProcessFlag = false;
 };
 
 inline string HrToString(HRESULT hr)

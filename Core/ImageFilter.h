@@ -22,7 +22,6 @@ public:
 		ComPtr<ID3D12DescriptorHeap>& rtvHeap,
 		UINT rtvOffset,
 		ComPtr<ID3D12DescriptorHeap>& dsvHeap,
-		ComPtr<ID3D12DescriptorHeap>& srvHeap,
 		UINT indexBufferCount);
 
 private:

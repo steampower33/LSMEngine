@@ -49,6 +49,8 @@ public:
 	bool m_useFirstPersonView;
 
 	XMFLOAT3 m_pos;
+	float m_aspectRatio;
+
 private:
 
 	XMFLOAT3 m_lookDir;
@@ -59,7 +61,6 @@ private:
 	float m_cursorNdcX;
 	float m_cursorNdcY;
 
-	float m_aspectRatio;
 
 	// roll, pitch, yaw
 	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
