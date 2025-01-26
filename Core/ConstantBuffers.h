@@ -33,9 +33,13 @@ __declspec(align(512)) struct GlobalConstants
 	float strengthIBL = 1.0f;
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
-	UINT depthOnlyIndex = 0;
-	float depthScale = 0.0f;
-	float d03[8];
+	int mode = 1;
+	float depthScale = 0.1f;
+	float fogStrength = 0.0f;
+	UINT depthOnlySRVIndex = 0;
+	UINT resolvedSRVIndex = 0;
+	UINT fogSRVIndex = 0;
+	float d03[4];
 };
 
 __declspec(align(256)) struct MeshConstants {

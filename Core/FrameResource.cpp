@@ -7,6 +7,9 @@ FrameResource::FrameResource(
 	m_height = height;
 	m_frameIndex = frameIndex;
 
+	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	cbvSrvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 	ThrowIfFailed(m_commandList->Close());
@@ -71,6 +74,14 @@ void FrameResource::Update(
 void FrameResource::InitializeDescriptorHeaps(
 	ComPtr<ID3D12Device>& device)
 {
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+		srvHeapDesc.NumDescriptors = 3;
+		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+	}
+
 	// Resolved
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -79,53 +90,11 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_resolvedRTVHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 1;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_resolvedSRVHeap)));
-
 		UINT sampleCount = 1;
-		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, 0, sampleCount, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RESOLVE_DEST, m_resolvedRTVHeap, m_resolvedSRVHeap);
-
-		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-		dsvHeapDesc.NumDescriptors = 1;
-		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_resolvedDSVHeap)));
-
-		D3D12_RESOURCE_DESC depthStencilDesc = {};
-		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		depthStencilDesc.Width = static_cast<UINT>(m_width);; // 화면 너비
-		depthStencilDesc.Height = static_cast<UINT>(m_height); // 화면 높이
-		depthStencilDesc.DepthOrArraySize = 1;
-		depthStencilDesc.MipLevels = 1;
-		depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		depthStencilDesc.SampleDesc.Count = sampleCount;
-		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-		D3D12_CLEAR_VALUE clearValue = {};
-		clearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		clearValue.DepthStencil.Depth = 1.0f;
-		clearValue.DepthStencil.Stencil = 0;
-
-		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&defaultHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&depthStencilDesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clearValue,
-			IID_PPV_ARGS(&m_floatDSBuffer)
-		));
-
-		// DSV 핸들 생성
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-		device->CreateDepthStencilView(m_resolvedDSBuffer.Get(), &dsvDesc, m_resolvedDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, sampleCount, 
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RESOLVE_DEST, 
+			m_resolvedRTVHeap, 0, m_srvHeap, srvCnt);
+		m_globalConstsBufferData.resolvedSRVIndex = srvCnt++;
 	}
 
 	// MSAA
@@ -136,15 +105,10 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_floatRTVHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 1;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_floatSRVHeap)));
-
 		UINT sampleCount = 4;
-		CreateBuffer(device, m_floatBuffers, static_cast<UINT>(m_width), static_cast<UINT>(m_height), 0, sampleCount, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2DMS,
-			D3D12_RESOURCE_STATE_RENDER_TARGET, m_floatRTVHeap, m_floatSRVHeap);
+		CreateBuffer(device, m_floatBuffers, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount, 
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2DMS, D3D12_RESOURCE_STATE_RENDER_TARGET, 
+			m_floatRTVHeap, 0, nullptr, 0);
 
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
 		dsvHeapDesc.NumDescriptors = 1;
@@ -194,17 +158,13 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_fogRTVHeap)));
 
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 1;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_fogSRVHeap)));
-
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_fogSRVHeap->GetCPUDescriptorHandleForHeapStart());
 
-		CreateBuffer(device, m_fogBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), 0, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D,
-			D3D12_RESOURCE_STATE_RENDER_TARGET, m_fogRTVHeap, m_fogSRVHeap);
+		UINT sampleCount = 1;
+		CreateBuffer(device, m_fogBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET, 
+			m_fogRTVHeap, 0, m_srvHeap, srvCnt);
+		m_globalConstsBufferData.fogSRVIndex = srvCnt++;
 	}
 
 	// PostEffects DepthOnly
@@ -247,13 +207,19 @@ void FrameResource::InitializeDescriptorHeaps(
 
 		device->CreateDepthStencilView(m_depthOnlyDSBuffer.Get(), &dsvDesc, m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), srvCnt * cbvSrvSize);
+		m_globalConstsBufferData.depthOnlySRVIndex = srvCnt++;
+
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
 
-		// TextureManager에서 관리
-		//m_textureManager->CreateSRV(device, m_depthOnlyDSBuffer, srvDesc, m_globalConstsBufferData);
+		device->CreateShaderResourceView(
+			m_depthOnlyDSBuffer.Get(),
+			&srvDesc,
+			srvHandle
+		);
 	}
 }

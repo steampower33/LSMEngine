@@ -2,21 +2,13 @@
 
 PostProcess::PostProcess(
 	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-	float width, float height)
+	float width, float height, UINT fogSRVIndex)
 {
 	m_bloomLevels = Graphics::bloomLevels;
-	Initialize(device, commandList, width, height);
-}
 
-PostProcess::~PostProcess()
-{
-}
+	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	srvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-void PostProcess::Initialize(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-	float width, float height
-)
-{
 	m_bufferSize = 1 + m_bloomLevels;
 
 	CreateDescriptors(device, width, height);
@@ -32,7 +24,7 @@ void PostProcess::Initialize(
 	m_buffer.resize(m_bufferSize);
 
 	// CopyFilter
-	m_copyFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
+	m_copyFilter = make_shared<ImageFilter>(device, commandList, width, height, fogSRVIndex);
 	CreateTex2D(device, m_buffer[0], static_cast<UINT>(width), static_cast<UINT>(height), 0, m_rtvHeap, m_srvHeap);
 
 	// BloomDownFilter
@@ -65,6 +57,10 @@ void PostProcess::Initialize(
 	m_combineFilter = make_shared<ImageFilter>(device, commandList, width, height, 0);
 }
 
+PostProcess::~PostProcess()
+{
+}
+
 void PostProcess::Update(SamplingConstants& m_combineConsts)
 {
 	m_copyFilter->Update(m_combineConsts);
@@ -77,7 +73,7 @@ void PostProcess::Render(
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& renderTarget,
 	ComPtr<ID3D12DescriptorHeap>& rtv,
-	ComPtr<ID3D12DescriptorHeap>& resolvedSRV,
+	ComPtr<ID3D12DescriptorHeap>& srv,
 	ComPtr<ID3D12DescriptorHeap>& dsv,
 	UINT frameIndex)
 {
@@ -86,10 +82,10 @@ void PostProcess::Render(
 	commandList->IASetIndexBuffer(&m_mesh->indexBufferView);
 
 	{
-		ID3D12DescriptorHeap* heaps[] = { resolvedSRV.Get() };
+		ID3D12DescriptorHeap* heaps[] = { srv.Get() };
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(resolvedSRV->GetGPUDescriptorHandleForHeapStart());
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart());
 		commandList->SetGraphicsRootDescriptorTable(6, srvHandle);
 
 		commandList->SetPipelineState(Graphics::samplingPSO.Get());
@@ -170,9 +166,6 @@ void PostProcess::CreateTex2D(
 		&clearValue,
 		IID_PPV_ARGS(&texture)
 	));
-
-	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	srvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvSize * index);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(srvHeap->GetCPUDescriptorHandleForHeapStart(), srvSize * index);

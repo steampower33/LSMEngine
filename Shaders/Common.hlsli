@@ -29,9 +29,13 @@ cbuffer GlobalConstants : register(b0)
     float strengthIBL;
     int choiceEnvMap;
     float envLodBias;
-    uint depthOnlyIndex;
+    int mode;
     float depthScale;
-    float d03[8];
+    float fogStrength;
+    uint depthOnlySRVIndex;
+    uint resolvedSRVIndex;
+    uint fogSRVIndex;
+    float d03[4];
 }
 
 cbuffer MeshConstants : register(b1)

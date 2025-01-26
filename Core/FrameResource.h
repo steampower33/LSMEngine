@@ -46,23 +46,21 @@ public:
 	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
 	// Buffers, DescriptorHeaps
-	ComPtr<ID3D12Resource> m_resolvedBuffers;
-	ComPtr<ID3D12DescriptorHeap> m_resolvedRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_resolvedSRVHeap;
-	ComPtr<ID3D12Resource> m_resolvedDSBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_resolvedDSVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	ComPtr<ID3D12Resource> m_floatBuffers;
 	ComPtr<ID3D12DescriptorHeap> m_floatRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_floatSRVHeap;
 	ComPtr<ID3D12Resource> m_floatDSBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_floatDSVHeap;
 
-	ComPtr<ID3D12Resource> m_fogBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
-	ComPtr<ID3D12DescriptorHeap> m_fogSRVHeap;
+	ComPtr<ID3D12Resource> m_resolvedBuffers;
+	ComPtr<ID3D12DescriptorHeap> m_resolvedRTVHeap;
+
 	ComPtr<ID3D12Resource> m_depthOnlyDSBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_depthOnlyDSVHeap;
+
+	ComPtr<ID3D12Resource> m_fogBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
 
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess;
@@ -73,4 +71,9 @@ private:
 
 	float m_width;
 	float m_height;
+
+	UINT srvCnt = 0;
+
+	UINT rtvSize;
+	UINT cbvSrvSize;
 };

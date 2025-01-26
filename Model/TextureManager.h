@@ -51,12 +51,6 @@ public:
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
-	void CreateSRV(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12Resource>& depthOnlyDSBuffer,
-		D3D12_SHADER_RESOURCE_VIEW_DESC& srvDesc,
-		GlobalConstants& globalConstsData);
-
 private:
 	vector<ComPtr<ID3D12Resource>> m_textures;
 	vector<ComPtr<ID3D12Resource>> m_texturesUploadHeap;

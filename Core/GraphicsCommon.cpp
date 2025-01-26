@@ -60,6 +60,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> bloomDownPSO;
 	ComPtr<ID3D12PipelineState> bloomUpPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
+	ComPtr<ID3D12PipelineState> depthBasicSolidPSO;
 	ComPtr<ID3D12PipelineState> depthOnlyPSO;
 
 	UINT bloomLevels;
@@ -85,13 +86,19 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
+	UINT textureSize = 50;
+	UINT cubeMapTextureSize = 10;
+	UINT fogMapSize = 1;
+
 	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[2];
-	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 50, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 50, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+		textureSize, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+		cubeMapTextureSize, textureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	bloomLevels = 3;
-	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges[1];
-	filterSrvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + bloomLevels, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges;
+	filterSrvRanges.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + bloomLevels, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
@@ -100,7 +107,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[4].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[5].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[6].InitAsDescriptorTable(1, filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[6].InitAsDescriptorTable(1, &filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// 叼胶农赋磐 赛 积己
 	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
@@ -273,7 +280,7 @@ void Graphics::InitBlendStates()
 }
 
 void Graphics::InitDepthStencilStates()
-{	
+{
 	{
 		basicDS.DepthEnable = TRUE;
 		basicDS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
@@ -365,7 +372,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	reflectSolidPSODesc.RasterizerState = solidCCWRS;
 	reflectSolidPSODesc.DepthStencilState = drawMaskedDS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&reflectSolidPSODesc, IID_PPV_ARGS(&reflectSolidPSO)));
-	
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC reflectWirePSODesc = basicSolidPSODesc;
 	reflectWirePSODesc.RasterizerState = wireCCWRS;
 	reflectWirePSODesc.DepthStencilState = drawMaskedDS;
@@ -423,10 +430,14 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthBasicSolidPSODesc = basicSolidPSODesc;
+	depthBasicSolidPSODesc.SampleDesc.Count = 1;
+	depthBasicSolidPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthBasicSolidPSODesc, IID_PPV_ARGS(&depthBasicSolidPSO)));
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = samplingPSODesc;
 	depthOnlyPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthOnlyPSODesc, IID_PPV_ARGS(&depthOnlyPSO)));
-
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)

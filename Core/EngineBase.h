@@ -56,13 +56,13 @@ public:
 	ComPtr<ID3D12Resource> m_dsBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 
+	static HeapAllocator m_srvAlloc;
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
-	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 
-	shared_ptr<Camera> m_camera;
+	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 	shared_ptr<TextureManager> m_textureManager;
 
-	static HeapAllocator m_srvAlloc;
+	shared_ptr<Camera> m_camera;
 
 	UINT m_rtvDescriptorSize = 0;
 	UINT m_cbvDescriptorSize = 0;

@@ -133,7 +133,7 @@ void MainEngine::Initialize()
 	// 후처리
 	for (int i = 0; i < FrameCount; i++)
 		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_pCurrFR->m_commandList, m_width, m_height);
+			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_pCurrFR->m_globalConstsBufferData.fogSRVIndex);
 
 	ThrowIfFailed(m_pCurrFR->m_commandList->Close());
 
@@ -188,24 +188,30 @@ void MainEngine::UpdateGUI()
 
 	if (ImGui::TreeNode("Post Effects"))
 	{
-		ImGui::SliderFloat("Depth Scale", &m_globalConstsBufferData.depthScale, 0.0f, 1.0f);
+		UINT flag = 0;
+		flag += ImGui::RadioButton("Render", &m_globalConstsBufferData.mode, 1);
+		ImGui::SameLine();
+		flag += ImGui::RadioButton("Depth", &m_globalConstsBufferData.mode, 2);
+		flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsBufferData.depthScale, 0.0f, 1.0f);
+		flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsBufferData.fogStrength, 0.0f, 10.0f);
+		if (flag)
+			m_dirtyFlag.postEffectsFlag = true;
 		ImGui::TreePop();
 	}
 	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
-		UINT flags = 0;
-		flags += ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f);
-		flags += ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
-		flags += ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
-		if (flags)
+		UINT flag = 0;
+		flag += ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f);
+		flag += ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
+		flag += ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
+		if (flag)
 			m_dirtyFlag.postProcessFlag = true;
 		ImGui::TreePop();
 	}
 
 	if (ImGui::TreeNode("Mirror"))
 	{
-		UINT flags = 0;
 		if (ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f))
 		{
 			m_blendFactor[0] = m_mirrorAlpha;
@@ -268,7 +274,6 @@ void MainEngine::Update(float dt)
 {
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-	m_pCurrFR->Update(m_camera, m_lightFromGUI, m_mirrorPlane, m_globalConstsBufferData, m_cubemapIndexConstsBufferData);
 
 	UpdateMouseControl();
 
@@ -284,15 +289,28 @@ void MainEngine::Update(float dt)
 		m_models[m_guiState.changedMeshKey]->UpdateState();
 	}
 
+	if (m_dirtyFlag.postEffectsFlag)
+	{
+		m_dirtyFlag.postEffectsFlag = false;
+
+		for (UINT i = 0; i < FrameCount; i++)
+		{
+			m_frameResources[i]->m_globalConstsBufferData.depthScale = m_globalConstsBufferData.depthScale;
+			m_frameResources[i]->m_globalConstsBufferData.fogStrength = m_globalConstsBufferData.fogStrength;
+			m_frameResources[i]->m_globalConstsBufferData.mode = m_globalConstsBufferData.mode;
+		}
+	}
+
 	if (m_dirtyFlag.postProcessFlag)
 	{
 		m_dirtyFlag.postProcessFlag = false;
-		
+
 		for (UINT i = 0; i < FrameCount; i++)
 			m_frameResources[i]->m_postProcess->Update(m_combineConsts);
 	}
 
 	m_mirror->OnlyCallConstsMemcpy();
+	m_pCurrFR->Update(m_camera, m_lightFromGUI, m_mirrorPlane, m_globalConstsBufferData, m_cubemapIndexConstsBufferData);
 }
 
 void MainEngine::Render()
@@ -314,20 +332,17 @@ void MainEngine::Render()
 		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
-	//// DepthOnlyPass
-	//{
-	//	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
-	//	m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-	//	m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	// DepthOnlyPass
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthBasicSolidPSO.Get());
 
-	//	if (m_guiState.isWireframe)
-	//		m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
-	//	else
-	//		m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicSolidPSO.Get());
-	//	for (const auto& model : m_models)
-	//		model.second->Render(m_device, m_pCurrFR->m_commandList);
-	//	m_mirror->Render(m_device, m_pCurrFR->m_commandList);
-	//}
+		for (const auto& model : m_models)
+			model.second->Render(m_device, m_pCurrFR->m_commandList);
+		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
+	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
@@ -395,30 +410,53 @@ void MainEngine::Render()
 		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
 	}
 
-	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_floatBuffers,
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+	{
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_floatBuffers,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 
-	m_pCurrFR->m_commandList->ResolveSubresource(
-		m_pCurrFR->m_resolvedBuffers.Get(),   // Resolve 대상 (단일 샘플 텍스처)
-		0,                      // 대상 서브리소스 인덱스
-		m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
-		0,                      // 소스 서브리소스 인덱스
-		m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
-	);
+		m_pCurrFR->m_commandList->ResolveSubresource(
+			m_pCurrFR->m_resolvedBuffers.Get(),   // Resolve 대상 (단일 샘플 텍스처)
+			0,                      // 대상 서브리소스 인덱스
+			m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
+			0,                      // 소스 서브리소스 인덱스
+			m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
+		);
 
-	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_floatBuffers,
-		D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_floatBuffers,
+			D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_resolvedBuffers,
-		D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_resolvedBuffers,
+			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+
+	// PostEffects
+	{
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pCurrFR->m_srvHeap.Get() };
+		m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_pCurrFR->m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthOnlyPSO.Get());
+		m_screenSquare->Render(m_device, m_pCurrFR->m_commandList);
+
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_fogBuffer,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
 
 	SetBarrier(m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	// PostProcess
 	{
 		m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
-			m_rtvHeap, m_pCurrFR->m_resolvedSRVHeap, m_dsvHeap, m_frameIndex);
+			m_rtvHeap, m_pCurrFR->m_srvHeap, m_dsvHeap, m_frameIndex);
 	}
+
+	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_fogBuffer,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_resolvedBuffers,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
@@ -595,7 +633,7 @@ void MainEngine::UpdateMouseControl()
 }
 
 void MainEngine::Destroy()
-{	
+{
 	if (multiFrame)
 	{
 		WaitForGpu();
