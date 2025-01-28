@@ -35,23 +35,11 @@ void MainEngine::Initialize()
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
 		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
-		m_cursorSphere->Update(m_lightFromGUI.position);
-	}
-
-	{
-		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
-		m_lightSphere = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		m_lightSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
-		m_lightSphere->m_meshConstsBufferData.useAlbedoMap = false;
-		m_lightSphere->Update(m_lightFromGUI.position);
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		meshData.albedoFilename = "./Assets/chessboard-albedo.png";
 		m_board = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -68,18 +56,19 @@ void MainEngine::Initialize()
 	}
 
 	{
-		MeshData meshData = GeometryGenerator::MakeSquare(2.0f);
+		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
+		XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 10.0f, 0.0f);
 		m_mirror = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 2.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, posMirror);
 		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.3f, 0.3f, 0.3f);
 		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_mirror->m_meshConstsBufferData.metallicFactor = 0.7f;
 		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.2f;
 		m_mirror->m_key = "mirror";
 
-		XMVECTOR pos{ 0.0f, 0.0f, 2.0f, 0.0f };
+		XMVECTOR pos = XMLoadFloat4(&posMirror);
 		XMVECTOR planeNormal{ 0.0f, 0.0f, -1.0f, 0.0f };
 
 		XMVECTOR plane = XMPlaneFromPointNormal(pos, planeNormal);
@@ -91,13 +80,13 @@ void MainEngine::Initialize()
 
 		shared_ptr<Model> helmet = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			meshDatas, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+			meshDatas, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.5f, 0.0f, 0.0f, 0.0f));
 		helmet->m_key = "helmet";
 		m_models.insert({ helmet->m_key, helmet });
 	}
 
 	{
-		float radius = 1.0f;
+		float radius = 0.5f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
 		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";
 		meshData.normalFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_normal-dx.png";
@@ -108,9 +97,21 @@ void MainEngine::Initialize()
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(-0.5f, 0.0f, 0.0f, 0.0f));
 		sphere->m_key = "sphere";
 		m_models.insert({ sphere->m_key, sphere });
+	}
+
+	{
+		m_lights[0].type = LIGHT_SPOT;
+
+		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+		m_lightSphere = make_shared<Model>(
+			m_device, m_pCurrFR->m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+		m_lightSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
+		m_lightSphere->m_meshConstsBufferData.useAlbedoMap = false;
+		m_lightSphere->Update(m_lights[0].position);
 	}
 
 	/*{
@@ -229,7 +230,7 @@ void MainEngine::UpdateGUI()
 
 	if (ImGui::TreeNode("Point Light"))
 	{
-		if (ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f))
+		if (ImGui::SliderFloat3("Position", &m_lights[0].position.x, -5.0f, 5.0f))
 		{
 			m_guiState.isLightMove = true;
 		}
@@ -274,13 +275,12 @@ void MainEngine::Update(float dt)
 {
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-
 	UpdateMouseControl();
 
 	if (m_guiState.isLightMove)
 	{
 		m_guiState.isLightMove = false;
-		m_lightSphere->Update(m_lightFromGUI.position);
+		m_lightSphere->Update(m_lights[0].position);
 	}
 
 	if (m_guiState.isMeshChanged)
@@ -310,7 +310,7 @@ void MainEngine::Update(float dt)
 	}
 
 	m_mirror->OnlyCallConstsMemcpy();
-	m_pCurrFR->Update(m_camera, m_lightFromGUI, m_mirrorPlane, m_globalConstsBufferData, m_cubemapIndexConstsBufferData);
+	m_pCurrFR->Update(m_camera, m_lights[0], m_mirrorPlane, m_globalConstsBufferData, m_cubemapIndexConstsBufferData);
 }
 
 void MainEngine::Render()
@@ -335,6 +335,18 @@ void MainEngine::Render()
 	// DepthOnlyPass
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthBasicSolidPSO.Get());
+
+		for (const auto& model : m_models)
+			model.second->Render(m_device, m_pCurrFR->m_commandList);
+		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
+	}
+
+	// ShadowMapDepthOnlyPass
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_shadowMapDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 		m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthBasicSolidPSO.Get());
@@ -435,12 +447,20 @@ void MainEngine::Render()
 		m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_pCurrFR->m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
+		// fog
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthOnlyPSO.Get());
+
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_depthOnlyDSBuffer,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 		m_screenSquare->Render(m_device, m_pCurrFR->m_commandList);
+
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_depthOnlyDSBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_fogBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

@@ -1,20 +1,29 @@
 
-#define MAX_LIGHTS 3 // 쉐이더에서도 #define 사용 가능
-#define NUM_DIR_LIGHTS 1
-#define NUM_POINT_LIGHTS 1
-#define NUM_SPOT_LIGHTS 1
+#define MAX_LIGHTS 1
+#define LIGHT_OFF 0x00
+#define LIGHT_DIRECTIONAL 0x01
+#define LIGHT_POINT 0x02
+#define LIGHT_SPOT 0x04
+#define LIGHT_SHADOW 0x10
 
 // 조명
 struct Light
 {
+    float4x4 viewProj; // 그림자 렌더링에 필요
+    float4x4 invProj; // 그림자 렌더링 디버깅용
+
     float3 radiance;
     float fallOffStart;
     float3 direction;
     float fallOffEnd;
     float3 position;
     float spotPower;
-    float3 d1;
-    float d2;
+    uint type;
+    float radius;
+    float d0;
+    float d1;
+    
+    float4x4 d2;
 };
 
 cbuffer GlobalConstants : register(b0)
@@ -22,20 +31,26 @@ cbuffer GlobalConstants : register(b0)
     float4x4 view;
     float4x4 proj;
     float4x4 invProj;
-    float4x4 d02;
     
-    Light light[MAX_LIGHTS];
     float3 eyeWorld;
     float strengthIBL;
+    
     int choiceEnvMap;
     float envLodBias;
     int mode;
     float depthScale;
+    
     float fogStrength;
     uint depthOnlySRVIndex;
+    uint shadowDepthOnlyIndex;
     uint resolvedSRVIndex;
+    
     uint fogSRVIndex;
-    float d03[4];
+    uint shadowMapSRVIndex;
+    float d00;
+    float d01;
+    
+    Light light[MAX_LIGHTS];
 }
 
 cbuffer MeshConstants : register(b1)
@@ -59,8 +74,9 @@ cbuffer MeshConstants : register(b1)
     
     uint invertNormalMapY;
     float meshLodBias;
-    float d10[2];
-    float4x3 d11;
+    float d10;
+    float d11;
+    float4x3 d12;
 }
 
 cbuffer TextureIndexConstants : register(b2)
@@ -69,18 +85,24 @@ cbuffer TextureIndexConstants : register(b2)
     uint diffuseIndex;
     uint specularIndex;
     uint normalIndex;
+    
     uint heightIndex;
     uint aoIndex;
     uint metallicIndex;
     uint roughnessIndex;
+    
     uint emissiveIndex;
-    float d21[7];
+    float d20;
+    float d21;
+    float d22;
     
-    float4x4 d22;
-    
-    float4x4 d23;
+    float4 d23;
     
     float4x4 d24;
+    
+    float4x4 d25;
+    
+    float4x4 d26;
 }
 
 cbuffer CubemapIndexConstants : register(b3)
@@ -89,13 +111,14 @@ cbuffer CubemapIndexConstants : register(b3)
     uint cubemapDiffuseIndex;
     uint cubemapSpecularIndex;
     uint brdfIndex;
-    float d31[12];
+    
+    float d30[12];
+    
+    float4x4 d31;
     
     float4x4 d32;
     
     float4x4 d33;
-    
-    float4x4 d34;
 }
 
 cbuffer SamplingConstants : register(b4)
@@ -104,18 +127,19 @@ cbuffer SamplingConstants : register(b4)
     float dy;
     float strength;
     float exposure;
-    float gamma;
     
+    float gamma;
     uint index;
     uint hightIndex;
     uint lowIndex;
-    uint d40[8];
+    
+    float4 d40[2];
+    
+    float4x4 d41;
     
     float4x4 d42;
     
     float4x4 d43;
-    
-    float4x4 d44;
 }
 
 struct VSInput

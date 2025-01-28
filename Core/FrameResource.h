@@ -34,18 +34,18 @@ public:
 
 	// Constants
 	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
-	GlobalConstants m_globalConstsBufferData = {};
+	GlobalConstants m_globalConstsBufferData;
 	UINT8* m_globalConstsBufferDataBegin = nullptr;
 
 	ComPtr<ID3D12Resource> m_reflectGlobalConstsUploadHeap;
-	GlobalConstants m_reflectGlobalConstsBufferData = {};
+	GlobalConstants m_reflectGlobalConstsBufferData;
 	UINT8* m_reflectGlobalConstsBufferDataBegin = nullptr;
 
 	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
-	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
+	CubemapIndexConstants m_cubemapIndexConstsBufferData;
 	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
 
-	// Buffers, DescriptorHeaps
+	// SRV : shadowDepthOnly + depthOnly + resolved + fog + shadowMap
 	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	ComPtr<ID3D12Resource> m_floatBuffers;
@@ -58,9 +58,16 @@ public:
 
 	ComPtr<ID3D12Resource> m_depthOnlyDSBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_depthOnlyDSVHeap;
+	ComPtr<ID3D12Resource> m_shadowMapDepthOnlyDSBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_shadowMapDepthOnlyDSVHeap;
 
 	ComPtr<ID3D12Resource> m_fogBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
+
+	float m_shadowMapWidth;
+	float m_shadowMapHeight;
+	ComPtr<ID3D12Resource> m_shadowMapBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_shadowMapRTVHeap;
 
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess;

@@ -102,6 +102,32 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
 
 }
 
+float3 LightRadiance(in Light light, in float3 posWorld, in float3 normalWorld)
+{
+    // Directional light
+    float3 lightVec = light.type & LIGHT_DIRECTIONAL
+                      ? -light.direction
+                      : light.position - posWorld;
+        
+    float lightDist = length(lightVec);
+    lightVec /= lightDist;
+
+    // Spot light
+    float spotFator = light.type & LIGHT_SPOT
+                     ? pow(max(-dot(lightVec, light.direction), 0.0f), light.spotPower)
+                      : 1.0f;
+        
+    // Distance attenuation
+    float att = saturate((light.fallOffEnd - lightDist)
+                         / (light.fallOffEnd - light.fallOffStart));
+
+    // Shadow map
+    float shadowFactor = 1.0;
+    float3 radiance = light.radiance * spotFator * att * shadowFactor;
+
+    return radiance;
+}
+
 float4 main(PSInput input) : SV_TARGET
 {
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
@@ -123,7 +149,7 @@ float4 main(PSInput input) : SV_TARGET
     float3 directLighting = float3(0, 0, 0);
     // 포인트 라이트만 먼저 구현
     [unroll]
-    for (int i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
+    for (int i = 0; i < MAX_LIGHTS; ++i)
     {
         float3 lightVec = light[i].position - input.posWorld;
         float lightDist = length(lightVec);
@@ -143,10 +169,10 @@ float4 main(PSInput input) : SV_TARGET
         float D = NdfGGX(NdotH, roughness);
         float3 G = SchlickGGX(NdotI, NdotO, roughness);
         float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
-
-        float att = saturate((light[i].fallOffEnd - lightDist)
-                                     / (light[i].fallOffEnd - light[i].fallOffStart));
-        float3 radiance = light[i].radiance * att;
+        
+        float3 radiance = 0.0f;
+            
+        radiance = LightRadiance(light[i], input.posWorld, normalWorld);
 
         directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
     }

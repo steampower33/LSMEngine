@@ -6,40 +6,58 @@
 
 using namespace DirectX;
 
-#define MAX_LIGHTS 3
+#define MAX_LIGHTS 1
+#define LIGHT_OFF 0x00
+#define LIGHT_DIRECTIONAL 0x01
+#define LIGHT_POINT 0x02
+#define LIGHT_SPOT 0x04
+#define LIGHT_SHADOW 0x10
 
 // 조명
 struct Light
 {
-	XMFLOAT3 radiance = { 1.0f, 1.0f, 1.0f };
+	XMFLOAT4X4 viewProj; // 그림자 렌더링에 필요
+	XMFLOAT4X4 invProj; // 그림자 렌더링 디버깅용
+
+	XMFLOAT3 radiance = { 5.0f, 5.0f, 5.0f };
 	float fallOffStart = 0.0f;
 	XMFLOAT3 direction = { 0.0f, 0.0f, 1.0f };
 	float fallOffEnd = 20.0f;
 	XMFLOAT3 position = { 0.0f, 0.0f, -2.0f };
-	float spotPower = 100.0f;
-	XMFLOAT3 d1;
-	float d2;
+	float spotPower = 6.0f;
+	UINT type = LIGHT_OFF;
+	float radius = 0.0f; // 반지름
+	float d0;
+	float d1;
+
+	XMFLOAT4X4 d2;
 };
 
-__declspec(align(512)) struct GlobalConstants
+__declspec(align(256)) struct GlobalConstants
 {
 	XMFLOAT4X4 view;
 	XMFLOAT4X4 proj;
 	XMFLOAT4X4 invProj;
-	XMFLOAT4X4 d2;
-
-	Light light[MAX_LIGHTS];
+	
 	XMFLOAT3 eyeWorld = { 0.0f, 0.0f, 0.0f };
 	float strengthIBL = 1.0f;
+
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
 	int mode = 1;
 	float depthScale = 0.1f;
+
 	float fogStrength = 0.0f;
 	UINT depthOnlySRVIndex = 0;
+	UINT shadowDepthOnlyIndex = 0;
 	UINT resolvedSRVIndex = 0;
+
 	UINT fogSRVIndex = 0;
-	float d03[4];
+	UINT shadowMapSRVIndex = 0;
+	float d00;
+	float d01;
+
+	Light light[MAX_LIGHTS];
 };
 
 __declspec(align(256)) struct MeshConstants {
@@ -62,9 +80,10 @@ __declspec(align(256)) struct MeshConstants {
 
 	UINT invertNormalMapY = 0;
 	float meshLodBias = 0.0f;
-	float d0[2];
+	float d10;
+	float d11;
 
-	XMFLOAT4X3 d1;
+	XMFLOAT4X3 d12;
 };
 
 __declspec(align(256)) struct TextureIndexConstants {
@@ -72,18 +91,24 @@ __declspec(align(256)) struct TextureIndexConstants {
 	UINT diffuseIndex = 0;
 	UINT specularIndex = 0;
 	UINT normalIndex = 0;
+	
 	UINT heightIndex = 0;
 	UINT aoIndex = 0;
 	UINT metallicIndex = 0;
 	UINT roughnessIndex = 0;
+	
 	UINT emissiveIndex = 0;
-	float dummy[7];
+	float d20;
+	float d21;
+	float d22;
 
-	XMFLOAT4X4 dummy1;
+	XMFLOAT4 d23;
 
-	XMFLOAT4X4 dummy2;
+	XMFLOAT4X4 d24;
 
-	XMFLOAT4X4 dummy3;
+	XMFLOAT4X4 d25;
+
+	XMFLOAT4X4 d26;
 };
 
 __declspec(align(256)) struct CubemapIndexConstants {
@@ -91,13 +116,14 @@ __declspec(align(256)) struct CubemapIndexConstants {
 	UINT cubemapDiffuseIndex = 0;
 	UINT cubemapSpecularIndex = 0;
 	UINT brdfIndex = 0;
-	float dummy[12];
 
-	XMFLOAT4X4 dummy1;
+	float d30[12];
 
-	XMFLOAT4X4 dummy2;
+	XMFLOAT4X4 d31;
 
-	XMFLOAT4X4 dummy3;
+	XMFLOAT4X4 d32;
+
+	XMFLOAT4X4 d33;
 };
 
 __declspec(align(256)) struct SamplingConstants {
@@ -105,16 +131,17 @@ __declspec(align(256)) struct SamplingConstants {
 	float dy = 0.0f;
 	float strength = 0.0f;
 	float exposure = 1.0f;
-	float gamma = 2.2f;
 
+	float gamma = 2.2f;
 	UINT index = 0;
 	UINT hightIndex = 0;
 	UINT lowIndex = 0;
-	UINT d[8];
 
-	XMFLOAT4X4 dummy1;
+	XMFLOAT4 d40[2];
+
+	XMFLOAT4X4 d41;
 	
-	XMFLOAT4X4 dummy2;
+	XMFLOAT4X4 d42;
 
-	XMFLOAT4X4 dummy3;
+	XMFLOAT4X4 d43;
 };
