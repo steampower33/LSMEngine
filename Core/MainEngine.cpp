@@ -25,53 +25,60 @@ void MainEngine::Initialize()
 
 		m_skybox = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ skybox }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
 		m_cursorSphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
 		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
 	}
 
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+
+	//	m_board = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_commandList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+
+	//	float degrees = 90.0f;
+	//	float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
+	//	XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
+	//	XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
+
+	//	XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
+	//	m_board->UpdateQuaternionAndTranslation(quaternion, translation);
+	//	m_board->m_key = "board";
+	//	m_models.insert({ m_board->m_key, m_board });
+	//}
+
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
-		m_board = make_shared<Model>(
+		XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_mirror = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, posMirror);
+		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_mirror->m_meshConstsBufferData.metallicFactor = 0.5f;
+		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.3f;
+		m_mirror->m_key = "mirror";
 
 		float degrees = 90.0f;
 		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
 		XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
 		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
 
-		XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
-		m_board->UpdateQuaternionAndTranslation(quaternion, translation);
-		m_board->m_key = "board";
-		m_models.insert({ m_board->m_key, m_board });
-	}
+		XMVECTOR translation = XMVectorAdd(XMLoadFloat4(&posMirror), { 0.0f, -1.0f, 0.0f, 0.0f });
+		m_mirror->UpdateQuaternionAndTranslation(quaternion, translation);
 
-	{
-		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+		XMVECTOR planeNormal{ 0.0f, 1.0f, 0.0f, 0.0f };
 
-		XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 10.0f, 0.0f);
-		m_mirror = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, posMirror);
-		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.3f, 0.3f, 0.3f);
-		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_mirror->m_meshConstsBufferData.metallicFactor = 0.7f;
-		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.2f;
-		m_mirror->m_key = "mirror";
-
-		XMVECTOR pos = XMLoadFloat4(&posMirror);
-		XMVECTOR planeNormal{ 0.0f, 0.0f, -1.0f, 0.0f };
-
-		XMVECTOR plane = XMPlaneFromPointNormal(pos, planeNormal);
+		XMVECTOR plane = XMPlaneFromPointNormal(translation, planeNormal);
 		XMStoreFloat4(&m_mirrorPlane, plane);
 	}
 
@@ -80,7 +87,7 @@ void MainEngine::Initialize()
 
 		shared_ptr<Model> helmet = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			meshDatas, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.5f, 0.0f, 0.0f, 0.0f));
+			meshDatas, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
 		helmet->m_key = "helmet";
 		m_models.insert({ helmet->m_key, helmet });
 	}
@@ -97,28 +104,39 @@ void MainEngine::Initialize()
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(-0.5f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		sphere->m_key = "sphere";
 		m_models.insert({ sphere->m_key, sphere });
 	}
 
 	{
-		m_lights[0].type = LIGHT_SPOT;
+		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
+		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 1.5f, 1.5f };
+		m_globalConstsData.light[0].direction = XMFLOAT3{0.0f, -1.0f, 0.0f};
+		m_globalConstsData.light[0].spotPower = 6.0f;
+		m_globalConstsData.light[0].type =
+			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
+
+		m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
+		m_globalConstsData.light[1].spotPower = 6.0f;
+		m_globalConstsData.light[1].fallOffEnd = 20.0f;
+		m_globalConstsData.light[1].type =
+			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
 		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
 		m_lightSphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		m_lightSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
 		m_lightSphere->m_meshConstsBufferData.useAlbedoMap = false;
-		m_lightSphere->Update(m_lights[0].position);
+		m_lightSphere->Update(m_globalConstsData.light[0].position);
 	}
 
 	/*{
 		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
 		shared_ptr<Model> box = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
 		box->m_key = "box";
 		m_models.insert({ box->m_key, box });
 	}*/
@@ -128,13 +146,13 @@ void MainEngine::Initialize()
 		MeshData meshData = GeometryGenerator::MakeSquare();
 		m_screenSquare = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsBufferData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
 	// 후처리
 	for (int i = 0; i < FrameCount; i++)
 		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_pCurrFR->m_globalConstsBufferData.fogSRVIndex);
+			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_pCurrFR->m_globalConstsData.fogSRVIndex);
 
 	ThrowIfFailed(m_pCurrFR->m_commandList->Close());
 
@@ -177,24 +195,24 @@ void MainEngine::UpdateGUI()
 
 	if (ImGui::TreeNode("Env Map"))
 	{
-		ImGui::SliderFloat("Strength", &m_globalConstsBufferData.strengthIBL, 0.0f, 5.0f);
-		ImGui::RadioButton("Env", &m_globalConstsBufferData.choiceEnvMap, 0);
+		ImGui::SliderFloat("Strength", &m_globalConstsData.strengthIBL, 0.0f, 5.0f);
+		ImGui::RadioButton("Env", &m_globalConstsData.choiceEnvMap, 0);
 		ImGui::SameLine();
-		ImGui::RadioButton("Irradiance", &m_globalConstsBufferData.choiceEnvMap, 1);
+		ImGui::RadioButton("Irradiance", &m_globalConstsData.choiceEnvMap, 1);
 		ImGui::SameLine();
-		ImGui::RadioButton("Specular", &m_globalConstsBufferData.choiceEnvMap, 2);
-		ImGui::SliderFloat("EnvLodBias", &m_globalConstsBufferData.envLodBias, 0.0f, 10.0f);
+		ImGui::RadioButton("Specular", &m_globalConstsData.choiceEnvMap, 2);
+		ImGui::SliderFloat("EnvLodBias", &m_globalConstsData.envLodBias, 0.0f, 10.0f);
 		ImGui::TreePop();
 	}
 
 	if (ImGui::TreeNode("Post Effects"))
 	{
 		UINT flag = 0;
-		flag += ImGui::RadioButton("Render", &m_globalConstsBufferData.mode, 1);
+		flag += ImGui::RadioButton("Render", &m_globalConstsData.mode, 1);
 		ImGui::SameLine();
-		flag += ImGui::RadioButton("Depth", &m_globalConstsBufferData.mode, 2);
-		flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsBufferData.depthScale, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsBufferData.fogStrength, 0.0f, 10.0f);
+		flag += ImGui::RadioButton("Depth", &m_globalConstsData.mode, 2);
+		flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
+		flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
 		if (flag)
 			m_dirtyFlag.postEffectsFlag = true;
 		ImGui::TreePop();
@@ -230,7 +248,7 @@ void MainEngine::UpdateGUI()
 
 	if (ImGui::TreeNode("Point Light"))
 	{
-		if (ImGui::SliderFloat3("Position", &m_lights[0].position.x, -5.0f, 5.0f))
+		if (ImGui::SliderFloat3("Position", &m_globalConstsData.light[0].position.x, -5.0f, 5.0f))
 		{
 			m_guiState.isLightMove = true;
 		}
@@ -276,11 +294,12 @@ void MainEngine::Update(float dt)
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
 	UpdateMouseControl();
+	UpdateLight(dt);
 
 	if (m_guiState.isLightMove)
 	{
 		m_guiState.isLightMove = false;
-		m_lightSphere->Update(m_lights[0].position);
+		m_lightSphere->Update(m_globalConstsData.light[0].position);
 	}
 
 	if (m_guiState.isMeshChanged)
@@ -295,9 +314,9 @@ void MainEngine::Update(float dt)
 
 		for (UINT i = 0; i < FrameCount; i++)
 		{
-			m_frameResources[i]->m_globalConstsBufferData.depthScale = m_globalConstsBufferData.depthScale;
-			m_frameResources[i]->m_globalConstsBufferData.fogStrength = m_globalConstsBufferData.fogStrength;
-			m_frameResources[i]->m_globalConstsBufferData.mode = m_globalConstsBufferData.mode;
+			m_frameResources[i]->m_globalConstsData.depthScale = m_globalConstsData.depthScale;
+			m_frameResources[i]->m_globalConstsData.fogStrength = m_globalConstsData.fogStrength;
+			m_frameResources[i]->m_globalConstsData.mode = m_globalConstsData.mode;
 		}
 	}
 
@@ -310,7 +329,8 @@ void MainEngine::Update(float dt)
 	}
 
 	m_mirror->OnlyCallConstsMemcpy();
-	m_pCurrFR->Update(m_camera, m_lights[0], m_mirrorPlane, m_globalConstsBufferData, m_cubemapIndexConstsBufferData);
+
+	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_cubemapIndexConstsData);
 }
 
 void MainEngine::Render()
@@ -380,6 +400,7 @@ void MainEngine::Render()
 		for (const auto& model : m_models)
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
 
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
 		m_lightSphere->Render(m_device, m_pCurrFR->m_commandList);
 
 		if (m_selected && (m_leftButton || m_rightButton))
@@ -403,7 +424,7 @@ void MainEngine::Render()
 		else
 			m_pCurrFR->m_commandList->SetPipelineState(Graphics::reflectSolidPSO.Get());
 		m_pCurrFR->m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectGlobalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectConstsUploadHeap.Get()->GetGPUVirtualAddress());
 		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		for (const auto& model : m_models)
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
@@ -501,6 +522,20 @@ void MainEngine::Render()
 		MoveToNextFrame();
 	else
 		WaitForPreviousFrame();
+}
+
+void MainEngine::UpdateLight(float dt)
+{
+	static XMVECTOR axis{ 2.0f, 0.0f, 0.0f };
+	XMMATRIX rotMat = XMMatrixRotationY(dt * 3.141592f * 0.5f);
+	axis = XMVector3TransformCoord(axis, rotMat);
+	
+	XMVECTOR focusPosition = XMVECTOR{ 0.0f, 0.0f, 0.0f };
+	XMVECTOR posVec = XMVectorAdd(XMVECTOR{ 0.0f, 2.0f, 0.0f }, axis);
+	XMStoreFloat3(&m_globalConstsData.light[1].position, posVec);
+	XMStoreFloat3(&m_globalConstsData.light[1].direction,
+		XMVector3Normalize(XMVectorSubtract(focusPosition, posVec)));
+	m_lightSphere->Update(m_globalConstsData.light[1].position);
 }
 
 void MainEngine::UpdateMouseControl()

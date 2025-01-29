@@ -21,7 +21,6 @@ public:
 
 	void Update(
 		shared_ptr<Camera>& camera,
-		Light& m_lightFromGUI,
 		XMFLOAT4& mirrorPlane,
 		GlobalConstants& m_globalConstsBufferData,
 		CubemapIndexConstants& cubemapIndexConsts);
@@ -34,16 +33,16 @@ public:
 
 	// Constants
 	ComPtr<ID3D12Resource> m_globalConstsUploadHeap;
-	GlobalConstants m_globalConstsBufferData;
-	UINT8* m_globalConstsBufferDataBegin = nullptr;
+	GlobalConstants m_globalConstsData;
+	UINT8* m_globalConstsDataBegin = nullptr;
 
-	ComPtr<ID3D12Resource> m_reflectGlobalConstsUploadHeap;
-	GlobalConstants m_reflectGlobalConstsBufferData;
-	UINT8* m_reflectGlobalConstsBufferDataBegin = nullptr;
+	ComPtr<ID3D12Resource> m_reflectConstsUploadHeap;
+	GlobalConstants m_reflectConstsData;
+	UINT8* m_reflectConstsDataBegin = nullptr;
 
 	ComPtr<ID3D12Resource> m_cubemapIndexConstsUploadHeap;
-	CubemapIndexConstants m_cubemapIndexConstsBufferData;
-	UINT8* m_cubemapIndexConstsBufferDataBegin = nullptr;
+	CubemapIndexConstants m_cubemapIndexConstsData;
+	UINT8* m_cubemapIndexConstsDataBegin = nullptr;
 
 	// SRV : shadowDepthOnly + depthOnly + resolved + fog + shadowMap
 	ComPtr<ID3D12DescriptorHeap> m_srvHeap;

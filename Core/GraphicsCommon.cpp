@@ -62,6 +62,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> combinePSO;
 	ComPtr<ID3D12PipelineState> depthBasicSolidPSO;
 	ComPtr<ID3D12PipelineState> depthOnlyPSO;
+	ComPtr<ID3D12PipelineState> basicSimplePSPSO;
 
 	UINT bloomLevels;
 	UINT textureSize = 20;
@@ -438,6 +439,10 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = samplingPSODesc;
 	depthOnlyPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthOnlyPSODesc, IID_PPV_ARGS(&depthOnlyPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSimplePSPSODesc = basicSolidPSODesc;
+	basicSimplePSPSODesc.PS = { simplePS->GetBufferPointer(), simplePS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSimplePSPSODesc, IID_PPV_ARGS(&basicSimplePSPSO)));
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)

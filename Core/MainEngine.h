@@ -24,7 +24,6 @@ private:
 	// Flags
 	GuiState m_guiState;
 	DirtyFlag m_dirtyFlag;
-	Light m_lights[1];
 
 	SamplingConstants m_combineConsts;
 
@@ -44,4 +43,5 @@ private:
 
 private:
 	void UpdateMouseControl();
+	void UpdateLight(float dt);
 };

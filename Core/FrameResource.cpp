@@ -18,11 +18,11 @@ FrameResource::FrameResource(
 	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 	ThrowIfFailed(m_commandList->Close());
 
-	CreateConstUploadBuffer(device, m_commandList, m_globalConstsUploadHeap, m_globalConstsBufferData, m_globalConstsBufferDataBegin);
+	CreateConstUploadBuffer(device, m_commandList, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
 
-	CreateConstUploadBuffer(device, m_commandList, m_reflectGlobalConstsUploadHeap, m_reflectGlobalConstsBufferData, m_reflectGlobalConstsBufferDataBegin);
+	CreateConstUploadBuffer(device, m_commandList, m_reflectConstsUploadHeap, m_reflectConstsData, m_reflectConstsDataBegin);
 
-	CreateConstUploadBuffer(device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsBufferData, m_cubemapIndexConstsBufferDataBegin);
+	CreateConstUploadBuffer(device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsData, m_cubemapIndexConstsDataBegin);
 
 	InitializeDescriptorHeaps(device);
 }
@@ -33,48 +33,46 @@ FrameResource::~FrameResource()
 }
 
 void FrameResource::Update(
-	shared_ptr<Camera>& camera, 
-	Light& lights,
+	shared_ptr<Camera>& camera,
 	XMFLOAT4& mirrorPlane,
 	GlobalConstants& globalConsts,
 	CubemapIndexConstants& cubemapIndexConsts)
 {
 	XMMATRIX view = camera->GetViewMatrix();
 	XMMATRIX viewTrans = XMMatrixTranspose(view);
-	XMStoreFloat4x4(&m_globalConstsBufferData.view, viewTrans);
+	XMStoreFloat4x4(&m_globalConstsData.view, viewTrans);
 
 	XMMATRIX proj = camera->GetProjectionMatrix(XMConvertToRadians(45.0f), camera->m_aspectRatio, 0.1f, 1000.0f);
 	XMMATRIX projTrans = XMMatrixTranspose(proj);
-	XMStoreFloat4x4(&m_globalConstsBufferData.proj, projTrans);
+	XMStoreFloat4x4(&m_globalConstsData.proj, projTrans);
 
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMMATRIX invProjTrans = XMMatrixTranspose(invProj);
-	XMStoreFloat4x4(&m_globalConstsBufferData.invProj, invProjTrans);
+	XMStoreFloat4x4(&m_globalConstsData.invProj, invProjTrans);
 
-	m_globalConstsBufferData.eyeWorld = camera->GetEyePos();
-	m_globalConstsBufferData.strengthIBL = globalConsts.strengthIBL;
-	m_globalConstsBufferData.choiceEnvMap = globalConsts.choiceEnvMap;
-	m_globalConstsBufferData.envLodBias = globalConsts.envLodBias;
+	m_globalConstsData.eyeWorld = camera->GetEyePos();
+	m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
+	m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
+	m_globalConstsData.envLodBias = globalConsts.envLodBias;
+	m_globalConstsData.light[0] = globalConsts.light[0];
+	m_globalConstsData.light[1] = globalConsts.light[1];
 
-	// Set Light
-	m_globalConstsBufferData.light[0] = lights;
-
-	memcpy(m_globalConstsBufferDataBegin, &m_globalConstsBufferData, sizeof(m_globalConstsBufferData));
+	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
 
 	// Reflect
-	m_reflectGlobalConstsBufferData = m_globalConstsBufferData;
+	m_reflectConstsData = m_globalConstsData;
 
 	XMVECTOR plane = XMLoadFloat4(&mirrorPlane);
 	XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
 	XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
 	XMMATRIX reflectedViewMatrixTrans = XMMatrixTranspose(reflectedViewMatrix);
-	XMStoreFloat4x4(&m_reflectGlobalConstsBufferData.view, reflectedViewMatrixTrans);
+	XMStoreFloat4x4(&m_reflectConstsData.view, reflectedViewMatrixTrans);
 
-	memcpy(m_reflectGlobalConstsBufferDataBegin, &m_reflectGlobalConstsBufferData, sizeof(m_reflectGlobalConstsBufferData));
+	memcpy(m_reflectConstsDataBegin, &m_reflectConstsData, sizeof(m_reflectConstsData));
 
-	m_cubemapIndexConstsBufferData = cubemapIndexConsts;
+	m_cubemapIndexConstsData = cubemapIndexConsts;
 
-	memcpy(m_cubemapIndexConstsBufferDataBegin, &m_cubemapIndexConstsBufferData, sizeof(m_cubemapIndexConstsBufferData));
+	memcpy(m_cubemapIndexConstsDataBegin, &m_cubemapIndexConstsData, sizeof(m_cubemapIndexConstsData));
 }
 
 void FrameResource::InitializeDescriptorHeaps(
@@ -100,7 +98,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, sampleCount, 
 			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RESOLVE_DEST, 
 			m_resolvedRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsBufferData.resolvedSRVIndex = srvCnt++;
+		m_globalConstsData.resolvedSRVIndex = srvCnt++;
 	}
 
 	// MSAA
@@ -170,7 +168,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		CreateBuffer(device, m_fogBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
 			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET, 
 			m_fogRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsBufferData.fogSRVIndex = srvCnt++;
+		m_globalConstsData.fogSRVIndex = srvCnt++;
 	}
 
 	// DepthOnly
@@ -214,7 +212,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		device->CreateDepthStencilView(m_depthOnlyDSBuffer.Get(), &dsvDesc, m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), srvCnt * cbvSrvSize);
-		m_globalConstsBufferData.depthOnlySRVIndex = srvCnt++;
+		m_globalConstsData.depthOnlySRVIndex = srvCnt++;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -270,7 +268,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		device->CreateDepthStencilView(m_shadowMapDepthOnlyDSBuffer.Get(), &dsvDesc, m_shadowMapDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), srvCnt * cbvSrvSize);
-		m_globalConstsBufferData.shadowDepthOnlyIndex = srvCnt++;
+		m_globalConstsData.shadowDepthOnlyIndex = srvCnt++;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -299,7 +297,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		CreateBuffer(device, m_shadowMapBuffer, static_cast<UINT>(m_shadowMapWidth), static_cast<UINT>(m_shadowMapHeight), sampleCount,
 			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET,
 			m_shadowMapRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsBufferData.shadowMapSRVIndex = srvCnt++;
+		m_globalConstsData.shadowMapSRVIndex = srvCnt++;
 
 	}
 }

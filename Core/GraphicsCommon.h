@@ -78,6 +78,7 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> combinePSO;
 	extern ComPtr<ID3D12PipelineState> depthBasicSolidPSO;
 	extern ComPtr<ID3D12PipelineState> depthOnlyPSO;
+	extern ComPtr<ID3D12PipelineState> basicSimplePSPSO;
 
 	extern UINT bloomLevels;
 	extern UINT textureSize;

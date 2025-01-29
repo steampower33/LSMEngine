@@ -39,9 +39,9 @@ public:
 	FrameResource* m_pCurrFR;
 
 	// Constants
-	GlobalConstants m_globalConstsBufferData = {};
-	GlobalConstants m_reflectGlobalConstsBufferData = {};
-	CubemapIndexConstants m_cubemapIndexConstsBufferData = {};
+	GlobalConstants m_globalConstsData = {};
+	GlobalConstants m_reflectConstsData = {};
+	CubemapIndexConstants m_cubemapIndexConstsData = {};
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;

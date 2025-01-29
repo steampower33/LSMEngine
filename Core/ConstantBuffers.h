@@ -6,7 +6,7 @@
 
 using namespace DirectX;
 
-#define MAX_LIGHTS 1
+#define MAX_LIGHTS 2
 #define LIGHT_OFF 0x00
 #define LIGHT_DIRECTIONAL 0x01
 #define LIGHT_POINT 0x02
@@ -40,7 +40,7 @@ __declspec(align(256)) struct GlobalConstants
 	XMFLOAT4X4 invProj;
 	
 	XMFLOAT3 eyeWorld = { 0.0f, 0.0f, 0.0f };
-	float strengthIBL = 1.0f;
+	float strengthIBL = 0.0f;
 
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
