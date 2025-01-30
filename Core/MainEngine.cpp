@@ -18,7 +18,7 @@ void MainEngine::Initialize()
 	m_textureManager->Initialize(m_device, m_pCurrFR->m_commandList);
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
-
+	
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
@@ -34,7 +34,7 @@ void MainEngine::Initialize()
 	}
 
 	{
-		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 20, 20);
 		m_cursorSphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -119,10 +119,12 @@ void MainEngine::Initialize()
 		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
 		m_globalConstsData.light[0].direction = XMFLOAT3{0.0f, -1.0f, 0.0f};
 		m_globalConstsData.light[0].spotPower = 6.0f;
+		m_globalConstsData.light[0].radius = 0.02f;
 		m_globalConstsData.light[0].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
 		m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
+		m_globalConstsData.light[1].radius = 0.02f;
 		m_globalConstsData.light[1].spotPower = 6.0f;
 		m_globalConstsData.light[1].fallOffEnd = 20.0f;
 		m_globalConstsData.light[1].type =
@@ -130,13 +132,14 @@ void MainEngine::Initialize()
 
 		for (UINT i = 0; i < MAX_LIGHTS; i++)
 		{
-			MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+			MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 20, 20);
+			XMFLOAT4 spherePos{ m_globalConstsData.light[i].position.x, m_globalConstsData.light[i].position.y, m_globalConstsData.light[i].position.z, 0.0f };
 			m_lightSphere[i] = make_shared<Model>(
 				m_device, m_pCurrFR->m_commandList, m_commandQueue,
-				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, spherePos);
 			m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
+			m_lightSphere[i]->m_scale = m_globalConstsData.light[i].radius;
 			m_lightSphere[i]->m_meshConstsBufferData.useAlbedoMap = false;
-			m_lightSphere[i]->Update(m_globalConstsData.light[i].position);
 		}
 	}
 
@@ -256,12 +259,14 @@ void MainEngine::UpdateGUI()
 	}
 
 	if (ImGui::TreeNode("Light 1")) {
-		ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.1f);
+		ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
+		m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
 		ImGui::TreePop();
 	}
 
 	if (ImGui::TreeNode("Light 2")) {
-		ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.1f);
+		ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
+		m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
 		ImGui::TreePop();
 	}
 
@@ -311,13 +316,6 @@ void MainEngine::Update(float dt)
 
 	UpdateMouseControl();
 	UpdateLight(dt);
-
-	if (m_guiState.isLightMove)
-	{
-		m_guiState.isLightMove = false;
-		for (UINT i = 0; i < MAX_LIGHTS; i++)
-			m_lightSphere[i]->Update(m_globalConstsData.light[0].position);
-	}
 
 	if (m_guiState.isMeshChanged)
 	{
@@ -574,6 +572,7 @@ void MainEngine::UpdateLight(float dt)
 	XMStoreFloat3(&m_globalConstsData.light[1].position, posVec);
 	XMVECTOR lightDirection = XMVector3Normalize(XMVectorSubtract(focusPosition, posVec));
 	XMStoreFloat3(&m_globalConstsData.light[1].direction, lightDirection);
+	XMStoreFloat4(&m_lightSphere[1]->m_position, posVec);
 
 	for (UINT i = 0; i < MAX_LIGHTS; i++)
 	{
@@ -615,7 +614,7 @@ void MainEngine::UpdateLight(float dt)
 			XMStoreFloat4x4(&m_globalConstsData.light[i].viewProj, lightViewProjTrans);
 			XMStoreFloat4x4(&m_globalConstsData.light[i].invProj, lightInvProjTrans);
 		}
-		m_lightSphere[i]->Update(m_globalConstsData.light[i].position);
+		m_lightSphere[i]->Update();
 	}
 }
 

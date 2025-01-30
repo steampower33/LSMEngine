@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "dependencies": [
     {
-      "name": "directxmath"
-    },
-    {
       "name": "directxtex",
       "features": [ "dx12", "openexr", "tools" ]
     },

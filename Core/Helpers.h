@@ -36,7 +36,7 @@ struct GuiState {
 	bool isDrawNormals = false;
 	bool isWireframe = false;
 	bool isMeshChanged = false;
-	bool isLightMove = false;
+	bool isLightChanged = false;
 };
 
 struct DirtyFlag {

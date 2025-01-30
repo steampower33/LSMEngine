@@ -41,7 +41,7 @@ public:
 	void RenderNormal(
 		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
-	void Update(XMFLOAT3& pos);
+	void Update();
 	void UpdateQuaternionAndTranslation(
 		XMVECTOR& q, XMVECTOR& dragTranslation);
 	void UpdateState();
@@ -60,6 +60,7 @@ public:
 	bool m_useMetallicMap = false;
 	bool m_useRoughnessMap = false;
 	bool m_useEmissiveMap = false;
+	float m_scale = 1.0f;
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;

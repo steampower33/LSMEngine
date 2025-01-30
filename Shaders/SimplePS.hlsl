@@ -1,4 +1,4 @@
-#include "Common.hlsli" // 쉐이더에서도 include 사용 가능
+#include "Common.hlsli"
 
 float4 main(PSInput input) : SV_TARGET
 {

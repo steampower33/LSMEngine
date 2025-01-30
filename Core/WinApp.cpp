@@ -27,7 +27,9 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 	RECT windowRect = { 0, 0, static_cast<LONG>(pEngine->m_width), static_cast<LONG>(pEngine->m_height) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, false);
 
-	m_hwnd = CreateWindow(wc.lpszClassName, L"LSMEngineWindow",
+	m_hwnd = CreateWindow(
+		wc.lpszClassName, 
+		L"LSMEngineWindow",
 		WS_OVERLAPPEDWINDOW,
 		100, // 윈도우 좌측 상단의 x 좌표
 		100, // 윈도우 좌측 상단의 y 좌표
@@ -36,8 +38,9 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 		NULL, NULL, hInstance, pEngine);
 
 	pEngine->Initialize();
-
+	
 	ShowWindow(m_hwnd, nShowCmd);
+	UpdateWindow(m_hwnd);
 
 	// 메시지 루프
 	MSG msg = {};

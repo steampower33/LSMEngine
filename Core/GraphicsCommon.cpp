@@ -230,8 +230,6 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	const wchar_t depthOnlyPSFilename[] = L"./Shaders/DepthOnlyPS.hlsl";
 	CreateShader(device, depthOnlyPSFilename, L"ps_6_0", depthOnlyPS);
 
-
-
 	// PostEffects
 	const wchar_t postEffectsPSFilename[] = L"./Shaders/PostEffectsPS.hlsl";
 	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
@@ -504,7 +502,7 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 void Graphics::CreateShader(
 	ComPtr<ID3D12Device>& device,
 	const wchar_t* filename,
-	const wchar_t* targetProfile, // Shader Target Profile
+	const wchar_t* targetProfile,
 	ComPtr<IDxcBlob>& shaderBlob)
 {
 	ComPtr<IDxcBlobEncoding> source;
@@ -521,17 +519,30 @@ void Graphics::CreateShader(
 	//std::wcout << L"Shader Name: " << shaderName << std::endl;
 
 	std::wstring pdbFilename = L"./PDB/" + std::wstring(shaderName) + L".pdb";
-	LPCWSTR args[] = {
-		L"-E", L"main",							// Entry point
-		L"-T", targetProfile,					// Shader target
-		L"-I", L"./Shaders",					// Include 경로
-		L"-Zi",									// Debug 정보 포함
-		L"-Od",									// 최적화 비활성화 (디버깅용)
-		L"-Fd", pdbFilename.c_str(),			// PDB 파일 생성 경로
+	std::wstring shaderIncludePath = std::filesystem::absolute(L"./Shaders").wstring();
+
+	std::vector<LPCWSTR> args;
+
+#if defined(_DEBUG)
+	args = {
+		L"-E", L"main",
+		L"-T", targetProfile,
+		L"-I", shaderIncludePath.c_str(),
+		L"-Zi",
+		L"-Od",
+		L"-Fd", pdbFilename.c_str()
 	};
+#else
+	args = {
+		L"-E", L"main",
+		L"-T", targetProfile,
+		L"-I", shaderIncludePath.c_str(),
+		L"-O2"
+	};
+#endif
 
 	ComPtr<IDxcResult> result;
-	ThrowIfFailed(compiler->Compile(&buffer, args, _countof(args), includeHandler.Get(), IID_PPV_ARGS(&result)));
+	ThrowIfFailed(compiler->Compile(&buffer, args.data(), static_cast<UINT32>(args.size()), includeHandler.Get(), IID_PPV_ARGS(&result)));
 
 	// 컴파일된 셰이더 가져오기
 	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);

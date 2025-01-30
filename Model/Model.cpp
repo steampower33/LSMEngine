@@ -52,16 +52,14 @@ void Model::Initialize(
 	}
 }
 
-void Model::Update(XMFLOAT3& pos)
+void Model::Update()
 {
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_world);
-	XMMATRIX worldWithoutTranslation = worldMatrix;
-	worldWithoutTranslation.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMMATRIX scaleMatrix = XMMatrixScaling(m_scale, m_scale, m_scale);
 
-	XMVECTOR translation = XMLoadFloat3(&pos);
+	XMVECTOR translation = XMLoadFloat4(&m_position);
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
 
-	XMMATRIX newWorld = worldWithoutTranslation * translationMatrix;
+	XMMATRIX newWorld = scaleMatrix * translationMatrix;
 	XMStoreFloat3(&m_boundingSphere->Center, newWorld.r[3]);
 	XMStoreFloat4x4(&m_world, newWorld);
 
