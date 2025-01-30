@@ -2,19 +2,8 @@
 
 using namespace std;
 
-Camera::Camera(float aspectRatio) : 
-	m_aspectRatio(aspectRatio),
-	m_pos(0.0f, 0.0f, -5.0f),
-	m_lookDir(0.0f, 0.0f, 1.0f),
-	m_upDir(0.0f, 1.0f, 0.0f),
-	m_rightDir(1.0f, 0.0f, 0.0f),
-	m_cursorNdcX(0.0f),
-	m_cursorNdcY(0.0f),
-	m_yaw(0.0f),
-	m_pitch(0.0f),
-	m_moveSpeed(10.0f),
-	m_mouseSensitivity(5.0f),
-	m_useFirstPersonView(false)
+Camera::Camera(float aspectRatio) :
+	m_aspectRatio(aspectRatio)
 {
 }
 
@@ -120,9 +109,9 @@ XMMATRIX Camera::GetViewMatrix()
 	return XMMatrixLookAtLH(pos, target, up);
 }
 
-XMMATRIX Camera::GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
+XMMATRIX Camera::GetProjectionMatrix()
 {
-	return XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
+	return XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
 }
 
 void Camera::KeyDown(WPARAM key)

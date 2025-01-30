@@ -2,11 +2,13 @@
 
 Texture2D texture[50] : register(t0, space0);
 TextureCube skyboxTexture[10] : register(t50, space0);
-SamplerState wrapSampler : register(s0, space0);
-SamplerState clampSampler : register(s1, space0);
 
 static const uint textureSizeOffset = 50;
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+
+#define NEAR_PLANE 0.1
+// #define LIGHT_WORLD_RADIUS 0.001
+#define LIGHT_FRUSTUM_WIDTH 0.34641 // <- 계산해서 찾은 값
 
 float3 SchlickFresnel(float3 F0, float NdotH)
 {
@@ -19,7 +21,7 @@ float3 GetNormal(PSInput input)
     
     if (useNormalMap && normalIndex != 0) // NormalWorld를 교체
     {
-        float3 normal = texture[normalIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb;
+        float3 normal = texture[normalIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).rgb;
         normal = 2.0 * normal - 1.0; // 범위 조절 [-1.0, 1.0]
 
         // OpenGL 용 노멀맵일 경우에는 y 방향을 뒤집어줍니다.
@@ -37,8 +39,6 @@ float3 GetNormal(PSInput input)
     return normalWorld;
 }
 
-
-
 float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
                   float metallic)
 {
@@ -47,7 +47,7 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
     float3 kd = lerp(1.0 - F, 0.0, metallic);
     
     // 앞에서 사용했던 방법과 동일
-    float3 irradiance = skyboxTexture[cubemapDiffuseIndex - textureSizeOffset].SampleLevel(wrapSampler, normalWorld, 0.0).rgb;
+    float3 irradiance = skyboxTexture[cubemapDiffuseIndex - textureSizeOffset].SampleLevel(linearWrapSampler, normalWorld, 0.0).rgb;
     
     return kd * albedo * irradiance;
 }
@@ -55,9 +55,9 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
 float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
                    float metallic, float roughness)
 {
-    float2 specularBRDF = texture[brdfIndex].SampleLevel(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
+    float2 specularBRDF = texture[brdfIndex].SampleLevel(linearClampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
     float3 specularIrradiance = skyboxTexture[cubemapSpecularIndex - textureSizeOffset].
-        SampleLevel(wrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
+        SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
     
     // 앞에서 사용했던 방법과 동일
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
@@ -102,6 +102,130 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
 
 }
 
+float PCF_Filter(float2 uv, float zReceiverNdc, float filterRadiusUV, Texture2D shadowMap)
+{
+    float sum = 0.0f;
+    for (int i = 0; i < 64; ++i)
+    {
+        float2 offset = diskSamples64[i] * filterRadiusUV;
+        sum += shadowMap.SampleCmpLevelZero(
+            shadowCompareSampler, uv + offset, zReceiverNdc);
+    }
+    return sum / 64;
+}
+
+// NdcDepthToViewDepth
+float N2V(float ndcDepth, matrix invProj)
+{
+    float4 pointView = mul(float4(0, 0, ndcDepth, 1), invProj);
+    return pointView.z / pointView.w;
+}
+
+void FindBlocker(out float avgBlockerDepthView, out float numBlockers, float2 uv,
+                 float zReceiverView, Texture2D shadowMap, matrix invProj, float lightRadiusWorld)
+{
+    float lightRadiusUV = lightRadiusWorld / LIGHT_FRUSTUM_WIDTH;
+    
+    float searchRadius = lightRadiusUV * (zReceiverView - NEAR_PLANE) / zReceiverView;
+
+    float blockerSum = 0;
+    numBlockers = 0;
+    for (int i = 0; i < 64; ++i)
+    {
+        float shadowMapDepth =
+            shadowMap.SampleLevel(shadowPointSampler, float2(uv + diskSamples64[i] * searchRadius), 0).r;
+
+        shadowMapDepth = N2V(shadowMapDepth, invProj);
+        
+        if (shadowMapDepth < zReceiverView)
+        {
+            blockerSum += shadowMapDepth;
+            numBlockers++;
+        }
+    }
+    avgBlockerDepthView = blockerSum / numBlockers;
+}
+
+float PCSS(float2 uv, float zReceiverNdc, Texture2D shadowMap, matrix invProj, float lightRadiusWorld)
+{
+    float lightRadiusUV = lightRadiusWorld / LIGHT_FRUSTUM_WIDTH;
+    
+    float zReceiverView = N2V(zReceiverNdc, invProj);
+    
+    // STEP 1: blocker search
+    float avgBlockerDepthView = 0;
+    float numBlockers = 0;
+
+    FindBlocker(avgBlockerDepthView, numBlockers, uv, zReceiverView, shadowMap, invProj, lightRadiusWorld);
+
+    if (numBlockers < 1)
+    {
+        // There are no occluders so early out(this saves filtering)
+        return 1.0f;
+    }
+    else
+    {
+        // STEP 2: penumbra size
+        float penumbraRatio = (zReceiverView - avgBlockerDepthView) / avgBlockerDepthView;
+        float filterRadiusUV = penumbraRatio * lightRadiusUV * NEAR_PLANE / zReceiverView;
+
+        // STEP 3: filtering
+        return PCF_Filter(uv, zReceiverNdc, filterRadiusUV, shadowMap);
+    }
+}
+
+float3 LightRadiance(in Light light, in float3 posWorld, in float3 normalWorld, in int index)
+{
+    // Directional light
+    float3 lightVec = light.type & LIGHT_DIRECTIONAL
+                      ? -light.direction
+                      : light.position - posWorld;
+        
+    float lightDist = length(lightVec);
+    lightVec /= lightDist;
+
+    // Spot light
+    float spotFator = light.type & LIGHT_SPOT
+                     ? pow(max(-dot(lightVec, light.direction), 0.0f), light.spotPower)
+                      : 1.0f;
+        
+    // Distance attenuation
+    float att = saturate((light.fallOffEnd - lightDist)
+                         / (light.fallOffEnd - light.fallOffStart));
+
+    // Shadow map
+    float shadowFactor = 1.0;
+    if (light.type & LIGHT_SHADOW)
+    {
+        const float nearZ = 0.01; // 카메라 설정과 동일
+        
+        // 1. Project posWorld to light screen
+        // light.viewProj 사용
+        float4 lightScreen = mul(float4(posWorld, 1.0), light.viewProj);
+        lightScreen.xyz /= lightScreen.w;
+        
+        // 2. 카메라(광원)에서 볼 때의 텍스춰 좌표 계산
+        // [-1, 1]x[-1, 1] -> [0, 1]x[0, 1]
+        // 주의: 텍스춰 좌표와 NDC는 y가 반대
+        float2 lightTexcoord = float2(lightScreen.x, -lightScreen.y);
+        lightTexcoord += 1.0;
+        lightTexcoord *= 0.5;
+        
+        uint width, height, numMips;
+        Texture2D shadowMap = texture[shadowDepthOnlyStartIndex + index];
+        shadowMap.GetDimensions(0, width, height, numMips);
+        
+        // Texel size
+        float dx = 5.0 / (float) width;
+        //shadowFactor = PCF_Filter(lightTexcoord.xy, lightScreen.z - 0.001, dx, shadowMap);
+        shadowFactor = PCSS(lightTexcoord, lightScreen.z - 0.01, shadowMap, light.invProj, light.radius);
+    }
+
+    float3 radiance = light.radiance * spotFator * att * shadowFactor;
+
+    return radiance;
+}
+
 float3 LightRadiance(in Light light, in float3 posWorld, in float3 normalWorld)
 {
     // Directional light
@@ -133,14 +257,14 @@ float4 main(PSInput input) : SV_TARGET
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
     
-    float3 albedo = useAlbedoMap ? texture[albedoIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb * albedoFactor
+    float3 albedo = useAlbedoMap ? texture[albedoIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).rgb * albedoFactor
                                  : albedoFactor;
-    float ao = useAOMap ? texture[aoIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).r : 1.0;
-    float metallic = useMetallicMap ? texture[metallicIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).b * metallicFactor
+    float ao = useAOMap ? texture[aoIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).r : 1.0;
+    float metallic = useMetallicMap ? texture[metallicIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).b * metallicFactor
                                     : metallicFactor;
-    float roughness = useRoughnessMap ? texture[roughnessIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).g * roughnessFactor
+    float roughness = useRoughnessMap ? texture[roughnessIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).g * roughnessFactor
                                       : roughnessFactor;
-    float3 emission = useEmissiveMap ? texture[emissiveIndex].SampleLevel(wrapSampler, input.texcoord, meshLodBias).rgb 
+    float3 emission = useEmissiveMap ? texture[emissiveIndex].SampleLevel(linearWrapSampler, input.texcoord, meshLodBias).rgb 
                                      : emissionFactor;
     
     float3 ambientLighting = AmbientLightingByIBL(albedo, normalWorld, pixelToEye, ao,
@@ -151,30 +275,33 @@ float4 main(PSInput input) : SV_TARGET
     [unroll]
     for (int i = 0; i < MAX_LIGHTS; ++i)
     {
-        float3 lightVec = light[i].position - input.posWorld;
-        float lightDist = length(lightVec);
-        lightVec /= lightDist;
-        float3 halfway = normalize(pixelToEye + lightVec);
+        if (light[i].type)
+        {
+            float3 lightVec = light[i].position - input.posWorld;
+            float lightDist = length(lightVec);
+            lightVec /= lightDist;
+            float3 halfway = normalize(pixelToEye + lightVec);
         
-        float NdotI = max(0.0, dot(normalWorld, lightVec));
-        float NdotH = max(0.0, dot(normalWorld, halfway));
-        float NdotO = max(0.0, dot(normalWorld, pixelToEye));
+            float NdotI = max(0.0, dot(normalWorld, lightVec));
+            float NdotH = max(0.0, dot(normalWorld, halfway));
+            float NdotO = max(0.0, dot(normalWorld, pixelToEye));
         
-        const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-        float3 F0 = lerp(Fdielectric, albedo, metallic);
-        float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
-        float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
-        float3 diffuseBRDF = kd * albedo;
+            const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+            float3 F0 = lerp(Fdielectric, albedo, metallic);
+            float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
+            float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
+            float3 diffuseBRDF = kd * albedo;
 
-        float D = NdfGGX(NdotH, roughness);
-        float3 G = SchlickGGX(NdotI, NdotO, roughness);
-        float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
+            float D = NdfGGX(NdotH, roughness);
+            float3 G = SchlickGGX(NdotI, NdotO, roughness);
+            float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
         
-        float3 radiance = 0.0f;
+            float3 radiance = 0.0f;
             
-        radiance = LightRadiance(light[i], input.posWorld, normalWorld);
+            radiance = LightRadiance(light[i], input.posWorld, normalWorld, i);
 
-        directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+            directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+        }
     }
     
     float4 pixelColor = float4(ambientLighting + directLighting + emission, 1.0);

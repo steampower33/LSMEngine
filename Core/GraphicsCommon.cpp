@@ -28,6 +28,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
 
+	ComPtr<IDxcBlob> depthOnlyVS;
+	ComPtr<IDxcBlob> depthOnlyPS;
+
 	ComPtr<IDxcBlob> postEffectsPS;
 
 	D3D12_RASTERIZER_DESC solidRS;
@@ -35,6 +38,7 @@ namespace Graphics
 	D3D12_RASTERIZER_DESC solidCCWRS;
 	D3D12_RASTERIZER_DESC wireCCWRS;
 	D3D12_RASTERIZER_DESC postProcessingRS;
+	D3D12_RASTERIZER_DESC depthBiasRS;
 
 	D3D12_BLEND_DESC disabledBlend;
 	D3D12_BLEND_DESC mirrorBlend;
@@ -60,9 +64,10 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> bloomDownPSO;
 	ComPtr<ID3D12PipelineState> bloomUpPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
-	ComPtr<ID3D12PipelineState> depthBasicSolidPSO;
 	ComPtr<ID3D12PipelineState> depthOnlyPSO;
+	ComPtr<ID3D12PipelineState> postEffectsPSO;
 	ComPtr<ID3D12PipelineState> basicSimplePSPSO;
+	ComPtr<ID3D12PipelineState> shadowDepthOnlyPSO;
 
 	UINT bloomLevels;
 	UINT textureSize = 20;
@@ -112,9 +117,9 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 
 	// 디스크립터 힙 생성
 	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
-	samplerHeapDesc.NumDescriptors = 2; // 샘플러 개수
+	samplerHeapDesc.NumDescriptors = 4;
 	samplerHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // 셰이더에서 접근 가능
+	samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	samplerHeapDesc.NodeMask = 0;
 
 	ComPtr<ID3D12DescriptorHeap> samplerHeap;
@@ -123,37 +128,52 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 		throw std::runtime_error("Failed to create sampler descriptor heap.");
 	}
 
-	// 샘플러 상태 정의
-	D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[4] = {};
 
-	// 첫 번째 정적 샘플러 (Wrap 모드)
-	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // 필터링 방식
-	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // U축 주소 모드
-	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // V축 주소 모드
-	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // W축 주소 모드
+	// LinearWrap
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	staticSamplers[0].MipLODBias = 0.0f;
 	staticSamplers[0].MaxAnisotropy = 1;
 	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 	staticSamplers[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
 	staticSamplers[0].MinLOD = 0.0f;
 	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
-	staticSamplers[0].ShaderRegister = 0; // s0에서 참조
+	staticSamplers[0].ShaderRegister = 0;
 	staticSamplers[0].RegisterSpace = 0;
 	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	// 두 번째 정적 샘플러 (Clamp 모드)
-	staticSamplers[1] = staticSamplers[0]; // 기본 값 복사
-	staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // U축 주소 모드 변경
-	staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // V축 주소 모드 변경
-	staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // W축 주소 모드 변경
-	staticSamplers[1].ShaderRegister = 1; // s1에서 참조
+	// LinearClamp
+	staticSamplers[1] = staticSamplers[0];
+	staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[1].ShaderRegister = 1;
+
+	// ShadowPoint
+	staticSamplers[2] = staticSamplers[0];
+	staticSamplers[2].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	staticSamplers[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	staticSamplers[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	staticSamplers[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	staticSamplers[2].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	staticSamplers[2].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	staticSamplers[2].ShaderRegister = 2;
+
+	// ShadowCompare
+	staticSamplers[3] = staticSamplers[2];
+	staticSamplers[3].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	staticSamplers[3].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	staticSamplers[3].ShaderRegister = 3;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
-		_countof(rootParameters),  // 루트 매개변수 개수
-		rootParameters,            // 루트 매개변수 배열
-		_countof(staticSamplers),  // 정적 샘플러 개수
-		staticSamplers,            // 정적 샘플러 배열
+		_countof(rootParameters),
+		rootParameters,
+		_countof(staticSamplers),
+		staticSamplers,
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	ComPtr<ID3DBlob> signature;
@@ -205,6 +225,14 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
 
 	// DepthOnly
+	const wchar_t depthOnlyVSFilename[] = L"./Shaders/DepthOnlyVS.hlsl";
+	CreateShader(device, depthOnlyVSFilename, L"vs_6_0", depthOnlyVS);
+	const wchar_t depthOnlyPSFilename[] = L"./Shaders/DepthOnlyPS.hlsl";
+	CreateShader(device, depthOnlyPSFilename, L"ps_6_0", depthOnlyPS);
+
+
+
+	// PostEffects
 	const wchar_t postEffectsPSFilename[] = L"./Shaders/PostEffectsPS.hlsl";
 	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
 }
@@ -234,6 +262,12 @@ void Graphics::InitRasterizerStates()
 
 	postProcessingRS = solidRS;
 	postProcessingRS.DepthClipEnable = FALSE;
+
+	depthBiasRS = solidRS;
+	depthBiasRS.DepthBias = 1000;
+	depthBiasRS.DepthBiasClamp = 0.0f;
+	depthBiasRS.SlopeScaledDepthBias = 1.0f;
+	depthBiasRS.DepthClipEnable = TRUE;
 }
 
 void Graphics::InitBlendStates()
@@ -431,14 +465,24 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthBasicSolidPSODesc = basicSolidPSODesc;
-	depthBasicSolidPSODesc.SampleDesc.Count = 1;
-	depthBasicSolidPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthBasicSolidPSODesc, IID_PPV_ARGS(&depthBasicSolidPSO)));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = samplingPSODesc;
-	depthOnlyPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = basicSolidPSODesc;
+	depthOnlyPSODesc.VS = { depthOnlyVS->GetBufferPointer(), depthOnlyVS->GetBufferSize() };
+	depthOnlyPSODesc.PS = { depthOnlyPS->GetBufferPointer(), depthOnlyPS->GetBufferSize() };
+	depthOnlyPSODesc.SampleDesc.Count = 1;
+	depthOnlyPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&depthOnlyPSODesc, IID_PPV_ARGS(&depthOnlyPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowDepthOnlyPSODesc = basicSolidPSODesc;
+	shadowDepthOnlyPSODesc.VS = { depthOnlyVS->GetBufferPointer(), depthOnlyVS->GetBufferSize() };
+	shadowDepthOnlyPSODesc.PS = { depthOnlyPS->GetBufferPointer(), depthOnlyPS->GetBufferSize() };
+	shadowDepthOnlyPSODesc.SampleDesc.Count = 1;
+	shadowDepthOnlyPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	shadowDepthOnlyPSODesc.RasterizerState = depthBiasRS;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&shadowDepthOnlyPSODesc, IID_PPV_ARGS(&shadowDepthOnlyPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC postEffectsPSODesc = samplingPSODesc;
+	postEffectsPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&postEffectsPSODesc, IID_PPV_ARGS(&postEffectsPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSimplePSPSODesc = basicSolidPSODesc;
 	basicSimplePSPSODesc.PS = { simplePS->GetBufferPointer(), simplePS->GetBufferSize() };

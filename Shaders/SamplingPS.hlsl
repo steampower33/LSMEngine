@@ -1,7 +1,6 @@
 #include "Common.hlsli"
 
 Texture2D g_texture[] : register(t0, space1);
-SamplerState wrapSampler : register(s0, space0);
 
 struct SamplingPSInput
 {
@@ -11,7 +10,7 @@ struct SamplingPSInput
 
 float4 main(SamplingPSInput input) : SV_TARGET
 {
-    float3 color = g_texture[index].Sample(wrapSampler, input.texcoord).xyz;
+    float3 color = g_texture[index].Sample(linearWrapSampler, input.texcoord).xyz;
     
     float l = (color.x + color.y + color.y) / 3;
     

@@ -38,7 +38,7 @@ void EngineBase::LoadPipeline()
 	InitializeFence();
 	Graphics::Initialize(m_device);
 
-	m_textureManager = make_shared<TextureManager>(m_device, m_textureHeap);
+	m_textureManager = make_shared<TextureManager>(m_device);
 	for (UINT i = 0; i < FrameCount; i++)
 	{
 		m_frameResources[i] = make_shared<FrameResource>(m_device, m_width, m_height, i);
@@ -92,8 +92,9 @@ void EngineBase::InitializeDX12CoreComponents()
 		));
 	}
 
-	m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	m_cbvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_rtvSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_cbvSrvSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_dsvSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -131,12 +132,6 @@ void EngineBase::InitializeDX12CoreComponents()
 void EngineBase::InitializeDescriptorHeaps()
 {
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-		textureHeapDesc.NumDescriptors = 60;
-		textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
-
 		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
 		imguiHeapDesc.NumDescriptors = 4;
 		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -172,7 +167,7 @@ void EngineBase::InitializeDescriptorHeaps()
 			rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), &rtvDesc, rtvHandle);
-			rtvHandle.Offset(1, m_rtvDescriptorSize);
+			rtvHandle.Offset(1, m_rtvSize);
 
 			// srv
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -186,7 +181,7 @@ void EngineBase::InitializeDescriptorHeaps()
 				&srvDesc,
 				srvHandle
 			);
-			srvHandle.Offset(1, m_cbvDescriptorSize);
+			srvHandle.Offset(1, m_cbvSrvSize);
 		}
 
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};

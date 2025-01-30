@@ -129,6 +129,10 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		{
 			PostQuitMessage(0);
 		}
+		if (wParam == VK_SPACE)
+		{
+			pEngine->m_lightRot = !pEngine->m_lightRot;
+		}
 		if (wParam == 'F')
 		{
 			pEngine->m_camera->m_useFirstPersonView = !pEngine->m_camera->m_useFirstPersonView;

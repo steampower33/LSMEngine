@@ -1,8 +1,6 @@
 #include "Common.hlsli" 
 
 Texture2D texture[] : register(t0, space0);
-SamplerState wrapSampler : register(s0, space0);
-SamplerState clampSampler : register(s1, space0);
 
 float4 TexcoordToView(float2 texcoord)
 {
@@ -11,7 +9,7 @@ float4 TexcoordToView(float2 texcoord)
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1; // 주의: y 방향을 뒤집어줘야 합니다.
-    posProj.z = texture[depthOnlySRVIndex].Sample(clampSampler, texcoord).r;
+    posProj.z = texture[shadowDepthOnlyStartIndex + 1].Sample(linearClampSampler, texcoord).r;
     posProj.w = 1.0;
 
     // ProjectSpace -> ViewSpace
@@ -44,7 +42,7 @@ float4 main(SamplingPSInput input) : SV_TARGET
         float fogFactor = exp(-distFog * fogStrength);
 
         // TODO: Fog
-        float3 color = texture[resolvedSRVIndex].Sample(clampSampler, input.texcoord).rgb;
+        float3 color = texture[resolvedSRVIndex].Sample(linearClampSampler, input.texcoord).rgb;
         
         color = lerp(fogColor, color, fogFactor);
         

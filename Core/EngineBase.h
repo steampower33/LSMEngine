@@ -34,12 +34,12 @@ public:
 	virtual void UpdateGUI() = 0;
 	virtual void Destroy() = 0;
 
-
 	shared_ptr<FrameResource> m_frameResources[FrameCount];
 	FrameResource* m_pCurrFR;
 
 	// Constants
 	GlobalConstants m_globalConstsData = {};
+	GlobalConstants m_shadowGlobalConstsData[MAX_LIGHTS];
 	GlobalConstants m_reflectConstsData = {};
 	CubemapIndexConstants m_cubemapIndexConstsData = {};
 
@@ -59,13 +59,13 @@ public:
 	static HeapAllocator m_srvAlloc;
 	ComPtr<ID3D12DescriptorHeap> m_imguiHeap;
 
-	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 	shared_ptr<TextureManager> m_textureManager;
 
 	shared_ptr<Camera> m_camera;
 
-	UINT m_rtvDescriptorSize = 0;
-	UINT m_cbvDescriptorSize = 0;
+	UINT m_rtvSize = 0;
+	UINT m_cbvSrvSize = 0;
+	UINT m_dsvSize = 0;
 
 	float m_width;
 	float m_height;
@@ -85,7 +85,7 @@ public:
 	bool m_rightButton = false;
 	bool m_selected = false;
 	bool m_dragStartFlag = false;
-
+	bool m_lightRot = false;
 
 protected:
 	void LoadPipeline();

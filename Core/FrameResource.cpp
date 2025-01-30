@@ -6,25 +6,39 @@ FrameResource::FrameResource(
 	m_width = width;
 	m_height = height;
 
-	m_shadowMapWidth = width;
-	m_shadowMapHeight = width;
-	
+	m_shadowWidth = 1024;
+	m_shadowHeight = 1024;
+
+	m_shadowViewport.TopLeftX = 0.0f;
+	m_shadowViewport.TopLeftY = 0.0f;
+	m_shadowViewport.Width = m_shadowWidth;
+	m_shadowViewport.Height = m_shadowHeight;
+	m_shadowViewport.MinDepth = 0.0f;
+	m_shadowViewport.MaxDepth = 1.0f;
+
+	m_shadowScissorRect.left = 0;
+	m_shadowScissorRect.top = 0;
+	m_shadowScissorRect.right = static_cast<LONG>(m_shadowWidth);
+	m_shadowScissorRect.bottom = static_cast<LONG>(m_shadowHeight);
+
 	m_frameIndex = frameIndex;
 
 	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	cbvSrvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	dsvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 	ThrowIfFailed(m_commandList->Close());
 
 	CreateConstUploadBuffer(device, m_commandList, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
+	
+	for (UINT i = 0; i < MAX_LIGHTS; i++)
+		CreateConstUploadBuffer(device, m_commandList, m_shadowGlobalConstsUploadHeap[i], m_shadowGlobalConstsData[i], m_shadowGlobalConstsDataBegin[i]);
 
 	CreateConstUploadBuffer(device, m_commandList, m_reflectConstsUploadHeap, m_reflectConstsData, m_reflectConstsDataBegin);
 
 	CreateConstUploadBuffer(device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsData, m_cubemapIndexConstsDataBegin);
-
-	InitializeDescriptorHeaps(device);
 }
 
 FrameResource::~FrameResource()
@@ -36,19 +50,21 @@ void FrameResource::Update(
 	shared_ptr<Camera>& camera,
 	XMFLOAT4& mirrorPlane,
 	GlobalConstants& globalConsts,
+	GlobalConstants (&shadowGlobalConsts)[MAX_LIGHTS],
 	CubemapIndexConstants& cubemapIndexConsts)
 {
 	XMMATRIX view = camera->GetViewMatrix();
 	XMMATRIX viewTrans = XMMatrixTranspose(view);
 	XMStoreFloat4x4(&m_globalConstsData.view, viewTrans);
 
-	XMMATRIX proj = camera->GetProjectionMatrix(XMConvertToRadians(45.0f), camera->m_aspectRatio, 0.1f, 1000.0f);
-	XMMATRIX projTrans = XMMatrixTranspose(proj);
-	XMStoreFloat4x4(&m_globalConstsData.proj, projTrans);
+	XMMATRIX proj = camera->GetProjectionMatrix();
+	XMStoreFloat4x4(&m_globalConstsData.proj, XMMatrixTranspose(proj));
+
+	XMMATRIX viewProjTrans = XMMatrixMultiplyTranspose(view, proj);
+	XMStoreFloat4x4(&m_globalConstsData.viewProj, viewProjTrans);
 
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
-	XMMATRIX invProjTrans = XMMatrixTranspose(invProj);
-	XMStoreFloat4x4(&m_globalConstsData.invProj, invProjTrans);
+	XMStoreFloat4x4(&m_globalConstsData.invProj, XMMatrixTranspose(invProj));
 
 	m_globalConstsData.eyeWorld = camera->GetEyePos();
 	m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
@@ -59,14 +75,20 @@ void FrameResource::Update(
 
 	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
 
+	// Shadow
+	for (UINT i = 0; i < MAX_LIGHTS; i++)
+	{
+		m_shadowGlobalConstsData[i] = shadowGlobalConsts[i];
+		memcpy(m_shadowGlobalConstsDataBegin[i], &m_shadowGlobalConstsData[i], sizeof(m_shadowGlobalConstsData[i]));
+	}
+
 	// Reflect
 	m_reflectConstsData = m_globalConstsData;
 
 	XMVECTOR plane = XMLoadFloat4(&mirrorPlane);
 	XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
 	XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
-	XMMATRIX reflectedViewMatrixTrans = XMMatrixTranspose(reflectedViewMatrix);
-	XMStoreFloat4x4(&m_reflectConstsData.view, reflectedViewMatrixTrans);
+	XMStoreFloat4x4(&m_reflectConstsData.view, XMMatrixTranspose(reflectedViewMatrix));
 
 	memcpy(m_reflectConstsDataBegin, &m_reflectConstsData, sizeof(m_reflectConstsData));
 
@@ -76,16 +98,9 @@ void FrameResource::Update(
 }
 
 void FrameResource::InitializeDescriptorHeaps(
-	ComPtr<ID3D12Device>& device)
+	ComPtr<ID3D12Device>& device,
+	shared_ptr<TextureManager>& textureManager)
 {
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 5;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
-	}
-
 	// Resolved
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -95,10 +110,10 @@ void FrameResource::InitializeDescriptorHeaps(
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_resolvedRTVHeap)));
 
 		UINT sampleCount = 1;
-		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, sampleCount, 
-			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RESOLVE_DEST, 
-			m_resolvedRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsData.resolvedSRVIndex = srvCnt++;
+		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, sampleCount,
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RESOLVE_DEST,
+			m_resolvedRTVHeap, 0, textureManager->m_textureHeap, textureManager->m_textureCnt);
+		m_globalConstsData.resolvedSRVIndex = textureManager->m_textureCnt++;
 	}
 
 	// MSAA
@@ -110,8 +125,8 @@ void FrameResource::InitializeDescriptorHeaps(
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_floatRTVHeap)));
 
 		UINT sampleCount = 4;
-		CreateBuffer(device, m_floatBuffers, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount, 
-			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2DMS, D3D12_RESOURCE_STATE_RENDER_TARGET, 
+		CreateBuffer(device, m_floatBuffers, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2DMS, D3D12_RESOURCE_STATE_RENDER_TARGET,
 			m_floatRTVHeap, 0, nullptr, 0);
 
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
@@ -166,15 +181,15 @@ void FrameResource::InitializeDescriptorHeaps(
 
 		UINT sampleCount = 1;
 		CreateBuffer(device, m_fogBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
-			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET, 
-			m_fogRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsData.fogSRVIndex = srvCnt++;
+			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET,
+			m_fogRTVHeap, 0, textureManager->m_textureHeap, textureManager->m_textureCnt);
+		m_globalConstsData.fogSRVIndex = textureManager->m_textureCnt++;
 	}
 
 	// DepthOnly
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-		dsvHeapDesc.NumDescriptors = 1; // 필요 시 증가
+		dsvHeapDesc.NumDescriptors = 1;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_depthOnlyDSVHeap)));
@@ -185,7 +200,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		depthStencilDesc.Height = static_cast<UINT>(m_height);
 		depthStencilDesc.DepthOrArraySize = 1;
 		depthStencilDesc.MipLevels = 1;
-		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		depthStencilDesc.SampleDesc.Count = 1; // MSAA 끔
 		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -211,8 +226,8 @@ void FrameResource::InitializeDescriptorHeaps(
 
 		device->CreateDepthStencilView(m_depthOnlyDSBuffer.Get(), &dsvDesc, m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), srvCnt * cbvSrvSize);
-		m_globalConstsData.depthOnlySRVIndex = srvCnt++;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(textureManager->m_heapStartCpu, textureManager->m_textureCnt * cbvSrvSize);
+		m_globalConstsData.depthOnlySRVIndex = textureManager->m_textureCnt++;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -230,18 +245,18 @@ void FrameResource::InitializeDescriptorHeaps(
 	// ShadowDepthOnly
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-		dsvHeapDesc.NumDescriptors = 1; // 필요 시 증가
+		dsvHeapDesc.NumDescriptors = MAX_LIGHTS;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_shadowMapDepthOnlyDSVHeap)));
+		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_shadowDepthOnlyDSVHeap)));
 
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		depthStencilDesc.Width = static_cast<UINT>(m_shadowMapWidth);
-		depthStencilDesc.Height = static_cast<UINT>(m_shadowMapHeight);
+		depthStencilDesc.Width = static_cast<UINT>(m_shadowWidth);
+		depthStencilDesc.Height = static_cast<UINT>(m_shadowHeight);
 		depthStencilDesc.DepthOrArraySize = 1;
 		depthStencilDesc.MipLevels = 1;
-		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		depthStencilDesc.SampleDesc.Count = 1; // MSAA 끔
 		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -250,54 +265,42 @@ void FrameResource::InitializeDescriptorHeaps(
 		clearValue.DepthStencil.Depth = 1.0f;
 		clearValue.DepthStencil.Stencil = 0;
 
-		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		ThrowIfFailed(device->CreateCommittedResource(
-			&defaultHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&depthStencilDesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clearValue,
-			IID_PPV_ARGS(&m_shadowMapDepthOnlyDSBuffer)
-		));
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+		{
+			auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(device->CreateCommittedResource(
+				&defaultHeapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&depthStencilDesc,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				&clearValue,
+				IID_PPV_ARGS(&m_shadowDepthOnlyDSBuffer[i])
+			));
 
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+			dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+			
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_shadowDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart(), i * dsvSize);
+			device->CreateDepthStencilView(m_shadowDepthOnlyDSBuffer[i].Get(), &dsvDesc, dsvHandle);
 
-		device->CreateDepthStencilView(m_shadowMapDepthOnlyDSBuffer.Get(), &dsvDesc, m_shadowMapDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(textureManager->m_heapStartCpu, textureManager->m_textureCnt * cbvSrvSize);
+			if (i == 0)
+				m_globalConstsData.shadowDepthOnlyStartIndex = textureManager->m_textureCnt;
+			textureManager->m_textureCnt++;
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart(), srvCnt * cbvSrvSize);
-		m_globalConstsData.shadowDepthOnlyIndex = srvCnt++;
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = 1;
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-
-		device->CreateShaderResourceView(
-			m_shadowMapDepthOnlyDSBuffer.Get(),
-			&srvDesc,
-			srvHandle
-		);
-	}
-
-	// ShadowMap
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = 1;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_shadowMapRTVHeap)));
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_shadowMapRTVHeap->GetCPUDescriptorHandleForHeapStart());
-
-		UINT sampleCount = 1;
-		CreateBuffer(device, m_shadowMapBuffer, static_cast<UINT>(m_shadowMapWidth), static_cast<UINT>(m_shadowMapHeight), sampleCount,
-			DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_RENDER_TARGET,
-			m_shadowMapRTVHeap, 0, m_srvHeap, srvCnt);
-		m_globalConstsData.shadowMapSRVIndex = srvCnt++;
-
+			device->CreateShaderResourceView(
+				m_shadowDepthOnlyDSBuffer[i].Get(),
+				&srvDesc,
+				srvHandle
+			);
+		}
 	}
 }

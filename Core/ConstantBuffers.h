@@ -37,6 +37,7 @@ __declspec(align(256)) struct GlobalConstants
 {
 	XMFLOAT4X4 view;
 	XMFLOAT4X4 proj;
+	XMFLOAT4X4 viewProj;
 	XMFLOAT4X4 invProj;
 	
 	XMFLOAT3 eyeWorld = { 0.0f, 0.0f, 0.0f };
@@ -44,18 +45,22 @@ __declspec(align(256)) struct GlobalConstants
 
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
-	int mode = 1;
+	int fogMode = 1;
 	float depthScale = 0.1f;
 
 	float fogStrength = 0.0f;
 	UINT depthOnlySRVIndex = 0;
-	UINT shadowDepthOnlyIndex = 0;
+	UINT shadowDepthOnlyStartIndex = 0;
 	UINT resolvedSRVIndex = 0;
 
 	UINT fogSRVIndex = 0;
-	UINT shadowMapSRVIndex = 0;
 	float d00;
 	float d01;
+	float d02;
+	
+	XMFLOAT4X4 d03;
+	XMFLOAT4X4 d04;
+	XMFLOAT4X4 d05;
 
 	Light light[MAX_LIGHTS];
 };

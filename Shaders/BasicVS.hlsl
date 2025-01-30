@@ -1,7 +1,6 @@
 #include "Common.hlsli"
 
 Texture2D g_texture[50] : register(t0, space0);
-SamplerState samplerWrap : register(s0, space0);
 
 PSInput main(VSInput input)
 {
@@ -21,7 +20,7 @@ PSInput main(VSInput input)
     {
         // VertexShader에서는 SampleLevel 사용
         // Heightmap은 보통 흑백이라서 마지막에 .r로 float 하나만 사용
-        float height = g_texture[heightIndex].SampleLevel(samplerWrap, input.texcoord, 0).r;
+        float height = g_texture[heightIndex].SampleLevel(linearWrapSampler, input.texcoord, 0).r;
         height = height * 2.0 - 1.0;
         pos += float4(output.normalWorld * height * heightScale, 0.0);
     }

@@ -34,7 +34,7 @@ public:
 	Camera(float aspectRatio);
 	XMFLOAT3 GetEyePos();
 	XMMATRIX GetViewMatrix();
-	XMMATRIX GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane);
+	XMMATRIX GetProjectionMatrix();
 
 	void KeyDown(WPARAM key);
 	void KeyUp(WPARAM key);
@@ -46,31 +46,36 @@ public:
 
 	void LogCameraState();
 
-	bool m_useFirstPersonView;
+	bool m_useFirstPersonView = false;
 
-	XMFLOAT3 m_pos;
+	XMFLOAT3 m_pos{ 0.0f, 0.0f, -5.0f };
 	float m_aspectRatio;
 
 private:
 
-	XMFLOAT3 m_lookDir;
-	XMFLOAT3 m_upDir;
-	XMFLOAT3 m_rightDir;
+	XMFLOAT3 m_lookDir{ 0.0f, 0.0f, 1.0f };
+	XMFLOAT3 m_upDir{ 0.0f, 1.0f, 0.0f };
+	XMFLOAT3 m_rightDir{ 1.0f, 0.0f, 0.0f };
 
 	// 마우스 커서 위치 저장 (Picking에 사용)
-	float m_cursorNdcX;
-	float m_cursorNdcY;
+	float m_cursorNdcX = 0.0f;
+	float m_cursorNdcY = 0.0f;
 
 
 	// roll, pitch, yaw
 	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
-	float m_yaw;
-	float m_pitch;
+	float m_yaw = 0.0f;
+	float m_pitch = 0.0f;
 
-	float m_moveSpeed;
-	float m_mouseSensitivity;
+	float m_moveSpeed = 10.0f;
+	float m_mouseSensitivity = 5.0f;
 
 	KeysPressed m_keysPressed;
 
 	bool m_isKeyMove = false;
+
+	float m_projFovAngleY = 90.0f;
+	float m_nearZ = 0.01f;
+	float m_farZ = 100.0f;
+	float m_aspect = 16.0f / 9.0f;
 };

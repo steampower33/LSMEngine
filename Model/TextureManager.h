@@ -20,8 +20,8 @@ class TextureManager
 {
 public:
 	TextureManager(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12DescriptorHeap>& textureHeap);
+		ComPtr<ID3D12Device>& device);
+
 	~TextureManager() {}
 
 	void Initialize(
@@ -51,15 +51,17 @@ public:
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
-private:
+	UINT m_textureCnt = 0;
+	UINT m_cubeTextureCnt = 50;
+
 	vector<ComPtr<ID3D12Resource>> m_textures;
 	vector<ComPtr<ID3D12Resource>> m_texturesUploadHeap;
+
+	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_heapStartCpu = {};
 	
 	unordered_map<string, int> m_textureIdx;
-	UINT m_textureCnt = 0;
-	UINT m_cubeTextureCnt = 50;
 
 private:
 	bool CheckDuplcateFilename(

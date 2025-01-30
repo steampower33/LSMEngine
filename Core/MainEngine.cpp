@@ -7,12 +7,17 @@ void MainEngine::Initialize()
 	LoadPipeline();
 	m_pCurrFR = m_frameResources[m_frameIndex].get();
 
-	// !중요 -> 커맨드리스트는 생성하고 바로 Close 되어있음
-	// 여기서부터 m_pCurrFR의 커맨드리스트를 초기화하고 여기서에다가 작성을 해야함
+	// Important -> The command list is created and closed immediately. 
+	// From here, you need to initialize the command list of m_pCurrFR and write here.
 	ThrowIfFailed(m_pCurrFR->m_commandAllocator->Reset());
 	ThrowIfFailed(m_pCurrFR->m_commandList->Reset(m_pCurrFR->m_commandAllocator.Get(), nullptr));
 
+	// 1. m_textureManager Initialize
+	// 2. m_frameResources Init DescriptorHeaps
+	// All srv of render pass are also managed in m_textureHeap
 	m_textureManager->Initialize(m_device, m_pCurrFR->m_commandList);
+	for (UINT i = 0; i < FrameCount; i++)
+		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
@@ -111,7 +116,7 @@ void MainEngine::Initialize()
 
 	{
 		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
-		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 1.5f, 1.5f };
+		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
 		m_globalConstsData.light[0].direction = XMFLOAT3{0.0f, -1.0f, 0.0f};
 		m_globalConstsData.light[0].spotPower = 6.0f;
 		m_globalConstsData.light[0].type =
@@ -123,13 +128,16 @@ void MainEngine::Initialize()
 		m_globalConstsData.light[1].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
-		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
-		m_lightSphere = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		m_lightSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
-		m_lightSphere->m_meshConstsBufferData.useAlbedoMap = false;
-		m_lightSphere->Update(m_globalConstsData.light[0].position);
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+		{
+			MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 100, 100);
+			m_lightSphere[i] = make_shared<Model>(
+				m_device, m_pCurrFR->m_commandList, m_commandQueue,
+				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+			m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
+			m_lightSphere[i]->m_meshConstsBufferData.useAlbedoMap = false;
+			m_lightSphere[i]->Update(m_globalConstsData.light[i].position);
+		}
 	}
 
 	/*{
@@ -152,7 +160,7 @@ void MainEngine::Initialize()
 	// 후처리
 	for (int i = 0; i < FrameCount; i++)
 		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_pCurrFR->m_globalConstsData.fogSRVIndex);
+			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_frameResources[i]->m_globalConstsData.fogSRVIndex);
 
 	ThrowIfFailed(m_pCurrFR->m_commandList->Close());
 
@@ -205,18 +213,19 @@ void MainEngine::UpdateGUI()
 		ImGui::TreePop();
 	}
 
-	if (ImGui::TreeNode("Post Effects"))
+	if (ImGui::TreeNode("Fog"))
 	{
 		UINT flag = 0;
-		flag += ImGui::RadioButton("Render", &m_globalConstsData.mode, 1);
+		flag += ImGui::RadioButton("Render", &m_globalConstsData.fogMode, 1);
 		ImGui::SameLine();
-		flag += ImGui::RadioButton("Depth", &m_globalConstsData.mode, 2);
+		flag += ImGui::RadioButton("Depth", &m_globalConstsData.fogMode, 2);
 		flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
 		flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
 		if (flag)
 			m_dirtyFlag.postEffectsFlag = true;
 		ImGui::TreePop();
 	}
+
 	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Process"))
 	{
@@ -246,12 +255,19 @@ void MainEngine::UpdateGUI()
 		ImGui::TreePop();
 	}
 
+	if (ImGui::TreeNode("Light 1")) {
+		ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.1f);
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("Light 2")) {
+		ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.1f);
+		ImGui::TreePop();
+	}
+
 	if (ImGui::TreeNode("Point Light"))
 	{
-		if (ImGui::SliderFloat3("Position", &m_globalConstsData.light[0].position.x, -5.0f, 5.0f))
-		{
-			m_guiState.isLightMove = true;
-		}
+		ImGui::Checkbox("Rotate", &m_lightRot);
 		ImGui::TreePop();
 	}
 
@@ -299,7 +315,8 @@ void MainEngine::Update(float dt)
 	if (m_guiState.isLightMove)
 	{
 		m_guiState.isLightMove = false;
-		m_lightSphere->Update(m_globalConstsData.light[0].position);
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+			m_lightSphere[i]->Update(m_globalConstsData.light[0].position);
 	}
 
 	if (m_guiState.isMeshChanged)
@@ -316,7 +333,7 @@ void MainEngine::Update(float dt)
 		{
 			m_frameResources[i]->m_globalConstsData.depthScale = m_globalConstsData.depthScale;
 			m_frameResources[i]->m_globalConstsData.fogStrength = m_globalConstsData.fogStrength;
-			m_frameResources[i]->m_globalConstsData.mode = m_globalConstsData.mode;
+			m_frameResources[i]->m_globalConstsData.fogMode = m_globalConstsData.fogMode;
 		}
 	}
 
@@ -330,7 +347,7 @@ void MainEngine::Update(float dt)
 
 	m_mirror->OnlyCallConstsMemcpy();
 
-	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_cubemapIndexConstsData);
+	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 }
 
 void MainEngine::Render()
@@ -339,37 +356,50 @@ void MainEngine::Render()
 		ThrowIfFailed(m_pCurrFR->m_commandAllocator->Reset());
 		ThrowIfFailed(m_pCurrFR->m_commandList->Reset(m_pCurrFR->m_commandAllocator.Get(), nullptr));
 
+		m_pCurrFR->m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+		m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+	}
+
+	// ShadowDepthOnly
+	{
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::shadowDepthOnlyPSO.Get());
+
+		m_pCurrFR->m_commandList->RSSetViewports(1, &m_pCurrFR->m_shadowViewport);
+		m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_pCurrFR->m_shadowScissorRect);
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_shadowDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart(), i * m_dsvSize);
+			m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+			m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_shadowGlobalConstsUploadHeap[i].Get()->GetGPUVirtualAddress());
+
+			for (const auto& model : m_models)
+				model.second->Render(m_device, m_pCurrFR->m_commandList);
+			m_mirror->Render(m_device, m_pCurrFR->m_commandList);
+		}
+
+		// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_DEPTH_WRITE To D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+			SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
+				D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+
+	{
 		m_pCurrFR->m_commandList->RSSetViewports(1, &m_viewport);
 		m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		m_pCurrFR->m_commandList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
-
-		ID3D12DescriptorHeap* ppHeaps[] = { m_textureHeap.Get() };
-		m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
 		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
-		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
-	// DepthOnlyPass
+	// FogDepthOnly
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
 		m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthBasicSolidPSO.Get());
-
-		for (const auto& model : m_models)
-			model.second->Render(m_device, m_pCurrFR->m_commandList);
-		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
-	}
-
-	// ShadowMapDepthOnlyPass
-	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_shadowMapDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
-		m_pCurrFR->m_commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthBasicSolidPSO.Get());
 
 		for (const auto& model : m_models)
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
@@ -379,6 +409,7 @@ void MainEngine::Render()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
 	m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
 
 	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
 	m_pCurrFR->m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
@@ -401,7 +432,9 @@ void MainEngine::Render()
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
 
 		m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
-		m_lightSphere->Render(m_device, m_pCurrFR->m_commandList);
+		
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+			m_lightSphere[i]->Render(m_device, m_pCurrFR->m_commandList);
 
 		if (m_selected && (m_leftButton || m_rightButton))
 			m_cursorSphere->Render(m_device, m_pCurrFR->m_commandList);
@@ -443,6 +476,11 @@ void MainEngine::Render()
 		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
 	}
 
+	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;
+	for (UINT i = 0; i < MAX_LIGHTS; i++)
+		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
 	{
 		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_floatBuffers,
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
@@ -464,16 +502,12 @@ void MainEngine::Render()
 
 	// PostEffects
 	{
-		ID3D12DescriptorHeap* ppHeaps[] = { m_pCurrFR->m_srvHeap.Get() };
-		m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_pCurrFR->m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-
 		// fog
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-		m_pCurrFR->m_commandList->SetPipelineState(Graphics::depthOnlyPSO.Get());
+		m_pCurrFR->m_commandList->SetPipelineState(Graphics::postEffectsPSO.Get());
 
 		SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_depthOnlyDSBuffer,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -493,7 +527,7 @@ void MainEngine::Render()
 	// PostProcess
 	{
 		m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
-			m_rtvHeap, m_pCurrFR->m_srvHeap, m_dsvHeap, m_frameIndex);
+			m_rtvHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
 	}
 
 	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_fogBuffer,
@@ -527,21 +561,68 @@ void MainEngine::Render()
 void MainEngine::UpdateLight(float dt)
 {
 	static XMVECTOR axis{ 2.0f, 0.0f, 0.0f };
-	XMMATRIX rotMat = XMMatrixRotationY(dt * 3.141592f * 0.5f);
-	axis = XMVector3TransformCoord(axis, rotMat);
+
+	if (m_lightRot)
+	{
+		XMMATRIX rotMat = XMMatrixRotationY(dt * 3.141592f * 0.5f);
+		axis = XMVector3TransformCoord(axis, rotMat);
+	}
 	
+	// 1번 LIGHT만 설정
 	XMVECTOR focusPosition = XMVECTOR{ 0.0f, 0.0f, 0.0f };
 	XMVECTOR posVec = XMVectorAdd(XMVECTOR{ 0.0f, 2.0f, 0.0f }, axis);
 	XMStoreFloat3(&m_globalConstsData.light[1].position, posVec);
-	XMStoreFloat3(&m_globalConstsData.light[1].direction,
-		XMVector3Normalize(XMVectorSubtract(focusPosition, posVec)));
-	m_lightSphere->Update(m_globalConstsData.light[1].position);
+	XMVECTOR lightDirection = XMVector3Normalize(XMVectorSubtract(focusPosition, posVec));
+	XMStoreFloat3(&m_globalConstsData.light[1].direction, lightDirection);
+
+	for (UINT i = 0; i < MAX_LIGHTS; i++)
+	{
+		const auto& light = m_globalConstsData.light[i];
+		if (light.type & LIGHT_SHADOW)
+		{
+			XMVECTOR up{ 0.0f, 1.0f, 0.0f };
+			XMVECTOR lightPos = XMLoadFloat3(&light.position);
+			XMVECTOR lightDir = XMLoadFloat3(&light.direction);
+
+			if (abs(XMVectorGetX(XMVector3Dot(up, lightDir)) + 1.0f) < 1e-5)
+				up = XMVECTOR{ 1.0f, 0.0f, 0.0f };
+
+			// 그림자맵을 만들 때 필요
+			XMMATRIX lightView = XMMatrixLookAtLH(
+				lightPos, XMVectorAdd(lightPos, lightDir), up);
+
+			XMMATRIX lightProj = XMMatrixPerspectiveFovLH(
+				XMConvertToRadians(120.0f), 1.0f, 0.1f, 10.0f);
+
+			m_shadowGlobalConstsData[i].eyeWorld = light.position;
+			XMStoreFloat4x4(&m_shadowGlobalConstsData[i].view, XMMatrixTranspose(lightView));
+			XMStoreFloat4x4(&m_shadowGlobalConstsData[i].proj, XMMatrixTranspose(lightProj));
+
+			XMMATRIX lightViewProj = XMMatrixMultiply(lightView, lightProj);
+			XMMATRIX lightViewProjTrans = XMMatrixTranspose(lightViewProj);
+			XMStoreFloat4x4(&m_shadowGlobalConstsData[i].viewProj, lightViewProjTrans);
+
+			XMVECTOR det;
+			XMMATRIX lightInvProj;
+			lightInvProj = XMMatrixInverse(&det, lightProj);
+			if (XMVectorGetX(det) == 0.0f) {
+				// 역행렬이 존재하지 않음
+				assert(false && "역행렬이 존재하지 않습니다!");
+			}
+			XMMATRIX lightInvProjTrans = XMMatrixTranspose(lightInvProj);
+			XMStoreFloat4x4(&m_shadowGlobalConstsData[i].invProj, lightInvProjTrans);
+
+			XMStoreFloat4x4(&m_globalConstsData.light[i].viewProj, lightViewProjTrans);
+			XMStoreFloat4x4(&m_globalConstsData.light[i].invProj, lightInvProjTrans);
+		}
+		m_lightSphere[i]->Update(m_globalConstsData.light[i].position);
+	}
 }
 
 void MainEngine::UpdateMouseControl()
 {
 	XMMATRIX view = m_camera->GetViewMatrix();
-	XMMATRIX proj = m_camera->GetProjectionMatrix(XMConvertToRadians(45.0f), m_camera->m_aspectRatio, 0.1f, 1000.0f);
+	XMMATRIX proj = m_camera->GetProjectionMatrix();
 
 	XMVECTOR q = XMQuaternionIdentity();
 	XMVECTOR dragTranslation{ 0.0f };
