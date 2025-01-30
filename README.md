@@ -8,7 +8,6 @@
 
 ## 개요
 
-- **DirectXMath**: 수학 연산(벡터, 행렬 등)을 지원
 - **DirectXTex**: 이미지(텍스처) 로딩/처리, OpenEXR 지원
 - **DirectXTK12**: DirectX 12 도우미 툴킷
 - **Assimp**: 3D 모델 포맷 임포팅
@@ -26,11 +25,3 @@
 - **vcpkg** 
 
 ---
-
-## 설치 및 빌드
-
-### 1. 리포지토리 클론
-
-```bash
-git clone https://github.com/yourusername/graphic-engine.git
-cd graphic-engine
