@@ -32,7 +32,7 @@ FrameResource::FrameResource(
 	ThrowIfFailed(m_commandList->Close());
 
 	CreateConstUploadBuffer(device, m_commandList, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
-	
+
 	for (UINT i = 0; i < MAX_LIGHTS; i++)
 		CreateConstUploadBuffer(device, m_commandList, m_shadowGlobalConstsUploadHeap[i], m_shadowGlobalConstsData[i], m_shadowGlobalConstsDataBegin[i]);
 
@@ -50,7 +50,7 @@ void FrameResource::Update(
 	shared_ptr<Camera>& camera,
 	XMFLOAT4& mirrorPlane,
 	GlobalConstants& globalConsts,
-	GlobalConstants (&shadowGlobalConsts)[MAX_LIGHTS],
+	GlobalConstants(&shadowGlobalConsts)[MAX_LIGHTS],
 	CubemapIndexConstants& cubemapIndexConsts)
 {
 	XMMATRIX view = camera->GetViewMatrix();
@@ -281,7 +281,7 @@ void FrameResource::InitializeDescriptorHeaps(
 			dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
 			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-			
+
 			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_shadowDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart(), i * dsvSize);
 			device->CreateDepthStencilView(m_shadowDepthOnlyDSBuffer[i].Get(), &dsvDesc, dsvHandle);
 
@@ -302,5 +302,20 @@ void FrameResource::InitializeDescriptorHeaps(
 				srvHandle
 			);
 		}
+	}
+
+	// Scene
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = 1;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
+
+		UINT sampleCount = 1;
+		CreateBuffer(device, m_sceneBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
+			DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			m_sceneRTVHeap, 0, textureManager->m_textureHeap, textureManager->m_textureCnt);
+		m_sceneBufferIndex = textureManager->m_textureCnt++;
 	}
 }

@@ -38,7 +38,7 @@ void EngineBase::LoadPipeline()
 	InitializeFence();
 	Graphics::Initialize(m_device);
 
-	m_textureManager = make_shared<TextureManager>(m_device);
+	m_textureManager = make_shared<TextureManager>(m_device, m_srvAlloc);
 	for (UINT i = 0; i < FrameCount; i++)
 	{
 		m_frameResources[i] = make_shared<FrameResource>(m_device, m_width, m_height, i);
@@ -131,15 +131,6 @@ void EngineBase::InitializeDX12CoreComponents()
 
 void EngineBase::InitializeDescriptorHeaps()
 {
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC imguiHeapDesc = {};
-		imguiHeapDesc.NumDescriptors = 4;
-		imguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		imguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&imguiHeapDesc, IID_PPV_ARGS(&m_imguiHeap)));
-		m_srvAlloc.Create(m_device.Get(), m_imguiHeap.Get());
-	}
-
 	// Deafult
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};

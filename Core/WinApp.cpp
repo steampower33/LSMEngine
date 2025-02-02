@@ -115,15 +115,25 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	}
 	case WM_MOUSEMOVE:
 	{
-		pEngine->m_isMouseMove = true;
 		float mousePosX = static_cast<float>(GET_X_LPARAM(lParam));
 		float mousePosY = static_cast<float>(GET_Y_LPARAM(lParam));
+
+		float posX = pEngine->m_scenePos.x;
+		float posY = pEngine->m_scenePos.y;
+		float sizeX = pEngine->m_sceneSize.x;
+		float sizeY = pEngine->m_sceneSize.y;
+
+		if (!(posX <= mousePosX && mousePosX <= posX + sizeX) ||
+			!(posY <= mousePosY && mousePosY <= posY + sizeY))
+			break;
+
+		pEngine->m_isMouseMove = true;
 		pEngine->m_mouseDeltaX = mousePosX - pEngine->m_mousePosX;
 		pEngine->m_mouseDeltaY = mousePosY - pEngine->m_mousePosY;
 		pEngine->m_mousePosX = mousePosX;
 		pEngine->m_mousePosY = mousePosY;
-		pEngine->m_ndcX = (2.0f * static_cast<float>(mousePosX)) / static_cast<float>(pEngine->m_width) - 1.0f;
-		pEngine->m_ndcY = 1.0f - (2.0f * static_cast<float>(mousePosY)) / static_cast<float>(pEngine->m_height);
+		pEngine->m_ndcX = (2.0f * static_cast<float>(mousePosX - posX)) / static_cast<float>(sizeX) - 1.0f;
+		pEngine->m_ndcY = 1.0f - (2.0f * static_cast<float>(mousePosY - posY)) / static_cast<float>(sizeY);
 		break;
 	}
 	case WM_KEYDOWN:

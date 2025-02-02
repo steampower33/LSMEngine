@@ -12,6 +12,7 @@
 #include "Helpers.h"
 #include "ConstantBuffers.h"
 #include "GraphicsCommon.h"
+#include "DescriptorHeapAllocator.h"
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -20,7 +21,8 @@ class TextureManager
 {
 public:
 	TextureManager(
-		ComPtr<ID3D12Device>& device);
+		ComPtr<ID3D12Device>& device,
+		HeapAllocator& srvAlloc);
 
 	~TextureManager() {}
 

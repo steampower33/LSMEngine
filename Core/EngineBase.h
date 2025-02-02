@@ -87,6 +87,11 @@ public:
 	bool m_dragStartFlag = false;
 	bool m_lightRot = false;
 
+	ImVec2 m_sceneControllerPos;
+	ImVec2 m_sceneControllerSize;
+	ImVec2 m_scenePos;
+	ImVec2 m_sceneSize;
+
 protected:
 	void LoadPipeline();
 	void InitializeDX12CoreComponents();

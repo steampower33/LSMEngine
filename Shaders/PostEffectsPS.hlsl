@@ -9,7 +9,7 @@ float4 TexcoordToView(float2 texcoord)
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1; // 주의: y 방향을 뒤집어줘야 합니다.
-    posProj.z = texture[shadowDepthOnlyStartIndex + 1].Sample(linearClampSampler, texcoord).r;
+    posProj.z = texture[depthOnlySRVIndex].Sample(linearClampSampler, texcoord).r;
     posProj.w = 1.0;
 
     // ProjectSpace -> ViewSpace

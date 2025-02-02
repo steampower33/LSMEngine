@@ -1,10 +1,11 @@
 #include "TextureManager.h"
 
 TextureManager::TextureManager(
-	ComPtr<ID3D12Device>& device)
+	ComPtr<ID3D12Device>& device,
+	HeapAllocator& srvAlloc)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-	textureHeapDesc.NumDescriptors = 60;
+	textureHeapDesc.NumDescriptors = 64;
 	textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
@@ -12,6 +13,8 @@ TextureManager::TextureManager(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(m_textureHeap->GetCPUDescriptorHandleForHeapStart());
 
 	m_heapStartCpu = heapStartCpu;
+
+	srvAlloc.Create(device.Get(), m_textureHeap.Get());
 }
 
 void TextureManager::Initialize(

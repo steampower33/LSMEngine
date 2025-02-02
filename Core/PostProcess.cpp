@@ -124,7 +124,7 @@ void PostProcess::Render(
 	}
 
 	commandList->SetPipelineState(Graphics::combinePSO.Get());
-	m_combineFilter->Render(commandList, rtv, rtvSize * frameIndex, dsv, m_mesh->indexBufferCount);
+	m_combineFilter->Render(commandList, rtv, 0, dsv, m_mesh->indexBufferCount);
 
 	for (UINT i = 0; i < m_bloomLevels + 1; i++)
 	{

@@ -1,6 +1,13 @@
 #include "MainEngine.h"
 
-MainEngine::MainEngine() : EngineBase() {}
+MainEngine::MainEngine() : EngineBase() 
+{
+	m_sceneControllerPos = ImVec2(5, 15);
+	m_sceneControllerSize = ImVec2(m_width / 5, 800);
+
+	m_scenePos = ImVec2(5 + m_width / 5 + 5, 15);
+	m_sceneSize = ImVec2(m_width - (5 + m_width / 5 + 5 + 5), 800);
+}
 
 void MainEngine::Initialize()
 {
@@ -18,7 +25,7 @@ void MainEngine::Initialize()
 	m_textureManager->Initialize(m_device, m_pCurrFR->m_commandList);
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
-	
+
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
@@ -117,15 +124,15 @@ void MainEngine::Initialize()
 	{
 		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
 		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
-		m_globalConstsData.light[0].direction = XMFLOAT3{0.0f, -1.0f, 0.0f};
-		m_globalConstsData.light[0].spotPower = 6.0f;
+		m_globalConstsData.light[0].direction = XMFLOAT3{ 0.0f, -1.0f, 0.0f };
+		m_globalConstsData.light[0].spotPower = 3.0f;
 		m_globalConstsData.light[0].radius = 0.02f;
 		m_globalConstsData.light[0].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
 		m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
 		m_globalConstsData.light[1].radius = 0.02f;
-		m_globalConstsData.light[1].spotPower = 6.0f;
+		m_globalConstsData.light[1].spotPower = 3.0f;
 		m_globalConstsData.light[1].fallOffEnd = 20.0f;
 		m_globalConstsData.light[1].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
@@ -193,121 +200,147 @@ void MainEngine::UpdateGUI()
 
 	ImGui::NewFrame();
 
-	ImGui::Begin("Scene Control");
-	ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-	if (ImGui::TreeNode("General"))
 	{
-		ImGui::Checkbox("Draw Normals", &m_guiState.isDrawNormals);
-		ImGui::Checkbox("Wireframe", &m_guiState.isWireframe);
+		// 창의 위치 및 크기 고정
+		ImGui::SetNextWindowPos(m_sceneControllerPos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(m_sceneControllerSize, ImGuiCond_Always);
 
-		ImGui::TreePop();
-	}
+		ImVec2 availSize = ImGui::GetContentRegionAvail();
 
-	if (ImGui::TreeNode("Env Map"))
-	{
-		ImGui::SliderFloat("Strength", &m_globalConstsData.strengthIBL, 0.0f, 5.0f);
-		ImGui::RadioButton("Env", &m_globalConstsData.choiceEnvMap, 0);
-		ImGui::SameLine();
-		ImGui::RadioButton("Irradiance", &m_globalConstsData.choiceEnvMap, 1);
-		ImGui::SameLine();
-		ImGui::RadioButton("Specular", &m_globalConstsData.choiceEnvMap, 2);
-		ImGui::SliderFloat("EnvLodBias", &m_globalConstsData.envLodBias, 0.0f, 10.0f);
-		ImGui::TreePop();
-	}
+		ImGui::Begin("Scene Control", nullptr,
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoCollapse);
 
-	if (ImGui::TreeNode("Fog"))
-	{
-		UINT flag = 0;
-		flag += ImGui::RadioButton("Render", &m_globalConstsData.fogMode, 1);
-		ImGui::SameLine();
-		flag += ImGui::RadioButton("Depth", &m_globalConstsData.fogMode, 2);
-		flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
-		if (flag)
-			m_dirtyFlag.postEffectsFlag = true;
-		ImGui::TreePop();
-	}
+		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-	//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Post Process"))
-	{
-		UINT flag = 0;
-		flag += ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
-		flag += ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
-		if (flag)
-			m_dirtyFlag.postProcessFlag = true;
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Mirror"))
-	{
-		if (ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f))
+		if (ImGui::TreeNode("General"))
 		{
-			m_blendFactor[0] = m_mirrorAlpha;
-			m_blendFactor[1] = m_mirrorAlpha;
-			m_blendFactor[2] = m_mirrorAlpha;
-		}
+			ImGui::Checkbox("Draw Normals", &m_guiState.isDrawNormals);
+			ImGui::Checkbox("Wireframe", &m_guiState.isWireframe);
 
-		ImGui::SliderFloat("Metallic",
-			&m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
-		ImGui::SliderFloat("Roughness",
-			&m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
-
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Light 1")) {
-		ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
-		m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Light 2")) {
-		ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
-		m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
-		ImGui::TreePop();
-	}
-
-	if (ImGui::TreeNode("Point Light"))
-	{
-		ImGui::Checkbox("Rotate", &m_lightRot);
-		ImGui::TreePop();
-	}
-
-	for (const auto& model : m_models)
-	{
-		ImGui::PushID(model.first.c_str());
-
-		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-		if (ImGui::TreeNode(model.first.c_str())) {
-			if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f) ||
-				ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f) ||
-				ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoMap) ||
-				ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
-				ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
-				ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
-				ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
-				ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
-				ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap) ||
-				ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap) ||
-				ImGui::SliderFloat("MeshLodBias", &model.second.get()->m_meshConstsBufferData.meshLodBias, 0.0f, 10.0f)
-				)
-			{
-				m_guiState.isMeshChanged = true;
-				m_guiState.changedMeshKey = model.first;
-			}
 			ImGui::TreePop();
 		}
 
-		ImGui::PopID();
+		if (ImGui::TreeNode("Env Map"))
+		{
+			ImGui::SliderFloat("Strength", &m_globalConstsData.strengthIBL, 0.0f, 5.0f);
+			ImGui::RadioButton("Env", &m_globalConstsData.choiceEnvMap, 0);
+			ImGui::SameLine();
+			ImGui::RadioButton("Irradiance", &m_globalConstsData.choiceEnvMap, 1);
+			ImGui::SameLine();
+			ImGui::RadioButton("Specular", &m_globalConstsData.choiceEnvMap, 2);
+			ImGui::SliderFloat("EnvLodBias", &m_globalConstsData.envLodBias, 0.0f, 10.0f);
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Fog"))
+		{
+			UINT flag = 0;
+			flag += ImGui::RadioButton("Render", &m_globalConstsData.fogMode, 1);
+			ImGui::SameLine();
+			flag += ImGui::RadioButton("Depth", &m_globalConstsData.fogMode, 2);
+			flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
+			flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
+			if (flag)
+				m_dirtyFlag.postEffectsFlag = true;
+			ImGui::TreePop();
+		}
+
+		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (ImGui::TreeNode("Post Process"))
+		{
+			UINT flag = 0;
+			flag += ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f);
+			flag += ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
+			flag += ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
+			if (flag)
+				m_dirtyFlag.postProcessFlag = true;
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Mirror"))
+		{
+			if (ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f))
+			{
+				m_blendFactor[0] = m_mirrorAlpha;
+				m_blendFactor[1] = m_mirrorAlpha;
+				m_blendFactor[2] = m_mirrorAlpha;
+			}
+
+			ImGui::SliderFloat("Metallic",
+				&m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
+			ImGui::SliderFloat("Roughness",
+				&m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Light 1")) {
+			ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
+			m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Light 2")) {
+			ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
+			m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Point Light"))
+		{
+			ImGui::Checkbox("Rotate", &m_lightRot);
+			ImGui::TreePop();
+		}
+
+		for (const auto& model : m_models)
+		{
+			ImGui::PushID(model.first.c_str());
+
+			//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode(model.first.c_str())) {
+				if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f) ||
+					ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f) ||
+					ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoMap) ||
+					ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
+					ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
+					ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
+					ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
+					ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
+					ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap) ||
+					ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap) ||
+					ImGui::SliderFloat("MeshLodBias", &model.second.get()->m_meshConstsBufferData.meshLodBias, 0.0f, 10.0f)
+					)
+				{
+					m_guiState.isMeshChanged = true;
+					m_guiState.changedMeshKey = model.first;
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+
+		ImGui::End();
 	}
 
-	ImGui::End();
+	// Scene
+	{
+		// 창의 위치 및 크기 고정
+		ImGui::SetNextWindowPos(m_scenePos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(m_sceneSize, ImGuiCond_Always);
+		ImGui::Begin("Scene", nullptr,
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoCollapse);
 
-	// Rendering
-	ImGui::Render();
+		ImVec2 availSize = ImGui::GetContentRegionAvail();
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneBufferIndex);
+		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
+		ImGui::End();
+	}
 }
 
 void MainEngine::Update(float dt)
@@ -378,6 +411,7 @@ void MainEngine::Render()
 			for (const auto& model : m_models)
 				model.second->Render(m_device, m_pCurrFR->m_commandList);
 			m_mirror->Render(m_device, m_pCurrFR->m_commandList);
+			m_skybox->Render(m_device, m_pCurrFR->m_commandList);
 		}
 
 		// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_DEPTH_WRITE To D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -402,26 +436,24 @@ void MainEngine::Render()
 		for (const auto& model : m_models)
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
 		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
+		m_skybox->Render(m_device, m_pCurrFR->m_commandList);
 	}
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
-	m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-
-	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
-	m_pCurrFR->m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-	m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
 	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+		const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+		m_pCurrFR->m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+		m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
 		if (m_guiState.isWireframe)
 			m_pCurrFR->m_commandList->SetPipelineState(Graphics::skyboxWirePSO.Get());
 		else
 			m_pCurrFR->m_commandList->SetPipelineState(Graphics::skyboxSolidPSO.Get());
 		m_skybox->RenderSkybox(m_device, m_pCurrFR->m_commandList);
-	}
 
-	{
 		if (m_guiState.isWireframe)
 			m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicWirePSO.Get());
 		else
@@ -430,7 +462,7 @@ void MainEngine::Render()
 			model.second->Render(m_device, m_pCurrFR->m_commandList);
 
 		m_pCurrFR->m_commandList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
-		
+
 		for (UINT i = 0; i < MAX_LIGHTS; i++)
 			m_lightSphere[i]->Render(m_device, m_pCurrFR->m_commandList);
 
@@ -442,10 +474,8 @@ void MainEngine::Render()
 			for (const auto& model : m_models)
 				model.second->RenderNormal(m_pCurrFR->m_commandList);
 		}
-	}
 
-	// Mirror
-	{
+		// Mirror
 		m_pCurrFR->m_commandList->SetPipelineState(Graphics::stencilMaskPSO.Get());
 		m_pCurrFR->m_commandList->OMSetStencilRef(1); // 참조 값 1로 설정
 		m_mirror->Render(m_device, m_pCurrFR->m_commandList);
@@ -522,11 +552,17 @@ void MainEngine::Render()
 	SetBarrier(m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_sceneBuffer,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
 	// PostProcess
 	{
-		m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
-			m_rtvHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
+		m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_commandList, m_pCurrFR->m_sceneBuffer,
+			m_pCurrFR->m_sceneRTVHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
 	}
+
+	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_sceneBuffer,
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_fogBuffer,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -534,8 +570,18 @@ void MainEngine::Render()
 	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_resolvedBuffers,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 
-	ID3D12DescriptorHeap* imguiHeap[] = { m_imguiHeap.Get() };
-	m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(imguiHeap), imguiHeap);
+	// Rendering
+	ImGui::Render();
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+	m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+	m_pCurrFR->m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+	m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+	m_pCurrFR->m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pCurrFR->m_commandList.Get());
 
 	SetBarrier(m_pCurrFR->m_commandList, m_renderTargets[m_frameIndex],
@@ -565,7 +611,7 @@ void MainEngine::UpdateLight(float dt)
 		XMMATRIX rotMat = XMMatrixRotationY(dt * 3.141592f * 0.5f);
 		axis = XMVector3TransformCoord(axis, rotMat);
 	}
-	
+
 	// 1번 LIGHT만 설정
 	XMVECTOR focusPosition = XMVECTOR{ 0.0f, 0.0f, 0.0f };
 	XMVECTOR posVec = XMVectorAdd(XMVECTOR{ 0.0f, 2.0f, 0.0f }, axis);
@@ -779,6 +825,7 @@ void MainEngine::Destroy()
 	}
 
 	CloseHandle(m_fenceEvent);
+	m_srvAlloc.Destroy();
 
 	// Cleanup
 	ImGui_ImplDX12_Shutdown();

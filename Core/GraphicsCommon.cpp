@@ -94,13 +94,16 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 
 	UINT textureSize = 50;
 	UINT cubeMapTextureSize = 10;
+	UINT imguiTextureSize = 4;
 	UINT fogMapSize = 1;
 
-	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[2];
+	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[3];
 	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 		textureSize, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 		cubeMapTextureSize, textureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	textureRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+		imguiTextureSize, textureSize + cubeMapTextureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	bloomLevels = 3;
 	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges;
@@ -112,7 +115,7 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[4].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[5].InitAsDescriptorTable(2, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[5].InitAsDescriptorTable(3, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[6].InitAsDescriptorTable(1, &filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	// 叼胶农赋磐 赛 积己

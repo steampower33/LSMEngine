@@ -73,6 +73,10 @@ public:
 	ComPtr<ID3D12Resource> m_fogBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_fogRTVHeap;
 
+	ComPtr<ID3D12Resource> m_sceneBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
+	UINT m_sceneBufferIndex = -1;
+
 	// PostProcess
 	shared_ptr<PostProcess> m_postProcess;
 
