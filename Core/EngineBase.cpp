@@ -7,10 +7,7 @@ class WinApp;
 HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
-	m_width(1920), m_height(1200),
-	m_mousePosX(m_width / 2),
-	m_mousePosY(m_height / 2),
-	m_aspectRatio(m_width / m_height)
+	m_width(1920), m_height(1200)
 {
 	m_viewport.TopLeftX = 0.0f;
 	m_viewport.TopLeftY = 0.0f;
@@ -23,6 +20,29 @@ EngineBase::EngineBase() :
 	m_scissorRect.top = 0;
 	m_scissorRect.right = static_cast<LONG>(m_width);
 	m_scissorRect.bottom = static_cast<LONG>(m_height);
+
+	m_sceneControllerPos = ImVec2(5, 15);
+	m_sceneControllerSize = ImVec2(360, 800);
+
+	m_scenePos = ImVec2(5 + m_sceneControllerSize.x + 5, 15);
+	m_sceneSize = ImVec2(m_width - (m_scenePos.x + 5), m_sceneControllerSize.y);
+
+	m_mousePosX = m_width / 2;
+	m_mousePosY = m_height / 2;
+
+	m_sceneViewport.TopLeftX = 0.0f;
+	m_sceneViewport.TopLeftY = 0.0f;
+	m_sceneViewport.Width = m_sceneSize.x;
+	m_sceneViewport.Height = m_sceneSize.y;
+	m_sceneViewport.MinDepth = 0.0f;
+	m_sceneViewport.MaxDepth = 1.0f;
+
+	m_sceneScissorRect.left = 0;
+	m_sceneScissorRect.top = 0;
+	m_sceneScissorRect.right = static_cast<LONG>(m_sceneSize.x);
+	m_sceneScissorRect.bottom = static_cast<LONG>(m_sceneSize.y);
+
+	m_aspectRatio = m_sceneSize.x / m_sceneSize.y;
 
 	m_camera = make_shared<Camera>(m_aspectRatio);
 }
@@ -41,7 +61,7 @@ void EngineBase::LoadPipeline()
 	m_textureManager = make_shared<TextureManager>(m_device, m_srvAlloc);
 	for (UINT i = 0; i < FrameCount; i++)
 	{
-		m_frameResources[i] = make_shared<FrameResource>(m_device, m_width, m_height, i);
+		m_frameResources[i] = make_shared<FrameResource>(m_device, m_sceneSize.x, m_sceneSize.y, i);
 	}
 }
 
@@ -253,7 +273,7 @@ void EngineBase::LoadGUI()
 	init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
 	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 	// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-	init_info.SrvDescriptorHeap = m_imguiHeap.Get();
+	init_info.SrvDescriptorHeap = m_textureManager->m_textureHeap.Get();
 	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return m_srvAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return m_srvAlloc.Free(cpu_handle, gpu_handle); };
 	ImGui_ImplDX12_Init(&init_info);

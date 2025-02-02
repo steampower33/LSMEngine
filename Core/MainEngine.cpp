@@ -2,11 +2,6 @@
 
 MainEngine::MainEngine() : EngineBase() 
 {
-	m_sceneControllerPos = ImVec2(5, 15);
-	m_sceneControllerSize = ImVec2(m_width / 5, 800);
-
-	m_scenePos = ImVec2(5 + m_width / 5 + 5, 15);
-	m_sceneSize = ImVec2(m_width - (5 + m_width / 5 + 5 + 5), 800);
 }
 
 void MainEngine::Initialize()
@@ -170,7 +165,7 @@ void MainEngine::Initialize()
 	// ÈÄÃ³¸®
 	for (int i = 0; i < FrameCount; i++)
 		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_pCurrFR->m_commandList, m_width, m_height, m_frameResources[i]->m_globalConstsData.fogSRVIndex);
+			m_device, m_pCurrFR->m_commandList, m_sceneSize.x, m_sceneSize.y, m_frameResources[i]->m_globalConstsData.fogSRVIndex);
 
 	ThrowIfFailed(m_pCurrFR->m_commandList->Close());
 
@@ -341,6 +336,9 @@ void MainEngine::UpdateGUI()
 		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
 		ImGui::End();
 	}
+
+	// Rendering
+	ImGui::Render();
 }
 
 void MainEngine::Update(float dt)
@@ -421,9 +419,9 @@ void MainEngine::Render()
 	}
 
 	{
-		m_pCurrFR->m_commandList->RSSetViewports(1, &m_viewport);
-		m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_scissorRect);
-
+		m_pCurrFR->m_commandList->RSSetViewports(1, &m_sceneViewport);
+		m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_sceneScissorRect);
+		
 		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	}
 
@@ -570,8 +568,8 @@ void MainEngine::Render()
 	SetBarrier(m_pCurrFR->m_commandList, m_pCurrFR->m_resolvedBuffers,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 
-	// Rendering
-	ImGui::Render();
+	m_pCurrFR->m_commandList->RSSetViewports(1, &m_viewport);
+	m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());

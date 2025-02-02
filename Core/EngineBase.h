@@ -46,6 +46,8 @@ public:
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
+	CD3DX12_VIEWPORT m_sceneViewport;
+	CD3DX12_RECT m_sceneScissorRect;
 	ComPtr<ID3D12Device> m_device;
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<IDXGISwapChain3> m_swapChain;

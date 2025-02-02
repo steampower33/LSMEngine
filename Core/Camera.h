@@ -49,7 +49,6 @@ public:
 	bool m_useFirstPersonView = false;
 
 	XMFLOAT3 m_pos{ 0.0f, 0.0f, -5.0f };
-	float m_aspectRatio;
 
 private:
 
@@ -60,7 +59,6 @@ private:
 	// 마우스 커서 위치 저장 (Picking에 사용)
 	float m_cursorNdcX = 0.0f;
 	float m_cursorNdcY = 0.0f;
-
 
 	// roll, pitch, yaw
 	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
@@ -77,5 +75,5 @@ private:
 	float m_projFovAngleY = 90.0f;
 	float m_nearZ = 0.01f;
 	float m_farZ = 100.0f;
-	float m_aspect = 16.0f / 9.0f;
+	float m_aspectRatio;
 };
