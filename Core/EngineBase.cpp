@@ -27,6 +27,9 @@ EngineBase::EngineBase() :
 	m_scenePos = ImVec2(5 + m_sceneControllerSize.x + 5, 15);
 	m_sceneSize = ImVec2(m_width - (m_scenePos.x + 5), m_sceneControllerSize.y);
 
+	m_assetsBrowserPos = ImVec2(m_sceneControllerPos.x, m_sceneControllerPos.y + m_sceneControllerSize.y + 5);
+	m_assetsBrowserSize = ImVec2(m_width - 5 - 5, m_height - m_sceneControllerSize.y - 5 - 5 - 15);
+
 	m_mousePosX = m_width / 2;
 	m_mousePosY = m_height / 2;
 

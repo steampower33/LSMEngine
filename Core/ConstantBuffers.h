@@ -41,7 +41,7 @@ __declspec(align(256)) struct GlobalConstants
 	XMFLOAT4X4 invProj;
 	
 	XMFLOAT3 eyeWorld = { 0.0f, 0.0f, 0.0f };
-	float strengthIBL = 0.0f;
+	float strengthIBL = 1.0f;
 
 	int choiceEnvMap = 0;
 	float envLodBias = 0.0f;
@@ -75,7 +75,7 @@ __declspec(align(256)) struct MeshConstants {
 	float roughnessFactor = 1.0f;
 	XMFLOAT3 emissionFactor = { 0.0f, 0.0f, 0.0f };
 	float heightScale = 0.0f;
-	UINT useAlbedoMap = 1;
+	UINT useAlbedoMap = 0;
 	UINT useNormalMap = 0;
 	UINT useHeightMap = 0;
 	UINT useAOMap = 0;

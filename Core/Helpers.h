@@ -31,17 +31,32 @@ using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
+struct TextureInfo {
+	UINT heapIndex;
+};
+
 struct GuiState {
 	string changedMeshKey = "";
 	bool isDrawNormals = false;
 	bool isWireframe = false;
 	bool isMeshChanged = false;
 	bool isLightChanged = false;
+	bool isEnvChanged = false;
 };
 
 struct DirtyFlag {
 	bool postProcessFlag = false;
 	bool postEffectsFlag = false;
+};
+
+struct ShapesInfo
+{
+	UINT sphereNum = 0;
+	UINT sphereCnt = 0;
+	UINT squareNum = 0;
+	UINT squareCnt = 0;
+	UINT boxNum = 0;
+	UINT boxCnt = 0;
 };
 
 inline string HrToString(HRESULT hr)
@@ -301,7 +316,7 @@ static void CreateDDSTextureBuffer(
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
 	UINT& textureCnt,
-	unordered_map<string, int>& textureIdx,
+	unordered_map<string, TextureInfo>& textureIdx,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	bool isCubeMap)
 {
@@ -360,7 +375,7 @@ static void CreateDDSTextureBuffer(
 	else
 		assert(false && "DDS Texture file does not exist!");
 
-	textureIdx.insert({ filename, textureCnt });
+	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
@@ -376,7 +391,7 @@ static void CreateEXRTextureBuffer(
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
 	UINT& textureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, TextureInfo>& textureIdx)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
@@ -455,7 +470,7 @@ static void CreateEXRTextureBuffer(
 	else
 		assert(false && "EXR Texture file does not exist!");
 
-	textureIdx.insert({ filename, textureCnt });
+	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded EXR texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
@@ -471,7 +486,7 @@ static void CreateMipMapTextureBuffer(
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
 	UINT& textureCnt,
-	unordered_map<string, int>& textureIdx, const bool useSRGB)
+	unordered_map<string, TextureInfo>& textureIdx, const bool useSRGB)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	textureHandle.Offset(size * textureCnt);
@@ -590,7 +605,7 @@ static void CreateMipMapTextureBuffer(
 	else
 		assert(false && "MipMap texture file does not exist!");
 
-	textureIdx.insert({ filename, textureCnt });
+	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded MipMap texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);

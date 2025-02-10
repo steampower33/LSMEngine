@@ -1,6 +1,6 @@
 #include "MainEngine.h"
 
-MainEngine::MainEngine() : EngineBase() 
+MainEngine::MainEngine() : EngineBase()
 {
 }
 
@@ -44,24 +44,6 @@ void MainEngine::Initialize()
 		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
 	}
 
-	//{
-	//	MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
-
-	//	m_board = make_shared<Model>(
-	//		m_device, m_pCurrFR->m_commandList, m_commandQueue,
-	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-
-	//	float degrees = 90.0f;
-	//	float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
-	//	XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
-	//	XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
-
-	//	XMVECTOR translation{ 0.0f, -2.0f, 0.0f, 0.0f };
-	//	m_board->UpdateQuaternionAndTranslation(quaternion, translation);
-	//	m_board->m_key = "board";
-	//	m_models.insert({ m_board->m_key, m_board });
-	//}
-
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
 
@@ -89,7 +71,7 @@ void MainEngine::Initialize()
 		XMStoreFloat4(&m_mirrorPlane, plane);
 	}
 
-	{
+	/*{
 		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/DamagedHelmet/", "DamagedHelmet.gltf");
 
 		shared_ptr<Model> helmet = make_shared<Model>(
@@ -98,6 +80,7 @@ void MainEngine::Initialize()
 		helmet->m_key = "helmet";
 		m_models.insert({ helmet->m_key, helmet });
 	}
+	*/
 
 	{
 		float radius = 0.5f;
@@ -145,15 +128,6 @@ void MainEngine::Initialize()
 		}
 	}
 
-	/*{
-		MeshData meshData = GeometryGenerator::MakeBox(1.0f);
-		shared_ptr<Model> box = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(2.0f, 0.0f, 0.0f, 0.0f));
-		box->m_key = "box";
-		m_models.insert({ box->m_key, box });
-	}*/
-
 	// 후처리용 화면 사각형
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare();
@@ -187,7 +161,6 @@ void MainEngine::Initialize()
 
 }
 
-
 void MainEngine::UpdateGUI()
 {
 	ImGui_ImplDX12_NewFrame();
@@ -196,6 +169,14 @@ void MainEngine::UpdateGUI()
 	ImGui::NewFrame();
 
 	{
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f); // 자식 패널의 테두리 크기
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.14f, 0.14f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.21f, 0.21f, 0.21f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.43f, 0.86f, 1.0f));
+
 		// 창의 위치 및 크기 고정
 		ImGui::SetNextWindowPos(m_sceneControllerPos, ImGuiCond_Always);
 		ImGui::SetNextWindowSize(m_sceneControllerSize, ImGuiCond_Always);
@@ -207,121 +188,288 @@ void MainEngine::UpdateGUI()
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoCollapse);
 
-		ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		// 왼쪽 패널의 너비 설정
+		float leftPaneWidth = 60.0f;
+		static int buttonIdx = 0;
+		ImVec2 buttonSize(leftPaneWidth, 30); // 패널 너비와 동일하게 설정
 
-		if (ImGui::TreeNode("General"))
+		// 왼쪽 패널
 		{
-			ImGui::Checkbox("Draw Normals", &m_guiState.isDrawNormals);
-			ImGui::Checkbox("Wireframe", &m_guiState.isWireframe);
+			ImGui::BeginChild("LeftPane", ImVec2(leftPaneWidth, 0), true);
 
-			ImGui::TreePop();
+			// 버튼 추가
+			if (ImGui::Button("General", buttonSize)) { buttonIdx = GuiIndex::GENERAL; }
+			if (ImGui::Button("Objects", buttonSize)) { buttonIdx = GuiIndex::OBJECTS; }
+			if (ImGui::Button("Shapes", buttonSize)) { buttonIdx = GuiIndex::SHAPES; }
+			if (ImGui::Button("Lights", buttonSize)) { buttonIdx = GuiIndex::LIGHT; }
+			if (ImGui::Button("Env", buttonSize)) { buttonIdx = GuiIndex::ENV; }
+			if (ImGui::Button("Fog", buttonSize)) { buttonIdx = GuiIndex::FOG; }
+			if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = GuiIndex::POST_PROCESS; }
+			if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = GuiIndex::MIRROR; }
+
+			ImGui::EndChild();
 		}
 
-		if (ImGui::TreeNode("Env Map"))
+		// 오른쪽 콘텐츠 영역
 		{
-			ImGui::SliderFloat("Strength", &m_globalConstsData.strengthIBL, 0.0f, 5.0f);
-			ImGui::RadioButton("Env", &m_globalConstsData.choiceEnvMap, 0);
 			ImGui::SameLine();
-			ImGui::RadioButton("Irradiance", &m_globalConstsData.choiceEnvMap, 1);
-			ImGui::SameLine();
-			ImGui::RadioButton("Specular", &m_globalConstsData.choiceEnvMap, 2);
-			ImGui::SliderFloat("EnvLodBias", &m_globalConstsData.envLodBias, 0.0f, 10.0f);
-			ImGui::TreePop();
-		}
 
-		if (ImGui::TreeNode("Fog"))
-		{
-			UINT flag = 0;
-			flag += ImGui::RadioButton("Render", &m_globalConstsData.fogMode, 1);
-			ImGui::SameLine();
-			flag += ImGui::RadioButton("Depth", &m_globalConstsData.fogMode, 2);
-			flag += ImGui::SliderFloat("Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
-			flag += ImGui::SliderFloat("Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
-			if (flag)
-				m_dirtyFlag.postEffectsFlag = true;
-			ImGui::TreePop();
-		}
-
-		//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-		if (ImGui::TreeNode("Post Process"))
-		{
-			UINT flag = 0;
-			flag += ImGui::SliderFloat("Strength", &m_combineConsts.strength, 0.0f, 1.0f);
-			flag += ImGui::SliderFloat("Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
-			flag += ImGui::SliderFloat("Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
-			if (flag)
-				m_dirtyFlag.postProcessFlag = true;
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Mirror"))
-		{
-			if (ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f))
+			ImGui::BeginChild("RightPane", ImVec2(0, 0), true, ImGuiWindowFlags_None);
+			if (buttonIdx == GuiIndex::GENERAL)
 			{
-				m_blendFactor[0] = m_mirrorAlpha;
-				m_blendFactor[1] = m_mirrorAlpha;
-				m_blendFactor[2] = m_mirrorAlpha;
-			}
+				ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-			ImGui::SliderFloat("Metallic",
-				&m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
-			ImGui::SliderFloat("Roughness",
-				&m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Light 1")) {
-			ImGui::SliderFloat("Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
-			m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Light 2")) {
-			ImGui::SliderFloat("Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
-			m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Point Light"))
-		{
-			ImGui::Checkbox("Rotate", &m_lightRot);
-			ImGui::TreePop();
-		}
-
-		for (const auto& model : m_models)
-		{
-			ImGui::PushID(model.first.c_str());
-
-			//ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-			if (ImGui::TreeNode(model.first.c_str())) {
-				if (ImGui::SliderFloat("Metallic", &model.second.get()->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f) ||
-					ImGui::SliderFloat("Roughness", &model.second.get()->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f) ||
-					ImGui::Checkbox("Use AlbedoTexture", &model.second.get()->m_useAlbedoMap) ||
-					ImGui::Checkbox("Use NormalMapping", &model.second.get()->m_useNormalMap) ||
-					ImGui::Checkbox("Use HeightMapping", &model.second.get()->m_useHeightMap) ||
-					ImGui::SliderFloat("HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f) ||
-					ImGui::Checkbox("Use AO", &model.second.get()->m_useAOMap) ||
-					ImGui::Checkbox("Use MetallicMap", &model.second.get()->m_useMetallicMap) ||
-					ImGui::Checkbox("Use RoughnessMap", &model.second.get()->m_useRoughnessMap) ||
-					ImGui::Checkbox("Use EmissiveMap", &model.second.get()->m_useEmissiveMap) ||
-					ImGui::SliderFloat("MeshLodBias", &model.second.get()->m_meshConstsBufferData.meshLodBias, 0.0f, 10.0f)
-					)
+				if (ImGui::BeginTable("GeneralTable", 2, flags))
 				{
-					m_guiState.isMeshChanged = true;
-					m_guiState.changedMeshKey = model.first;
+					DrawTableRow("Draw Normals", [&]() {
+						return ImGui::Checkbox("##Draw Normals", &m_guiState.isDrawNormals);
+						});
+
+					DrawTableRow("WireFrame", [&]() {
+						return ImGui::Checkbox("##WireFrame", &m_guiState.isWireframe);
+						});
+
+					ImGui::EndTable();
 				}
-				ImGui::TreePop();
+
 			}
+			else if (buttonIdx == GuiIndex::OBJECTS)
+			{
+				for (const auto& model : m_models)
+				{
+					ImGui::PushID(model.first.c_str());
 
-			ImGui::PopID();
+					if (ImGui::CollapsingHeader(model.first.c_str())) {
+						ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+						if (ImGui::BeginTable("MirrorTable", 2, flags))
+						{
+							UINT flag = 0;
+
+							flag += DrawTableRow("Metallic", [&]() {
+								return ImGui::SliderFloat("##Metallic", &model.second.get()->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
+								});
+
+							flag += DrawTableRow("Roughness", [&]() {
+								return ImGui::SliderFloat("##Roughness", &model.second.get()->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+								});
+
+							flag += DrawTableRow("Use AlbedoTexture", [&]() {
+								return ImGui::Checkbox("##Use AlbedoTexture", &model.second.get()->m_useAlbedoMap);
+								});
+
+							flag += DrawTableRow("Use NormalMapping", [&]() {
+								return ImGui::Checkbox("##Use NormalMapping", &model.second.get()->m_useNormalMap);
+								});
+
+							flag += DrawTableRow("Use HeightMapping", [&]() {
+								return ImGui::Checkbox("##Use HeightMapping", &model.second.get()->m_useHeightMap);
+								});
+
+							flag += DrawTableRow("HeightScale", [&]() {
+								return ImGui::SliderFloat("##HeightScale", &model.second.get()->m_meshConstsBufferData.heightScale, 0.0f, 0.1f);
+								});
+
+							flag += DrawTableRow("Use AO", [&]() {
+								return ImGui::Checkbox("##Use AO", &model.second.get()->m_useAOMap);
+								});
+
+							flag += DrawTableRow("Use MetallicMap", [&]() {
+								return ImGui::Checkbox("##Use MetallicMap", &model.second.get()->m_useMetallicMap);
+								});
+
+							flag += DrawTableRow("Use RoughnessMap", [&]() {
+								return ImGui::Checkbox("##Use RoughnessMap", &model.second.get()->m_useRoughnessMap);
+								});
+
+							flag += DrawTableRow("Use EmissiveMap", [&]() {
+								return ImGui::Checkbox("##Use EmissiveMap", &model.second.get()->m_useEmissiveMap);
+								});
+
+							flag += DrawTableRow("MeshLodBias", [&]() {
+								return ImGui::SliderFloat("##MeshLodBias", &model.second.get()->m_meshConstsBufferData.meshLodBias, 0.0f, 10.0f);
+								});
+
+							if (flag)
+							{
+								m_guiState.isMeshChanged = true;
+								m_guiState.changedMeshKey = model.first;
+							}
+							ImGui::EndTable();
+						}
+					}
+
+					ImGui::PopID();
+				}
+			}
+			else if (buttonIdx == GuiIndex::SHAPES)
+			{
+				if (ImGui::Button("Sphere", buttonSize)) { m_shapesInfo.sphereCnt++; }
+				ImGui::SameLine();
+				if (ImGui::Button("Square", buttonSize)) { m_shapesInfo.squareCnt++; }
+				ImGui::SameLine();
+				if (ImGui::Button("Box", buttonSize)) { m_shapesInfo.boxCnt++; }
+			}
+			else if (buttonIdx == GuiIndex::LIGHT)
+			{
+				if (ImGui::CollapsingHeader("Light 1")) {
+					ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+					if (ImGui::BeginTable("MirrorTable", 2, flags))
+					{
+						DrawTableRow("Radius", [&]() {
+							return ImGui::SliderFloat("##Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
+							});
+						m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
+						ImGui::EndTable();
+					}
+				}
+
+				if (ImGui::CollapsingHeader("Light 2")) {
+					ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+					if (ImGui::BeginTable("MirrorTable", 2, flags))
+					{
+						DrawTableRow("Radius", [&]() {
+							return ImGui::SliderFloat("##Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
+							});
+						m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
+						ImGui::EndTable();
+					}
+				}
+
+				if (ImGui::CollapsingHeader("Point Light"))
+				{
+					ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+					if (ImGui::BeginTable("MirrorTable", 2, flags))
+					{
+						DrawTableRow("Rotate", [&]() {
+							return ImGui::Checkbox("##Rotate", &m_lightRot);
+							});
+						ImGui::EndTable();
+					}
+				}
+			}
+			else if (buttonIdx == GuiIndex::ENV)
+			{
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+				if (ImGui::BeginTable("EnvTable", 2, flags))
+				{
+					UINT flag = 0;
+					flag += DrawTableRow("Strength", [&]() {
+						return ImGui::SliderFloat("##Strength", &m_globalConstsData.strengthIBL, 0.0f, 5.0f);
+						});
+
+					static const char* envOptions[] = { "Env", "Irradiance", "Specular" };
+
+					flag += DrawTableRow("Options", [&]() {
+						return ImGui::Combo("##Options", &m_globalConstsData.choiceEnvMap, envOptions, IM_ARRAYSIZE(envOptions));
+						});
+
+					flag += DrawTableRow("EnvLodBias", [&]() {
+						return ImGui::SliderFloat("##EnvLodBias", &m_globalConstsData.envLodBias, 0.0f, 10.0f);
+						});
+
+					if (flag)
+						m_guiState.isEnvChanged = true;
+					ImGui::EndTable();
+				}
+
+			}
+			else if (buttonIdx == GuiIndex::FOG)
+			{
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+				if (ImGui::BeginTable("FogTable", 2, flags))
+				{
+					UINT flag = 0;
+
+					static const char* fogOptions[] = { "Render", "Depth" };
+					flag += DrawTableRow("Options", [&]() {
+						return ImGui::Combo("##Options", &m_globalConstsData.fogMode, fogOptions, IM_ARRAYSIZE(fogOptions));
+						});
+
+					flag += DrawTableRow("Depth Scale", [&]() {
+						return ImGui::SliderFloat("##Depth Scale", &m_globalConstsData.depthScale, 0.0f, 1.0f);
+						});
+
+					flag += DrawTableRow("Fog Strength", [&]() {
+						return ImGui::SliderFloat("##Fog Strength", &m_globalConstsData.fogStrength, 0.0f, 10.0f);
+						});
+
+					if (flag)
+						m_dirtyFlag.postEffectsFlag = true;
+					ImGui::EndTable();
+				}
+			}
+			else if (buttonIdx == GuiIndex::POST_PROCESS)
+			{
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+				if (ImGui::BeginTable("PostProcessTable", 2, flags))
+				{
+					UINT flag = 0;
+
+					flag += DrawTableRow("Strength", [&]() {
+						return ImGui::SliderFloat("##Strength", &m_combineConsts.strength, 0.0f, 1.0f);
+						});
+
+					flag += DrawTableRow("Exposure", [&]() {
+						return ImGui::SliderFloat("##Exposure", &m_combineConsts.exposure, 0.0f, 10.0f);
+						});
+
+					flag += DrawTableRow("Gamma", [&]() {
+						return ImGui::SliderFloat("##Gamma", &m_combineConsts.gamma, 0.0f, 5.0f);
+						});
+
+					if (flag)
+						m_dirtyFlag.postProcessFlag = true;
+					ImGui::EndTable();
+				}
+			}
+			else if (buttonIdx == GuiIndex::MIRROR)
+			{
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+				if (ImGui::BeginTable("MirrorTable", 2, flags))
+				{
+					UINT flag = 0;
+
+					if (flag += DrawTableRow("Alpha", [&]() {
+						return ImGui::SliderFloat("##Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
+						}))
+					{
+						m_blendFactor[0] = m_mirrorAlpha;
+						m_blendFactor[1] = m_mirrorAlpha;
+						m_blendFactor[2] = m_mirrorAlpha;
+					}
+
+					flag += DrawTableRow("Metallic", [&]() {
+						return ImGui::SliderFloat("##Metallic", &m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
+						});
+
+					flag += DrawTableRow("Roughness", [&]() {
+						return ImGui::SliderFloat("##Roughness", &m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+						});
+					
+					ImGui::EndTable();
+				}
+			}
+			ImGui::EndChild();
 		}
-
+		ImGui::PopStyleVar(3);
+		ImGui::PopStyleColor(3);
 		ImGui::End();
 	}
 
 	// Scene
 	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+
 		// 창의 위치 및 크기 고정
 		ImGui::SetNextWindowPos(m_scenePos, ImGuiCond_Always);
 		ImGui::SetNextWindowSize(m_sceneSize, ImGuiCond_Always);
@@ -334,6 +482,40 @@ void MainEngine::UpdateGUI()
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneBufferIndex);
 		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+	}
+
+	// Assets Browser
+	{
+		ImGui::SetNextWindowPos(m_assetsBrowserPos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(m_assetsBrowserSize, ImGuiCond_Always);
+		if (!ImGui::Begin("Assets Browser", nullptr,
+			ImGuiWindowFlags_MenuBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoCollapse))
+		{
+			ImGui::End();
+			return;
+		}
+
+		ImGui::BeginChild("LeftPane", ImVec2(m_sceneControllerSize.x, 0), true);
+		ImGui::Text("Folders");
+		ImGui::Separator();
+		ImGui::EndChild();
+
+		ImGui::SameLine(); // 좌측 패널과 우측 패널을 나란히 배치
+
+		// 우측 패널: 선택한 폴더 내 에셋 영역
+		ImGui::BeginChild("RightPane", ImVec2(0, 0), true);
+		ImGui::Text("Assets");
+
+		ImGui::Separator();
+
+		ImGui::EndChild();
+
 		ImGui::End();
 	}
 
@@ -374,7 +556,11 @@ void MainEngine::Update(float dt)
 			m_frameResources[i]->m_postProcess->Update(m_combineConsts);
 	}
 
-	m_mirror->OnlyCallConstsMemcpy();
+	if (m_guiState.isEnvChanged)
+	{
+		m_guiState.isEnvChanged = false;
+		m_mirror->OnlyCallConstsMemcpy();
+	}
 
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 }
@@ -392,6 +578,8 @@ void MainEngine::Render()
 		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 		m_pCurrFR->m_commandList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 	}
+
+	CreateShapes();
 
 	// ShadowDepthOnly
 	{
@@ -421,7 +609,7 @@ void MainEngine::Render()
 	{
 		m_pCurrFR->m_commandList->RSSetViewports(1, &m_sceneViewport);
 		m_pCurrFR->m_commandList->RSSetScissorRects(1, &m_sceneScissorRect);
-		
+
 		m_pCurrFR->m_commandList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
 	}
 
@@ -574,7 +762,7 @@ void MainEngine::Render()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 	m_pCurrFR->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+	const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_pCurrFR->m_commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_pCurrFR->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
@@ -832,4 +1020,64 @@ void MainEngine::Destroy()
 
 	// COM 해제
 	CoUninitialize();
+}
+
+void MainEngine::CreateShapes()
+{
+	if (m_shapesInfo.sphereCnt > 0)
+	{
+		m_shapesInfo.sphereCnt = 0;
+		float radius = 0.5f;
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
+		XMFLOAT3 cameraPos = m_camera->GetEyePos();
+		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
+
+		shared_ptr<Model> model = make_shared<Model>(
+			m_device, m_pCurrFR->m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
+		model->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
+		m_models.insert({ model->m_key, model });
+		m_shapesInfo.sphereNum++;
+	}
+
+	if (m_shapesInfo.squareCnt > 0)
+	{
+		m_shapesInfo.squareCnt = 0;
+
+		MeshData meshData = GeometryGenerator::MakeSquare();
+		XMFLOAT3 cameraPos = m_camera->GetEyePos();
+		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
+
+		shared_ptr<Model> model = make_shared<Model>(
+			m_device, m_pCurrFR->m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
+		model->m_key = "square" + std::to_string(m_shapesInfo.squareNum);
+		m_models.insert({ model->m_key, model });
+		m_shapesInfo.squareNum++;
+	}
+
+	if (m_shapesInfo.boxCnt > 0)
+	{
+		m_shapesInfo.boxCnt = 0;
+
+		MeshData meshData = GeometryGenerator::MakeBox();
+		XMFLOAT3 cameraPos = m_camera->GetEyePos();
+		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
+
+		shared_ptr<Model> model = make_shared<Model>(
+			m_device, m_pCurrFR->m_commandList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
+		model->m_key = "box" + std::to_string(m_shapesInfo.boxNum);
+		m_models.insert({ model->m_key, model });
+		m_shapesInfo.boxNum++;
+	}
+}
+
+UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement)
+{
+	ImGui::TableNextRow();
+	ImGui::TableSetColumnIndex(0);
+	ImGui::Text("%s", label);
+	ImGui::TableSetColumnIndex(1);
+	return uiElement(); // UI 요소 실행 후 반환
 }

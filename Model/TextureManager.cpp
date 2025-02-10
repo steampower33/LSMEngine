@@ -103,7 +103,7 @@ void TextureManager::LoadTextures(
 }
 
 bool TextureManager::CheckDuplcateFilename(
-	unordered_map<string, int>& textureIdx,
+	unordered_map<string, TextureInfo>& textureIdx,
 	const string& filename,
 	const string& lowerFilename,
 	shared_ptr<Mesh>& newMesh,
@@ -119,37 +119,37 @@ bool TextureManager::CheckDuplcateFilename(
 		if (f->first.find(".dds") != std::string::npos)
 		{
 			if (lowerFilename.find("env") != std::string::npos)
-				cubemapIndexConstsBufferData.cubemapEnvIndex = f->second;
+				cubemapIndexConstsBufferData.cubemapEnvIndex = f->second.heapIndex;
 			else if (lowerFilename.find("diffuse") != std::string::npos)
-				cubemapIndexConstsBufferData.cubemapDiffuseIndex = f->second;
+				cubemapIndexConstsBufferData.cubemapDiffuseIndex = f->second.heapIndex;
 			else if (lowerFilename.find("specular") != std::string::npos)
-				cubemapIndexConstsBufferData.cubemapSpecularIndex = f->second;
+				cubemapIndexConstsBufferData.cubemapSpecularIndex = f->second.heapIndex;
 			else if (lowerFilename.find("brdf") != std::string::npos)
-				cubemapIndexConstsBufferData.brdfIndex = f->second;
+				cubemapIndexConstsBufferData.brdfIndex = f->second.heapIndex;
 		}
 		else // Check Others
 		{
 			if (lowerFilename.find("albedo") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.albedoIndex = f->second;
+				newMesh->textureIndexConstsBufferData.albedoIndex = f->second.heapIndex;
 			else if (lowerFilename.find("diffuse") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.diffuseIndex = f->second;
+				newMesh->textureIndexConstsBufferData.diffuseIndex = f->second.heapIndex;
 			else if (lowerFilename.find("specular") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.specularIndex = f->second;
+				newMesh->textureIndexConstsBufferData.specularIndex = f->second.heapIndex;
 			else if (lowerFilename.find("normal") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.normalIndex = f->second;
+				newMesh->textureIndexConstsBufferData.normalIndex = f->second.heapIndex;
 			else if (lowerFilename.find("height") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.heightIndex = f->second;
+				newMesh->textureIndexConstsBufferData.heightIndex = f->second.heapIndex;
 			else if (lowerFilename.find("ao") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.aoIndex = f->second;
+				newMesh->textureIndexConstsBufferData.aoIndex = f->second.heapIndex;
 			else if (lowerFilename.find("metallic") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.metallicIndex = f->second;
+				newMesh->textureIndexConstsBufferData.metallicIndex = f->second.heapIndex;
 			else if (lowerFilename.find("roughness") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.roughnessIndex = f->second;
+				newMesh->textureIndexConstsBufferData.roughnessIndex = f->second.heapIndex;
 			else if (lowerFilename.find("emissive") != std::string::npos)
-				newMesh->textureIndexConstsBufferData.emissiveIndex = f->second;
+				newMesh->textureIndexConstsBufferData.emissiveIndex = f->second.heapIndex;
 		}
 
-		printf("Duplicated texture : %s, location is %d\n", f->first.c_str(), f->second);
+		printf("Duplicated texture : %s, location is %d\n", f->first.c_str(), f->second.heapIndex);
 
 		return false;
 	}

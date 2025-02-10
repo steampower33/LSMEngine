@@ -26,6 +26,24 @@ void Model::Initialize(
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	shared_ptr<TextureManager>& textureManager)
 {
+	for (int i = 0; i < meshDatas.size(); i++)
+	{
+		shared_ptr<Mesh> newMesh = make_shared<Mesh>();
+
+		CreateVertexBuffer(device, commandList, meshDatas[i].vertices, newMesh);
+		CreateIndexBuffer(device, commandList, meshDatas[i].indices, newMesh);
+
+		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
+
+		CreateConstDefaultBuffer(device, commandList, newMesh);
+
+		if (newMesh->textureIndexConstsBufferData.albedoIndex != 0)
+			m_meshConstsBufferData.useAlbedoMap = 1;
+
+		m_meshes.push_back(newMesh);
+	}
+
+
 	m_radius = 1.0f;
 	m_boundingSphere = make_shared<BoundingSphere>(XMFLOAT3(m_position.x, m_position.y, m_position.z), m_radius);
 
@@ -37,19 +55,6 @@ void Model::Initialize(
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixInverse(nullptr, positionMatrix));
 
 	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
-
-	for (int i = 0; i < meshDatas.size(); i++)
-	{
-		shared_ptr<Mesh> newMesh = make_shared<Mesh>();
-
-		CreateVertexBuffer(device, commandList, meshDatas[i].vertices, newMesh);
-		CreateIndexBuffer(device, commandList, meshDatas[i].indices, newMesh);
-
-		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
-
-		CreateConstDefaultBuffer(device, commandList, newMesh);
-		m_meshes.push_back(newMesh);
-	}
 }
 
 void Model::Update()

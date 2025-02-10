@@ -93,6 +93,8 @@ public:
 	ImVec2 m_sceneControllerSize;
 	ImVec2 m_scenePos;
 	ImVec2 m_sceneSize;
+	ImVec2 m_assetsBrowserPos;
+	ImVec2 m_assetsBrowserSize;
 
 protected:
 	void LoadPipeline();

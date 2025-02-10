@@ -41,7 +41,23 @@ private:
 
 	shared_ptr<Model> m_screenSquare;
 
+	ShapesInfo m_shapesInfo;
+
+	enum GuiIndex {
+		GENERAL,
+		OBJECTS,
+		SHAPES,
+		LIGHT,
+		ENV,
+		FOG,
+		POST_PROCESS,
+		MIRROR,
+	};
+
 private:
 	void UpdateMouseControl();
 	void UpdateLight(float dt);
+	void CreateShapes();
+	UINT DrawTableRow(const char* label, std::function<UINT()> uiElement);
+
 };

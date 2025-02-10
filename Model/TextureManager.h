@@ -62,12 +62,12 @@ public:
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_heapStartCpu = {};
-	
-	unordered_map<string, int> m_textureIdx;
+
+	unordered_map<string, TextureInfo> m_textureIdx;
 
 private:
 	bool CheckDuplcateFilename(
-		unordered_map<string, int>& textureIdx,
+		unordered_map<string, TextureInfo>& textureIdx,
 		const string& filename,
 		const string& lowerFilename,
 		shared_ptr<Mesh>& newMesh,
