@@ -2,24 +2,50 @@
 
 ImageFilter::ImageFilter(
 	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-	UINT width, UINT height, UINT index)
+	UINT width, UINT height, UINT index, FilterOption option, UINT bloomLevels)
 {
-	Initialize(device, commandList, width, height, index);
-}
-
-void ImageFilter::Initialize(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
-	UINT width, UINT height, UINT index)
-{
-	m_viewport.TopLeftX = 0.0f;
-	m_viewport.TopLeftY = 0.0f;
-	m_viewport.Width = static_cast<float>(width);
-	m_viewport.Height = static_cast<float>(height);
-	m_viewport.MinDepth = 0.0f;
-	m_viewport.MaxDepth = 1.0f;
+	cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	m_samplingConstsBufferData.dx = 1.0f / width;
 	m_samplingConstsBufferData.dy = 1.0f / height;
+	
+	m_width = width;
+	m_height = height;
+
+	m_option = option;
+	switch (m_option)
+	{
+	case COPY:
+		break;
+	case BLOOM_DOWN:
+		srvIndex = 2 * index - 2;
+		uavIndex = 2 * index + 1;
+		tgx = UINT(ceil(m_width / 32.0f));
+		tgy = UINT(ceil(m_height / 32.0f));
+		break;
+	case BLOOM_UP:
+		srvIndex = 2 * index + 2;
+		uavIndex = 2 * index + 1;
+		tgx = UINT(ceil(m_width / 32.0f));
+		tgy = UINT(ceil(m_height / 32.0f));
+		break;
+	case BLUR_X:
+		srvIndex = 2 * index;
+		uavIndex = 2 * (index + bloomLevels) + 1;
+		tgx = UINT(ceil(m_width / 256.0f));
+		tgy = m_height;
+		break;
+	case BLUR_Y:
+		srvIndex = 2 * (index + bloomLevels);
+		uavIndex = 2 * index + 1;
+		tgx = m_width;
+		tgy = UINT(ceil(m_height / 256.0f));
+		break;
+	case COMBINE:
+		break;
+	default:
+		break;
+	}
 
 	m_samplingConstsBufferData.index = index;
 
@@ -38,22 +64,49 @@ void ImageFilter::Update(SamplingConstants& m_combineConsts)
 
 void ImageFilter::Render(
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12DescriptorHeap>& rtvHeap,
-	UINT rtvOffset,
-	ComPtr<ID3D12DescriptorHeap>& dsvHeap,
-	UINT indexBufferCount)
+	ComPtr<ID3D12DescriptorHeap>& rtv,
+	ComPtr<ID3D12DescriptorHeap>& srv)
 {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvHeap->GetCPUDescriptorHandleForHeapStart(), rtvOffset);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->GetCPUDescriptorHandleForHeapStart());
-	commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	if (m_option == COPY)
+	{
+		commandList->SetPipelineState(Graphics::samplingPSO.Get());
 
-	const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
-	commandList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-	commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv->GetCPUDescriptorHandleForHeapStart());
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
-	commandList->RSSetViewports(1, &m_viewport);
-	commandList->SetGraphicsRootConstantBufferView(4, m_samplingConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart(), cbvSrvUavSize * m_samplingConstsBufferData.index);
+		commandList->SetGraphicsRootDescriptorTable(5, srvHandle);
 
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	commandList->DrawIndexedInstanced(indexBufferCount, 1, 0, 0, 0);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList->DrawInstanced(3, 1, 0, 0);
+
+	}
+	else if (m_option == COMBINE)
+	{
+		commandList->SetPipelineState(Graphics::combinePSO.Get());
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv->GetCPUDescriptorHandleForHeapStart());
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+		commandList->SetGraphicsRootConstantBufferView(4, m_samplingConstsUploadHeap->GetGPUVirtualAddress());
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart());
+		commandList->SetGraphicsRootDescriptorTable(5, srvHandle);
+
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList->DrawInstanced(3, 1, 0, 0);
+	}
+}
+
+void ImageFilter::ComputeRender(
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12DescriptorHeap>& heaps)
+{
+	CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(heaps->GetGPUDescriptorHandleForHeapStart(), cbvSrvUavSize * srvIndex);
+	commandList->SetComputeRootDescriptorTable(0, srvHandle);
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(heaps->GetGPUDescriptorHandleForHeapStart(), cbvSrvUavSize * uavIndex);
+	commandList->SetComputeRootDescriptorTable(1, uavHandle);
+
+	commandList->Dispatch(tgx, tgy, 1);
 }

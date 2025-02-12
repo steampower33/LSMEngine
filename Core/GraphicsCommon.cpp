@@ -7,6 +7,7 @@ namespace Graphics
 	ComPtr<IDxcIncludeHandler> includeHandler;
 
 	ComPtr<ID3D12RootSignature> rootSignature;
+	ComPtr<ID3D12RootSignature> computeRootSignature;
 
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
@@ -22,15 +23,17 @@ namespace Graphics
 	ComPtr<IDxcBlob> samplingVS;
 	ComPtr<IDxcBlob> samplingPS;
 
-	ComPtr<IDxcBlob> bloomDownPS;
-	ComPtr<IDxcBlob> bloomUpPS;
-
 	ComPtr<IDxcBlob> combineVS;
 	ComPtr<IDxcBlob> combinePS;
+
+	ComPtr<IDxcBlob> samplingCS;
+	ComPtr<IDxcBlob> blurXCS;
+	ComPtr<IDxcBlob> blurYCS;
 
 	ComPtr<IDxcBlob> depthOnlyVS;
 	ComPtr<IDxcBlob> depthOnlyPS;
 
+	ComPtr<IDxcBlob> postEffectsVS;
 	ComPtr<IDxcBlob> postEffectsPS;
 
 	D3D12_RASTERIZER_DESC solidRS;
@@ -44,6 +47,7 @@ namespace Graphics
 	D3D12_BLEND_DESC mirrorBlend;
 
 	D3D12_DEPTH_STENCIL_DESC basicDS;
+	D3D12_DEPTH_STENCIL_DESC disabledDS;
 	D3D12_DEPTH_STENCIL_DESC maskDS;
 	D3D12_DEPTH_STENCIL_DESC drawMaskedDS;
 
@@ -61,15 +65,16 @@ namespace Graphics
 
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> samplingPSO;
-	ComPtr<ID3D12PipelineState> bloomDownPSO;
-	ComPtr<ID3D12PipelineState> bloomUpPSO;
 	ComPtr<ID3D12PipelineState> combinePSO;
 	ComPtr<ID3D12PipelineState> depthOnlyPSO;
 	ComPtr<ID3D12PipelineState> postEffectsPSO;
 	ComPtr<ID3D12PipelineState> basicSimplePSPSO;
 	ComPtr<ID3D12PipelineState> shadowDepthOnlyPSO;
 
-	UINT bloomLevels;
+	ComPtr<ID3D12PipelineState> samplingCSPSO;
+	ComPtr<ID3D12PipelineState> blurXCSPSO;
+	ComPtr<ID3D12PipelineState> blurYCSPSO;
+
 	UINT textureSize = 20;
 	UINT cubeTextureSize = 10;
 }
@@ -95,7 +100,6 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	UINT textureSize = 50;
 	UINT cubeMapTextureSize = 10;
 	UINT imguiTextureSize = 4;
-	UINT fogMapSize = 1;
 
 	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[3];
 	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
@@ -105,31 +109,13 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	textureRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 		imguiTextureSize, textureSize + cubeMapTextureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	bloomLevels = 3;
-	CD3DX12_DESCRIPTOR_RANGE1 filterSrvRanges;
-	filterSrvRanges.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 + bloomLevels, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-
-	CD3DX12_ROOT_PARAMETER1 rootParameters[7] = {};
+	CD3DX12_ROOT_PARAMETER1 rootParameters[6] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[4].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[5].InitAsDescriptorTable(3, textureRanges, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[6].InitAsDescriptorTable(1, &filterSrvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
-
-	// 디스크립터 힙 생성
-	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
-	samplerHeapDesc.NumDescriptors = 4;
-	samplerHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	samplerHeapDesc.NodeMask = 0;
-
-	ComPtr<ID3D12DescriptorHeap> samplerHeap;
-	HRESULT hr = device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&samplerHeap));
-	if (FAILED(hr)) {
-		throw std::runtime_error("Failed to create sampler descriptor heap.");
-	}
 
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[4] = {};
 
@@ -185,6 +171,62 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 	ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
 }
 
+void Graphics::InitComputeRootSignature(ComPtr<ID3D12Device>& device)
+{
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+	{
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
+	CD3DX12_DESCRIPTOR_RANGE1 srvRange;
+	srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // 슬롯 0에 SRV
+
+	CD3DX12_DESCRIPTOR_RANGE1 uavRange;
+	uavRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // 슬롯 0에 UAV
+
+	CD3DX12_ROOT_PARAMETER1 rootParameters[3] = {};
+	rootParameters[0].InitAsDescriptorTable(1, &srvRange); // 입력 리소스
+	rootParameters[1].InitAsDescriptorTable(1, &uavRange); // 출력 대상
+	rootParameters[2].InitAsConstantBufferView(0, 0);
+
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
+
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].MipLODBias = 0.0f;
+	staticSamplers[0].MaxAnisotropy = 1;
+	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	staticSamplers[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	staticSamplers[0].MinLOD = 0.0f;
+	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplers[0].ShaderRegister = 0;
+	staticSamplers[0].RegisterSpace = 0;
+	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	// LinearClamp
+	staticSamplers[1] = staticSamplers[0];
+	staticSamplers[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].ShaderRegister = 1;
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters), 
+		rootParameters, 
+		_countof(staticSamplers),
+		staticSamplers,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> signature;
+	ComPtr<ID3DBlob> error;
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
+	ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&computeRootSignature)));
+}
+
 void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 {
 	// Basic
@@ -209,23 +251,24 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
 	CreateShader(device, skyboxPSFilename, L"ps_6_0", skyboxPS);
 
-	// Samplingfilter
+	// Sampling
 	const wchar_t samplingVSFilename[] = L"./Shaders/SamplingVS.hlsl";
 	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
 	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
 	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
-
-	// BloomDown, BloomUp
-	const wchar_t bloomDownPSFilename[] = L"./Shaders/BloomDownPS.hlsl";
-	CreateShader(device, bloomDownPSFilename, L"ps_6_0", bloomDownPS);
-	const wchar_t bloomUpPSFilename[] = L"./Shaders/BloomUpPS.hlsl";
-	CreateShader(device, bloomUpPSFilename, L"ps_6_0", bloomUpPS);
-
-	// CombineFilter
+	// Combine
 	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
 	CreateShader(device, combineVSFilename, L"vs_6_0", combineVS);
 	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
 	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
+
+	// SamplingCS, BlurXCS, BlurYCS
+	const wchar_t samplingCSFilename[] = L"./Shaders/SamplingCS.hlsl";
+	CreateShader(device, samplingCSFilename, L"cs_6_0", samplingCS);
+	const wchar_t blurXCSFilename[] = L"./Shaders/BlurXCS.hlsl";
+	CreateShader(device, blurXCSFilename, L"cs_6_0", blurXCS);
+	const wchar_t blurYCSFilename[] = L"./Shaders/BlurYCS.hlsl";
+	CreateShader(device, blurYCSFilename, L"cs_6_0", blurYCS);
 
 	// DepthOnly
 	const wchar_t depthOnlyVSFilename[] = L"./Shaders/DepthOnlyVS.hlsl";
@@ -234,6 +277,8 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, depthOnlyPSFilename, L"ps_6_0", depthOnlyPS);
 
 	// PostEffects
+	const wchar_t postEffectsVSFilename[] = L"./Shaders/PostEffectsVS.hlsl";
+	CreateShader(device, postEffectsVSFilename, L"vs_6_0", postEffectsVS);
 	const wchar_t postEffectsPSFilename[] = L"./Shaders/PostEffectsPS.hlsl";
 	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
 }
@@ -262,7 +307,9 @@ void Graphics::InitRasterizerStates()
 	wireCCWRS.FillMode = D3D12_FILL_MODE_WIREFRAME;
 
 	postProcessingRS = solidRS;
+	postProcessingRS.CullMode = D3D12_CULL_MODE_NONE;
 	postProcessingRS.DepthClipEnable = FALSE;
+	postProcessingRS.MultisampleEnable = FALSE;
 
 	depthBiasRS = solidRS;
 	depthBiasRS.DepthBias = 1000;
@@ -335,6 +382,11 @@ void Graphics::InitDepthStencilStates()
 		basicDS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 		basicDS.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
 		basicDS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	}
+
+	{
+		disabledDS = basicDS;
+		disabledDS.DepthEnable = FALSE;
 	}
 
 	{
@@ -446,19 +498,13 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxReflectWirePSODesc, IID_PPV_ARGS(&skyboxReflectWirePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC samplingPSODesc = basicSolidPSODesc;
+	samplingPSODesc.InputLayout = { nullptr, 0 };
 	samplingPSODesc.VS = { samplingVS->GetBufferPointer(), samplingVS->GetBufferSize() };
 	samplingPSODesc.PS = { samplingPS->GetBufferPointer(), samplingPS->GetBufferSize() };
 	samplingPSODesc.RasterizerState = postProcessingRS;
 	samplingPSODesc.SampleDesc.Count = 1;
+	samplingPSODesc.DepthStencilState = disabledDS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&samplingPSODesc, IID_PPV_ARGS(&samplingPSO)));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC bloomDownPSODesc = samplingPSODesc;
-	bloomDownPSODesc.PS = { bloomDownPS->GetBufferPointer(), bloomDownPS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&bloomDownPSODesc, IID_PPV_ARGS(&bloomDownPSO)));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC bloomUpPSODesc = samplingPSODesc;
-	bloomUpPSODesc.PS = { bloomUpPS->GetBufferPointer(), bloomUpPS->GetBufferSize() };
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&bloomUpPSODesc, IID_PPV_ARGS(&bloomUpPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = samplingPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
@@ -481,19 +527,37 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	shadowDepthOnlyPSODesc.RasterizerState = depthBiasRS;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&shadowDepthOnlyPSODesc, IID_PPV_ARGS(&shadowDepthOnlyPSO)));
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC postEffectsPSODesc = samplingPSODesc;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC postEffectsPSODesc = basicSolidPSODesc;
+	postEffectsPSODesc.VS = { postEffectsVS->GetBufferPointer(), postEffectsVS->GetBufferSize() };
 	postEffectsPSODesc.PS = { postEffectsPS->GetBufferPointer(), postEffectsPS->GetBufferSize() };
+	postEffectsPSODesc.RasterizerState = postProcessingRS;
+	postEffectsPSODesc.SampleDesc.Count = 1;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&postEffectsPSODesc, IID_PPV_ARGS(&postEffectsPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSimplePSPSODesc = basicSolidPSODesc;
 	basicSimplePSPSODesc.PS = { simplePS->GetBufferPointer(), simplePS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSimplePSPSODesc, IID_PPV_ARGS(&basicSimplePSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC samplingCSPSODesc = {};
+	samplingCSPSODesc.pRootSignature = computeRootSignature.Get();
+	samplingCSPSODesc.CS = { samplingCS->GetBufferPointer(), samplingCS->GetBufferSize() };
+	samplingCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&samplingCSPSODesc, IID_PPV_ARGS(&samplingCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC blurXCSPSODesc = samplingCSPSODesc;
+	blurXCSPSODesc.CS = { blurXCS->GetBufferPointer(), blurXCS->GetBufferSize() };
+	ThrowIfFailed(device->CreateComputePipelineState(&blurXCSPSODesc, IID_PPV_ARGS(&blurXCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC blurYCSPSODesc = samplingCSPSODesc;
+	blurYCSPSODesc.CS = { blurYCS->GetBufferPointer(), blurYCS->GetBufferSize() };
+	ThrowIfFailed(device->CreateComputePipelineState(&blurYCSPSODesc, IID_PPV_ARGS(&blurYCSPSO)));
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 {
 	InitDXC();
 	InitRootSignature(device);
+	InitComputeRootSignature(device);
 	InitShaders(device);
 	InitRasterizerStates();
 	InitBlendStates();

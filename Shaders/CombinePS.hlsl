@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2D g_texture[] : register(t0, space1);
+Texture2D g_texture[] : register(t0, space0);
 
 struct SamplingPSInput
 {
@@ -20,7 +20,7 @@ float3 LinearToneMapping(float3 color)
 float4 main(SamplingPSInput input) : SV_TARGET
 {
     float3 color0 = g_texture[0].Sample(linearClampSampler, input.texcoord).xyz;
-    float3 color1 = g_texture[1].Sample(linearClampSampler, input.texcoord).xyz;
+    float3 color1 = g_texture[2].Sample(linearClampSampler, input.texcoord).xyz;
     
     float3 combined = (1.0 - strength) * color0 + strength * color1;
     

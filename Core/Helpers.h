@@ -98,6 +98,13 @@ static void SetBarrier(
 	commandList->ResourceBarrier(1, &barrier);
 }
 
+static void SetUAVBarrier(
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Resource>& buffer)
+{
+	D3D12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(buffer.Get());
+	commandList->ResourceBarrier(1, &uavBarrier);
+}
 
 static void CreateBuffer(
 	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer,

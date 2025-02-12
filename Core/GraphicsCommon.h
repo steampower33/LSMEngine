@@ -23,6 +23,7 @@ namespace Graphics
 	extern ComPtr<IDxcIncludeHandler> includeHandler;
 
 	extern ComPtr<ID3D12RootSignature> rootSignature;
+	extern ComPtr<ID3D12RootSignature> computeRootSignature;
 
 	extern ComPtr<IDxcBlob> basicVS;
 	extern ComPtr<IDxcBlob> basicPS;
@@ -38,15 +39,17 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> samplingVS;
 	extern ComPtr<IDxcBlob> samplingPS;
 
-	extern ComPtr<IDxcBlob> bloomDownPS;
-	extern ComPtr<IDxcBlob> bloomUpPS;
-
 	extern ComPtr<IDxcBlob> combineVS;
 	extern ComPtr<IDxcBlob> combinePS;
+
+	extern ComPtr<IDxcBlob> samplingCS;
+	extern ComPtr<IDxcBlob> blurXCS;
+	extern ComPtr<IDxcBlob> blurYCS;
 
 	extern ComPtr<IDxcBlob> depthOnlyVS;
 	extern ComPtr<IDxcBlob> depthOnlyPS;
 
+	extern ComPtr<IDxcBlob> postEffectsVS;
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
 	extern D3D12_RASTERIZER_DESC solidRS;
@@ -60,6 +63,7 @@ namespace Graphics
 	extern D3D12_BLEND_DESC mirrorBlend;
 
 	extern D3D12_DEPTH_STENCIL_DESC basicDS;
+	extern D3D12_DEPTH_STENCIL_DESC disabledDS;
 	extern D3D12_DEPTH_STENCIL_DESC maskDS;
 	extern D3D12_DEPTH_STENCIL_DESC drawMaskedDS;
 
@@ -77,21 +81,23 @@ namespace Graphics
 
 	extern ComPtr<ID3D12PipelineState> normalPSO;
 	extern ComPtr<ID3D12PipelineState> samplingPSO;
-	extern ComPtr<ID3D12PipelineState> bloomDownPSO;
-	extern ComPtr<ID3D12PipelineState> bloomUpPSO;
 	extern ComPtr<ID3D12PipelineState> combinePSO;
 	extern ComPtr<ID3D12PipelineState> depthOnlyPSO;
 	extern ComPtr<ID3D12PipelineState> postEffectsPSO;
 	extern ComPtr<ID3D12PipelineState> basicSimplePSPSO;
 	extern ComPtr<ID3D12PipelineState> shadowDepthOnlyPSO;
 
-	extern UINT bloomLevels;
+	extern ComPtr<ID3D12PipelineState> samplingCSPSO;
+	extern ComPtr<ID3D12PipelineState> blurXCSPSO;
+	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
+
 	extern UINT textureSize;
 	extern UINT cubeTextureSize;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();
 	void InitRootSignature(ComPtr<ID3D12Device>& device);
+	void InitComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitShaders(ComPtr<ID3D12Device>& device);
 	void InitRasterizerStates();
 	void InitBlendStates();
