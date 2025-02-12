@@ -158,7 +158,6 @@ void MainEngine::Initialize()
 	{
 		WaitForPreviousFrame();
 	}
-
 }
 
 void MainEngine::UpdateGUI()
@@ -168,44 +167,42 @@ void MainEngine::UpdateGUI()
 
 	ImGui::NewFrame();
 
+	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(m_width, m_height), ImGuiCond_Always);
+	ImGui::Begin("Main Editor", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+
 	{
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
-		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f); // 자식 패널의 테두리 크기
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
 
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.14f, 0.14f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.21f, 0.21f, 0.21f, 1.0f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.43f, 0.86f, 1.0f));
 
-		// 창의 위치 및 크기 고정
-		ImGui::SetNextWindowPos(m_sceneControllerPos, ImGuiCond_Always);
-		ImGui::SetNextWindowSize(m_sceneControllerSize, ImGuiCond_Always);
-
 		ImVec2 availSize = ImGui::GetContentRegionAvail();
 
-		ImGui::Begin("Scene Control", nullptr,
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoCollapse);
+		ImGui::BeginChild("Scene Control", m_sceneControllerSize, true);
 
 		// 왼쪽 패널의 너비 설정
 		float leftPaneWidth = 60.0f;
 		static int buttonIdx = 0;
 		ImVec2 buttonSize(leftPaneWidth, 30); // 패널 너비와 동일하게 설정
 
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f); // 자식 패널의 테두리 크기
+
 		// 왼쪽 패널
 		{
 			ImGui::BeginChild("LeftPane", ImVec2(leftPaneWidth, 0), true);
 
 			// 버튼 추가
-			if (ImGui::Button("General", buttonSize)) { buttonIdx = GuiIndex::GENERAL; }
-			if (ImGui::Button("Objects", buttonSize)) { buttonIdx = GuiIndex::OBJECTS; }
-			if (ImGui::Button("Shapes", buttonSize)) { buttonIdx = GuiIndex::SHAPES; }
-			if (ImGui::Button("Lights", buttonSize)) { buttonIdx = GuiIndex::LIGHT; }
-			if (ImGui::Button("Env", buttonSize)) { buttonIdx = GuiIndex::ENV; }
-			if (ImGui::Button("Fog", buttonSize)) { buttonIdx = GuiIndex::FOG; }
-			if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = GuiIndex::POST_PROCESS; }
-			if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = GuiIndex::MIRROR; }
+			if (ImGui::Button("General", buttonSize)) { buttonIdx = GENERAL; }
+			if (ImGui::Button("Objects", buttonSize)) { buttonIdx = OBJECTS; }
+			if (ImGui::Button("Shapes", buttonSize)) { buttonIdx = SHAPES; }
+			if (ImGui::Button("Lights", buttonSize)) { buttonIdx = LIGHT; }
+			if (ImGui::Button("Env", buttonSize)) { buttonIdx = ENV; }
+			if (ImGui::Button("Fog", buttonSize)) { buttonIdx = FOG; }
+			if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = POST_PROCESS; }
+			if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = MIRROR; }
 
 			ImGui::EndChild();
 		}
@@ -215,7 +212,7 @@ void MainEngine::UpdateGUI()
 			ImGui::SameLine();
 
 			ImGui::BeginChild("RightPane", ImVec2(0, 0), true, ImGuiWindowFlags_None);
-			if (buttonIdx == GuiIndex::GENERAL)
+			if (buttonIdx == GENERAL)
 			{
 				ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -235,7 +232,7 @@ void MainEngine::UpdateGUI()
 				}
 
 			}
-			else if (buttonIdx == GuiIndex::OBJECTS)
+			else if (buttonIdx == OBJECTS)
 			{
 				for (const auto& model : m_models)
 				{
@@ -304,7 +301,7 @@ void MainEngine::UpdateGUI()
 					ImGui::PopID();
 				}
 			}
-			else if (buttonIdx == GuiIndex::SHAPES)
+			else if (buttonIdx == SHAPES)
 			{
 				if (ImGui::Button("Sphere", buttonSize)) { m_shapesInfo.sphereCnt++; }
 				ImGui::SameLine();
@@ -312,7 +309,7 @@ void MainEngine::UpdateGUI()
 				ImGui::SameLine();
 				if (ImGui::Button("Box", buttonSize)) { m_shapesInfo.boxCnt++; }
 			}
-			else if (buttonIdx == GuiIndex::LIGHT)
+			else if (buttonIdx == LIGHT)
 			{
 				if (ImGui::CollapsingHeader("Light 1")) {
 					ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
@@ -353,7 +350,7 @@ void MainEngine::UpdateGUI()
 					}
 				}
 			}
-			else if (buttonIdx == GuiIndex::ENV)
+			else if (buttonIdx == ENV)
 			{
 				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
@@ -380,7 +377,7 @@ void MainEngine::UpdateGUI()
 				}
 
 			}
-			else if (buttonIdx == GuiIndex::FOG)
+			else if (buttonIdx == FOG)
 			{
 				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
@@ -406,7 +403,7 @@ void MainEngine::UpdateGUI()
 					ImGui::EndTable();
 				}
 			}
-			else if (buttonIdx == GuiIndex::POST_PROCESS)
+			else if (buttonIdx == POST_PROCESS)
 			{
 				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
@@ -431,7 +428,7 @@ void MainEngine::UpdateGUI()
 					ImGui::EndTable();
 				}
 			}
-			else if (buttonIdx == GuiIndex::MIRROR)
+			else if (buttonIdx == MIRROR)
 			{
 				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
@@ -455,7 +452,7 @@ void MainEngine::UpdateGUI()
 					flag += DrawTableRow("Roughness", [&]() {
 						return ImGui::SliderFloat("##Roughness", &m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
 						});
-					
+
 					ImGui::EndTable();
 				}
 			}
@@ -463,63 +460,116 @@ void MainEngine::UpdateGUI()
 		}
 		ImGui::PopStyleVar(3);
 		ImGui::PopStyleColor(3);
-		ImGui::End();
+		ImGui::EndChild();
 	}
 
 	// Scene
 	{
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+		ImGui::SameLine();
 
-		// 창의 위치 및 크기 고정
-		ImGui::SetNextWindowPos(m_scenePos, ImGuiCond_Always);
-		ImGui::SetNextWindowSize(m_sceneSize, ImGuiCond_Always);
-		ImGui::Begin("Scene", nullptr,
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoCollapse);
+		ImGui::BeginChild("Scene", m_sceneSize, true);
 
 		ImVec2 availSize = ImGui::GetContentRegionAvail();
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneBufferIndex);
 		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
 
-		ImGui::PopStyleVar();
-		ImGui::End();
+		ImGui::EndChild();
 	}
 
 	// Assets Browser
 	{
-		ImGui::SetNextWindowPos(m_assetsBrowserPos, ImGuiCond_Always);
-		ImGui::SetNextWindowSize(m_assetsBrowserSize, ImGuiCond_Always);
-		if (!ImGui::Begin("Assets Browser", nullptr,
-			ImGuiWindowFlags_MenuBar |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoCollapse))
+
+		//ImGui::SetNextWindowPos(m_assetsBrowserPos, ImGuiCond_Always);
+		//ImGui::SetNextWindowSize(m_assetsBrowserSize, ImGuiCond_Always);
+		ImGui::BeginChild("Assets Browser", m_assetsBrowserSize, true);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+
+		const int numColumns = 10;  // 한 줄에 표시할 아이템 개수
+		int itemIndex = 0;
+		ImVec2 itemSize(120, 160); // 개별 아이템 크기
+		ImVec2 imageSize(100, 100); // 이미지 크기
+		float padding = (itemSize.x - imageSize.x) / 2.0f; // 좌우 여백
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+		for (const auto& pair : m_textureManager->m_textureInfos) // 텍스처 리스트 순회
 		{
-			ImGui::End();
-			return;
+			if (itemIndex % numColumns != 0)
+				ImGui::SameLine(); // 같은 줄에 배치
+
+			ImGui::PushID(itemIndex); // 고유 ID 추가
+
+			// 개별 아이템 박스
+			ImGui::BeginChild("MaterialItem", ImVec2(120, 160), true, ImGuiWindowFlags_NoScrollbar);
+
+			// 이미지 정렬 (상/하/좌/우 여백 통일)
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 좌우 여백 맞추기
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10); // 위쪽 여백
+			ImGui::Image((ImTextureID)pair.second.gpuHandle.ptr, imageSize);
+
+			// 이미지 클릭 감지
+			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				dragState.isDragging = true;
+				dragState.draggedItem = pair.second.filename;
+				dragState.draggedTexture = (ImTextureID)pair.second.gpuHandle.ptr;
+				ImVec2 mousePos = ImGui::GetMousePos();
+				ImVec2 itemPos = ImGui::GetItemRectMin();
+				dragState.dragOffset = ImVec2(mousePos.x - itemPos.x, mousePos.y - itemPos.y);
+				dragState.albedoTextureIndex = pair.second.heapIndex;
+			}
+
+			// 구분선 정렬
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+			ImGui::Separator();
+
+			// 텍스트 정렬
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 텍스트 좌우 중앙 정렬
+			ImGui::TextWrapped(pair.second.filename.c_str());
+
+			ImGui::EndChild();
+			ImGui::PopID(); // ID 제거
+
+			itemIndex++;
 		}
-
-		ImGui::BeginChild("LeftPane", ImVec2(m_sceneControllerSize.x, 0), true);
-		ImGui::Text("Folders");
-		ImGui::Separator();
-		ImGui::EndChild();
-
-		ImGui::SameLine(); // 좌측 패널과 우측 패널을 나란히 배치
-
-		// 우측 패널: 선택한 폴더 내 에셋 영역
-		ImGui::BeginChild("RightPane", ImVec2(0, 0), true);
-		ImGui::Text("Assets");
-
-		ImGui::Separator();
+		ImGui::PopStyleVar(3);
 
 		ImGui::EndChild();
 
-		ImGui::End();
+		// 드래그 중이면 반투명한 미리보기 표시
+		if (dragState.isDragging)
+		{
+			ImVec2 mousePos = ImGui::GetMousePos();
+			ImVec2 drawPos = ImVec2(mousePos.x - dragState.dragOffset.x, mousePos.y - dragState.dragOffset.y);
+
+			// 드래그 이미지를 항상 최상위에 렌더링
+			ImGui::SetNextWindowFocus();
+			ImGui::SetNextWindowPos(drawPos, ImGuiCond_Always);
+			ImGui::SetNextWindowBgAlpha(0.5f); // 반투명 효과
+			ImGui::Begin("DragPreview", nullptr,
+				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+				ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
+
+			ImGui::Image(dragState.draggedTexture, ImVec2(100, 100));
+
+			ImGui::End();
+			
+			// 마우스 놓으면 드래그 종료
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			{
+				dragState.isReleased = true;
+				dragState.isDragging = false;
+				dragState.draggedItem.clear();
+			}
+		}
 	}
 
-	// Rendering
+	ImGui::End();
+
 	ImGui::Render();
 }
 
@@ -858,7 +908,7 @@ void MainEngine::UpdateMouseControl()
 	XMVECTOR q = XMQuaternionIdentity();
 	XMVECTOR dragTranslation{ 0.0f };
 
-	if (m_leftButton || m_rightButton)
+	if (m_leftButton || m_rightButton || dragState.isReleased)
 	{
 		// NDC 좌표를 클립 공간의 좌표로 변환 (Z = 0.0f는 Near Plane, Z = 1.0f는 Far Plane)
 		XMVECTOR rayNDCNear = XMVectorSet(m_ndcX, m_ndcY, 0.0f, 1.0f);
@@ -895,7 +945,7 @@ void MainEngine::UpdateMouseControl()
 
 		shared_ptr<Model> selectedModel = nullptr;
 		float dist = 0.0f;
-		for (auto& model : m_models)
+		for (const auto& model : m_models)
 		{
 			m_selected = ray.RaySphereIntersect(model.second->m_boundingSphere, dist);
 			if (m_selected)
@@ -907,6 +957,16 @@ void MainEngine::UpdateMouseControl()
 
 		if (m_selected)
 		{
+			if (dragState.isReleased)
+			{
+				dragState.isReleased = false;
+				for (const auto& mesh : selectedModel->m_meshes)
+				{
+					mesh->textureIndexConstsBufferData.albedoIndex = dragState.albedoTextureIndex;
+					memcpy(mesh->textureIndexConstsBufferDataBegin, &mesh->textureIndexConstsBufferData, sizeof(mesh->textureIndexConstsBufferDataBegin));
+				}
+				cout << "Released" << endl;
+			}
 			//cout << dist << endl;
 
 			// 충돌 지점에 작은 구 그리기

@@ -35,14 +35,13 @@ void Model::Initialize(
 
 		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
 
-		CreateConstDefaultBuffer(device, commandList, newMesh);
+		CreateConstUploadBuffer(device, commandList, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
 
 		if (newMesh->textureIndexConstsBufferData.albedoIndex != 0)
 			m_meshConstsBufferData.useAlbedoMap = 1;
 
 		m_meshes.push_back(newMesh);
 	}
-
 
 	m_radius = 1.0f;
 	m_boundingSphere = make_shared<BoundingSphere>(XMFLOAT3(m_position.x, m_position.y, m_position.z), m_radius);
@@ -130,7 +129,7 @@ void Model::Render(
 
 	for (const auto& mesh : m_meshes)
 	{
-		commandList->SetGraphicsRootConstantBufferView(2, mesh->textureIndexConstsBuffer.Get()->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootConstantBufferView(2, mesh->textureIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
 		commandList->IASetIndexBuffer(&mesh->indexBufferView);
@@ -145,7 +144,7 @@ void Model::RenderSkybox(
 	ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
 	commandList->SetGraphicsRootConstantBufferView(1, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	commandList->SetGraphicsRootConstantBufferView(2, m_meshes[0]->textureIndexConstsBuffer.Get()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(2, m_meshes[0]->textureIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	commandList->IASetVertexBuffers(0, 1, &m_meshes[0]->vertexBufferView);
 	commandList->IASetIndexBuffer(&m_meshes[0]->indexBufferView);

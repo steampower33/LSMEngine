@@ -52,7 +52,17 @@ private:
 		FOG,
 		POST_PROCESS,
 		MIRROR,
+		MATERIAL
 	};
+
+	struct DragState {
+		bool isDragging = false;
+		std::string draggedItem;
+		ImTextureID draggedTexture;
+		UINT albedoTextureIndex;
+		ImVec2 dragOffset;
+		bool isReleased;
+	} dragState;
 
 private:
 	void UpdateMouseControl();

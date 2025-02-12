@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
 #include "DirectXTex.h"
 #include "directxtk12\DDSTextureLoader.h"
@@ -33,6 +34,13 @@ using namespace DirectX;
 
 struct TextureInfo {
 	UINT heapIndex;
+	string path;
+	string filename;
+	string ext;
+	ComPtr<ID3D12Resource> texture;
+	ComPtr<ID3D12Resource> textureUploadHeap;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle;
 };
 
 struct GuiState {
@@ -317,27 +325,28 @@ inline wstring StringToWString(const string& str) {
 static void CreateDDSTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12CommandQueue>& commandQueue,
-	const string& filename,
-	const string& lowerFilename,
+	const string& filepath,
+	const string& lowerFilepath,
 	shared_ptr<Mesh>& newMesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	vector<ComPtr<ID3D12Resource>>& textures,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
 	UINT& textureCnt,
-	unordered_map<string, TextureInfo>& textureIdx,
+	unordered_map<string, TextureInfo>& textureInfos,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	bool isCubeMap)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureCnt);
+	gpuHandle.Offset(size * textureCnt);
 
-	wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filepath);
 
 	// ResourceUploadBatch 객체 생성
 	ResourceUploadBatch resourceUpload(device.Get());
 	resourceUpload.Begin();
 
 	// DDS 텍스처 로드
-	ComPtr<ID3D12Resource> tex;
+	ComPtr<ID3D12Resource> texture;
 	DDS_ALPHA_MODE alphaMode;
 
 	ThrowIfFailed(CreateDDSTextureFromFileEx(
@@ -347,7 +356,7 @@ static void CreateDDSTextureBuffer(
 		0,
 		D3D12_RESOURCE_FLAG_NONE,
 		DDS_LOADER_DEFAULT,
-		tex.GetAddressOf(),
+		texture.GetAddressOf(),
 		&alphaMode,
 		&isCubeMap));
 
@@ -358,31 +367,36 @@ static void CreateDDSTextureBuffer(
 	// SRV 생성
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = tex->GetDesc().Format;
+	srvDesc.Format = texture->GetDesc().Format;
 	srvDesc.ViewDimension = isCubeMap ? D3D12_SRV_DIMENSION_TEXTURECUBE : D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = tex->GetDesc().MipLevels;
+	srvDesc.Texture2D.MipLevels = texture->GetDesc().MipLevels;
 
 	device->CreateShaderResourceView(
-		tex.Get(),
+		texture.Get(),
 		&srvDesc,
-		textureHandle
+		cpuHandle
 	);
 
-	// 리소스 관리
-	textures.push_back(tex);
-
-	if (lowerFilename.find("env") != std::string::npos)
+	if (lowerFilepath.find("env") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapEnvIndex = textureCnt;
-	else if (lowerFilename.find("diffuse") != std::string::npos)
+	else if (lowerFilepath.find("diffuse") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
-	else if (lowerFilename.find("specular") != std::string::npos)
+	else if (lowerFilepath.find("specular") != std::string::npos)
 		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
-	else if (lowerFilename.find("brdf") != std::string::npos)
+	else if (lowerFilepath.find("brdf") != std::string::npos)
 		cubemapIndexConstsBufferData.brdfIndex = textureCnt;
 	else
 		assert(false && "DDS Texture file does not exist!");
 
-	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
+	std::filesystem::path filePath(filepath);
+
+	std::string filename = filePath.stem().string();  // 확장자 제외한 파일명
+	std::string extension = filePath.extension().string();  // 확장자
+	std::string filenameExtension = filePath.filename().string();
+
+	textureInfos.insert({ filenameExtension, TextureInfo{
+		textureCnt, filepath, filename, extension, 
+		texture, nullptr, cpuHandle, gpuHandle } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
@@ -391,21 +405,21 @@ static void CreateDDSTextureBuffer(
 static void CreateEXRTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const string& filename,
-	const string& lowerFilename,
+	const string& filepath,
+	const string& lowerFilepath,
 	shared_ptr<Mesh>& newMesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	vector<ComPtr<ID3D12Resource>>& textures,
-	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
 	UINT& textureCnt,
-	unordered_map<string, TextureInfo>& textureIdx)
+	unordered_map<string, TextureInfo>& textureInfos)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureCnt);
+	gpuHandle.Offset(size * textureCnt);
 
 	ComPtr<ID3D12Resource> texture;
 
-	wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filepath);
 	DirectX::TexMetadata metaData;
 	auto image = make_unique<ScratchImage>();
 	ThrowIfFailed(LoadFromEXRFile(wideFilename.c_str(), &metaData, *image));
@@ -425,17 +439,17 @@ static void CreateEXRTextureBuffer(
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto uploadHeapdesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-	ComPtr<ID3D12Resource> texUploadHeap;
+	ComPtr<ID3D12Resource> textureUploadHeap;
 	ThrowIfFailed(device->CreateCommittedResource(
 		&uploadHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&uploadHeapdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&texUploadHeap)));
+		IID_PPV_ARGS(&textureUploadHeap)));
 
 	UpdateSubresources(
-		commandList.Get(), texture.Get(), texUploadHeap.Get(),
+		commandList.Get(), texture.Get(), textureUploadHeap.Get(),
 		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
 	SetBarrier(commandList, texture,
@@ -450,34 +464,39 @@ static void CreateEXRTextureBuffer(
 	device->CreateShaderResourceView(
 		texture.Get(), // 텍스처 리소스
 		&srvDesc, // SRV 설명
-		textureHandle // 디스크립터 힙의 핸들
+		cpuHandle // 디스크립터 힙의 핸들
 	);
 
-	textures.push_back(texture);
-	texturesUploadHeap.push_back(texUploadHeap);
-
-	if (lowerFilename.find("albedo") != std::string::npos)
+	if (lowerFilepath.find("albedo") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
-	else if (lowerFilename.find("diffuse") != std::string::npos)
+	else if (lowerFilepath.find("diffuse") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
-	else if (lowerFilename.find("specular") != std::string::npos)
+	else if (lowerFilepath.find("specular") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
-	else if (lowerFilename.find("normal") != std::string::npos)
+	else if (lowerFilepath.find("normal") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
-	else if (lowerFilename.find("height") != std::string::npos)
+	else if (lowerFilepath.find("height") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
-	else if (lowerFilename.find("ao") != std::string::npos)
+	else if (lowerFilepath.find("ao") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
-	else if (lowerFilename.find("metallic") != std::string::npos)
+	else if (lowerFilepath.find("metallic") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
-	else if (lowerFilename.find("roughness") != std::string::npos)
+	else if (lowerFilepath.find("roughness") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
-	else if (lowerFilename.find("emissive") != std::string::npos)
+	else if (lowerFilepath.find("emissive") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "EXR Texture file does not exist!");
 
-	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
+	std::filesystem::path filePath(filepath);
+
+	std::string filename = filePath.stem().string();  // 확장자 제외한 파일명
+	std::string extension = filePath.extension().string();  // 확장자
+	std::string filenameExtension = filePath.filename().string();
+
+	textureInfos.insert({ filenameExtension, TextureInfo{
+		textureCnt, filepath, filename, extension, 
+		texture, textureUploadHeap, cpuHandle, gpuHandle } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded EXR texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
@@ -486,21 +505,21 @@ static void CreateEXRTextureBuffer(
 static void CreateMipMapTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const string& filename,
-	const string& lowerFilename,
+	const string& filepath,
+	const string& lowerFilepath,
 	shared_ptr<Mesh>& newMesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	vector<ComPtr<ID3D12Resource>>& textures,
-	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
 	UINT& textureCnt,
-	unordered_map<string, TextureInfo>& textureIdx, const bool useSRGB)
+	unordered_map<string, TextureInfo>& textureInfos, const bool useSRGB)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureCnt);
+	gpuHandle.Offset(size * textureCnt);
 
 	auto image = make_unique<ScratchImage>();
 
-	wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filepath);
 	DirectX::TexMetadata metaData;
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, &metaData, *image));
 
@@ -559,17 +578,17 @@ static void CreateMipMapTextureBuffer(
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto uploadHeapdesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-	ComPtr<ID3D12Resource> texUploadHeap;
+	ComPtr<ID3D12Resource> textureUploadHeap;
 	ThrowIfFailed(device->CreateCommittedResource(
 		&uploadHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&uploadHeapdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&texUploadHeap)));
+		IID_PPV_ARGS(&textureUploadHeap)));
 
 	UpdateSubresources(
-		commandList.Get(), texture.Get(), texUploadHeap.Get(),
+		commandList.Get(), texture.Get(), textureUploadHeap.Get(),
 		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
 	SetBarrier(commandList, texture,
@@ -585,34 +604,39 @@ static void CreateMipMapTextureBuffer(
 	device->CreateShaderResourceView(
 		texture.Get(), // 텍스처 리소스
 		&srvDesc, // SRV 설명
-		textureHandle // 디스크립터 힙의 핸들
+		cpuHandle // 디스크립터 힙의 핸들
 	);
 
-	textures.push_back(texture);
-	texturesUploadHeap.push_back(texUploadHeap);
-
-	if (lowerFilename.find("albedo") != std::string::npos)
+	if (lowerFilepath.find("albedo") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
-	else if (lowerFilename.find("diffuse") != std::string::npos)
+	else if (lowerFilepath.find("diffuse") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
-	else if (lowerFilename.find("specular") != std::string::npos)
+	else if (lowerFilepath.find("specular") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
-	else if (lowerFilename.find("normal") != std::string::npos)
+	else if (lowerFilepath.find("normal") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
-	else if (lowerFilename.find("height") != std::string::npos)
+	else if (lowerFilepath.find("height") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
-	else if (lowerFilename.find("ao") != std::string::npos)
+	else if (lowerFilepath.find("ao") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
-	else if (lowerFilename.find("metallic") != std::string::npos)
+	else if (lowerFilepath.find("metallic") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
-	else if (lowerFilename.find("roughness") != std::string::npos)
+	else if (lowerFilepath.find("roughness") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
-	else if (lowerFilename.find("emissive") != std::string::npos)
+	else if (lowerFilepath.find("emissive") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "MipMap texture file does not exist!");
 
-	textureIdx.insert({ filename, TextureInfo{ textureCnt } });
+	std::filesystem::path filePath(filepath);
+
+	std::string filename = filePath.stem().string();  // 확장자 제외한 파일명
+	std::string extension = filePath.extension().string();  // 확장자
+	std::string filenameExtension = filePath.filename().string();
+
+	textureInfos.insert({ filenameExtension, TextureInfo{
+		textureCnt, filepath, filename, extension, 
+		texture, textureUploadHeap, cpuHandle, gpuHandle } });
 	textureCnt++;
 
 	wprintf(L"Successfully loaded MipMap texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
@@ -632,23 +656,25 @@ static string TransformToLower(string str)
 static void CreateTextureBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const string& filename,
-	const string& lowerFilename,
+	const string& filepath,
+	const string& lowerFilepath,
 	shared_ptr<Mesh>& newMesh,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
 	UINT& textureCnt,
-	unordered_map<string, int>& textureIdx)
+	unordered_map<string, TextureInfo>& textureInfos)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	textureHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureCnt);
+	gpuHandle.Offset(size * textureCnt);
 
 	auto image = make_unique<ScratchImage>();
 
 	ComPtr<ID3D12Resource> texture;
 
-	wstring wideFilename = StringToWString(filename);
+	wstring wideFilename = StringToWString(filepath);
 	ThrowIfFailed(DirectX::LoadFromWICFile(wideFilename.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, *image));
 
 	DirectX::TexMetadata metaData = image.get()->GetMetadata();
@@ -662,17 +688,17 @@ static void CreateTextureBuffer(
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto uploadHeapdesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-	ComPtr<ID3D12Resource> texUploadHeap;
+	ComPtr<ID3D12Resource> textureUploadHeap;
 	ThrowIfFailed(device->CreateCommittedResource(
 		&uploadHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&uploadHeapdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&texUploadHeap)));
+		IID_PPV_ARGS(&textureUploadHeap)));
 
 	UpdateSubresources(
-		commandList.Get(), texture.Get(), texUploadHeap.Get(),
+		commandList.Get(), texture.Get(), textureUploadHeap.Get(),
 		0, 0, static_cast<unsigned int>(subresources.size()), subresources.data());
 
 	SetBarrier(commandList, texture,
@@ -687,155 +713,41 @@ static void CreateTextureBuffer(
 	device->CreateShaderResourceView(
 		texture.Get(), // 텍스처 리소스
 		&srvDesc, // SRV 설명
-		textureHandle // 디스크립터 힙의 핸들
+		cpuHandle // 디스크립터 힙의 핸들
 	);
 
-	textures.push_back(texture);
-	texturesUploadHeap.push_back(texUploadHeap);
-
-	if (lowerFilename.find("albedo") != std::string::npos)
+	if (lowerFilepath.find("albedo") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
-	else if (lowerFilename.find("diffuse") != std::string::npos)
+	else if (lowerFilepath.find("diffuse") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
-	else if (lowerFilename.find("specular") != std::string::npos)
+	else if (lowerFilepath.find("specular") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
-	else if (lowerFilename.find("normal") != std::string::npos)
+	else if (lowerFilepath.find("normal") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
-	else if (lowerFilename.find("height") != std::string::npos)
+	else if (lowerFilepath.find("height") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
-	else if (lowerFilename.find("ao") != std::string::npos)
+	else if (lowerFilepath.find("ao") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
-	else if (lowerFilename.find("metallic") != std::string::npos)
+	else if (lowerFilepath.find("metallic") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
-	else if (lowerFilename.find("roughness") != std::string::npos)
+	else if (lowerFilepath.find("roughness") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
-	else if (lowerFilename.find("emissive") != std::string::npos)
+	else if (lowerFilepath.find("emissive") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
 	else
 		assert(false && "Texture file does not exist!");
 
-	textureIdx.insert({ filename, textureCnt });
+	std::filesystem::path filePath(filepath);
+
+	std::string filename = filePath.stem().string();  // 확장자 제외한 파일명
+	std::string extension = filePath.extension().string();  // 확장자
+	std::string filenameExtension = filePath.filename().string();
+
+	textureInfos.insert({ filenameExtension, TextureInfo{
+		textureCnt, filepath, filename, extension, 
+		texture, textureUploadHeap, cpuHandle, gpuHandle }});
 	textureCnt++;
 
 	wprintf(L"Successfully loaded texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
 
-}
-
-static void CreateConstDefaultBuffer(ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	shared_ptr<Mesh>& mesh)
-{
-	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-	const UINT constantsSize = sizeof(TextureIndexConstants);
-
-	D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantsSize);
-
-	ThrowIfFailed(device->CreateCommittedResource(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&bufferDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&mesh->textureIndexConstsBuffer)));
-
-	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-	ThrowIfFailed(device->CreateCommittedResource(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&bufferDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&mesh->textureIndexConstsUploadHeap)));
-
-	CD3DX12_RANGE readRange(0, 0);
-	ThrowIfFailed(mesh->textureIndexConstsUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&mesh->textureIndexConstsBufferDataBegin)));
-	memcpy(mesh->textureIndexConstsBufferDataBegin, &mesh->textureIndexConstsBufferData, sizeof(mesh->textureIndexConstsBufferData));
-	mesh->textureIndexConstsUploadHeap->Unmap(0, nullptr);
-
-	commandList->CopyBufferRegion(mesh->textureIndexConstsBuffer.Get(), 0, mesh->textureIndexConstsUploadHeap.Get(), 0, sizeof(mesh->textureIndexConstsBufferData));
-
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		mesh->textureIndexConstsBuffer.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-	);
-	commandList->ResourceBarrier(1, &barrier);
-}
-
-static void CreateEmptyTexture(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
-	vector<ComPtr<ID3D12Resource>>& textures,
-	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
-	UINT& textureCnt)
-{
-	ComPtr<ID3D12Resource> texture;
-
-	// 1x1 검정 텍스처 데이터 (RGBA)
-	unsigned char blackPixel[4] = { 0, 0, 0, 0 };
-
-	// 텍스처 리소스 생성 (GPU 기본 힙)
-	auto textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		1, 1, 1, 0,
-		1, 0,
-		D3D12_RESOURCE_FLAG_NONE
-	);
-
-	auto defaultHeapDesc = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	ThrowIfFailed(device->CreateCommittedResource(
-		&defaultHeapDesc,
-		D3D12_HEAP_FLAG_NONE,
-		&textureDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&texture)
-	));
-
-	// 업로드 힙 리소스 생성
-	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, 1);
-	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-	ComPtr<ID3D12Resource> textureUploadHeap;
-	ThrowIfFailed(device->CreateCommittedResource(
-		&uploadHeapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&buffer,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&textureUploadHeap)));
-
-	// 텍스처 데이터 복사
-	D3D12_SUBRESOURCE_DATA textureData = {};
-	textureData.pData = blackPixel;
-	textureData.RowPitch = 4; // 1x1 픽셀, RGBA
-	textureData.SlicePitch = textureData.RowPitch;
-
-	UpdateSubresources(commandList.Get(), texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-
-	SetBarrier(commandList, texture,
-		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = texture->GetDesc().Format; // 텍스처의 포맷
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	device->CreateShaderResourceView(
-		texture.Get(), // 텍스처 리소스
-		&srvDesc, // SRV 설명
-		textureHandle // 디스크립터 힙의 핸들
-	);
-
-	textures.push_back(texture);
-	texturesUploadHeap.push_back(textureUploadHeap);
-	textureCnt++;
 }

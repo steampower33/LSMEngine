@@ -59,11 +59,16 @@ public:
 	vector<ComPtr<ID3D12Resource>> m_textures;
 	vector<ComPtr<ID3D12Resource>> m_texturesUploadHeap;
 
+	ComPtr<ID3D12Resource> m_emptyTexture;
+	ComPtr<ID3D12Resource> m_emptyTextureUploadHeap;
+
 	ComPtr<ID3D12DescriptorHeap> m_textureHeap;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_heapStartCpu = {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_heapStartGpu = {};
 
-	unordered_map<string, TextureInfo> m_textureIdx;
+	unordered_map<string, TextureInfo> m_textureInfos;
+	unordered_map<string, TextureInfo> m_ddsTextureInfos;
 
 private:
 	bool CheckDuplcateFilename(
@@ -72,4 +77,10 @@ private:
 		const string& lowerFilename,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
+
+	void CreateEmptyTexture(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
+		UINT& textureCnt);
 };
