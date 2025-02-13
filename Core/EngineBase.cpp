@@ -7,7 +7,7 @@ class WinApp;
 HeapAllocator EngineBase::m_srvAlloc;
 
 EngineBase::EngineBase() :
-	m_width(1920), m_height(1200)
+	m_width(1600), m_height(900)
 {
 	m_viewport.TopLeftX = 0.0f;
 	m_viewport.TopLeftY = 0.0f;
@@ -22,7 +22,7 @@ EngineBase::EngineBase() :
 	m_scissorRect.bottom = static_cast<LONG>(m_height);
 
 	m_sceneControllerPos = ImVec2(5, 15);
-	m_sceneControllerSize = ImVec2(360, 800);
+	m_sceneControllerSize = ImVec2(m_width * 0.20f, m_height * 0.66f);
 
 	m_scenePos = ImVec2(5 + m_sceneControllerSize.x + 5, 15);
 	m_sceneSize = ImVec2(m_width - (m_scenePos.x + 5), m_sceneControllerSize.y);
