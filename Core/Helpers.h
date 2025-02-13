@@ -213,7 +213,7 @@ static void CreateVertexBuffer(
 		&defaultHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&buffer,
-		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
 		IID_PPV_ARGS(&mesh->vertexBuffer)));
 
@@ -232,11 +232,13 @@ static void CreateVertexBuffer(
 	vertexData.RowPitch = vertexBufferSizeInBytes;
 	vertexData.SlicePitch = vertexBufferSizeInBytes;
 
+	SetBarrier(commandList, mesh->vertexBuffer,
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+
 	UpdateSubresources(commandList.Get(), mesh->vertexBuffer.Get(), mesh->vertexUploadHeap.Get(), 0, 0, 1, &vertexData);
 
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		mesh->vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	commandList->ResourceBarrier(1, &barrier);
+	SetBarrier(commandList, mesh->vertexBuffer,
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	mesh->vertexBufferView.BufferLocation = mesh->vertexBuffer->GetGPUVirtualAddress();
 	mesh->vertexBufferView.StrideInBytes = sizeof(Vertex);
@@ -261,7 +263,7 @@ static void CreateIndexBuffer(
 		&defaultHeapProps,
 		D3D12_HEAP_FLAG_NONE, // no flags
 		&buffer,
-		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
 		IID_PPV_ARGS(&mesh->indexBuffer)));
 
@@ -280,11 +282,13 @@ static void CreateIndexBuffer(
 	indexData.RowPitch = indexBufferSizeInBytes;
 	indexData.SlicePitch = indexBufferSizeInBytes;
 
+	SetBarrier(commandList, mesh->indexBuffer,
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+
 	UpdateSubresources(commandList.Get(), mesh->indexBuffer.Get(), mesh->indexUploadHeap.Get(), 0, 0, 1, &indexData);
 
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		mesh->indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-	commandList->ResourceBarrier(1, &barrier);
+	SetBarrier(commandList, mesh->indexBuffer,
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	mesh->indexBufferView.BufferLocation = mesh->indexBuffer->GetGPUVirtualAddress();
 	mesh->indexBufferView.Format = DXGI_FORMAT_R32_UINT;

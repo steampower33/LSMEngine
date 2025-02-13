@@ -31,8 +31,8 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 		wc.lpszClassName, 
 		L"LSMEngineWindow",
 		WS_OVERLAPPEDWINDOW,
-		100, // 윈도우 좌측 상단의 x 좌표
-		100, // 윈도우 좌측 상단의 y 좌표
+		0, // 윈도우 좌측 상단의 x 좌표
+		0, // 윈도우 좌측 상단의 y 좌표
 		windowRect.right - windowRect.left, // 윈도우 가로 방향 해상도
 		windowRect.bottom - windowRect.top, // 윈도우 세로 방향 해상도
 		NULL, NULL, hInstance, pEngine);
