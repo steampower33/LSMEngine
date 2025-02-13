@@ -64,10 +64,15 @@ private:
 		bool isReleased;
 	} dragState;
 
+	// Synchronization
+	static MainEngine* s_app;
+
 private:
 	void UpdateMouseControl();
 	void UpdateLight(float dt);
 	void CreateShapes();
 	UINT DrawTableRow(const char* label, std::function<UINT()> uiElement);
+	void WorkerThread(int threadIndex);
+	void LoadContexts();
 
 };

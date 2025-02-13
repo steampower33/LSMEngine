@@ -27,6 +27,7 @@
 #include "DirectXTexEXR.h"
 
 static const UINT FrameCount = 3;
+constexpr UINT NumContexts = 1;
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -299,7 +300,6 @@ static void CreateIndexBuffer(
 template <typename T>
 static void CreateConstUploadBuffer(
 	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& constsUploadHeap,
 	T& constsBufferData,
 	UINT8*& constsBufferDataBegin)

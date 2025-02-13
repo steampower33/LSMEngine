@@ -9,6 +9,7 @@ HeapAllocator EngineBase::m_srvAlloc;
 EngineBase::EngineBase() :
 	m_width(1600), m_height(900)
 {
+
 	m_viewport.TopLeftX = 0.0f;
 	m_viewport.TopLeftY = 0.0f;
 	m_viewport.Width = m_width;
@@ -66,6 +67,10 @@ void EngineBase::LoadPipeline()
 	{
 		m_frameResources[i] = make_shared<FrameResource>(m_device, m_sceneSize.x, m_sceneSize.y, i);
 	}
+
+	ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_initCommandAllocator)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_initCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_initCommandList)));
+	ThrowIfFailed(m_initCommandList->Close());
 }
 
 void EngineBase::InitializeDX12CoreComponents()

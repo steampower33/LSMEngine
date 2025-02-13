@@ -35,7 +35,7 @@ void Model::Initialize(
 
 		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
 
-		CreateConstUploadBuffer(device, commandList, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
+		CreateConstUploadBuffer(device, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
 
 		if (newMesh->textureIndexConstsBufferData.albedoIndex != 0)
 			m_meshConstsBufferData.useAlbedoMap = 1;
@@ -53,7 +53,7 @@ void Model::Initialize(
 	XMStoreFloat4x4(&m_meshConstsBufferData.world, XMMatrixTranspose(positionMatrix));
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixInverse(nullptr, positionMatrix));
 
-	CreateConstUploadBuffer(device, commandList, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
+	CreateConstUploadBuffer(device, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
 }
 
 void Model::Update()

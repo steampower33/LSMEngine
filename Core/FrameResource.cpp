@@ -22,23 +22,28 @@ FrameResource::FrameResource(
 	m_shadowScissorRect.bottom = static_cast<LONG>(m_shadowHeight);
 
 	m_frameIndex = frameIndex;
-
+	
 	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	cbvSrvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	dsvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
-	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
-	ThrowIfFailed(m_commandList->Close());
+	for (UINT i = 0; i < commandListCount; i++)
+	{
+		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[i])));
+		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[i].Get(), nullptr, IID_PPV_ARGS(&m_commandList[i])));
+		ThrowIfFailed(m_commandList[i]->Close());
+	}
 
-	CreateConstUploadBuffer(device, m_commandList, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
+	m_batchSubmit[0] = m_commandList[0].Get();
+
+	CreateConstUploadBuffer(device, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
 
 	for (UINT i = 0; i < MAX_LIGHTS; i++)
-		CreateConstUploadBuffer(device, m_commandList, m_shadowGlobalConstsUploadHeap[i], m_shadowGlobalConstsData[i], m_shadowGlobalConstsDataBegin[i]);
+		CreateConstUploadBuffer(device, m_shadowGlobalConstsUploadHeap[i], m_shadowGlobalConstsData[i], m_shadowGlobalConstsDataBegin[i]);
 
-	CreateConstUploadBuffer(device, m_commandList, m_reflectConstsUploadHeap, m_reflectConstsData, m_reflectConstsDataBegin);
+	CreateConstUploadBuffer(device, m_reflectConstsUploadHeap, m_reflectConstsData, m_reflectConstsDataBegin);
 
-	CreateConstUploadBuffer(device, m_commandList, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsData, m_cubemapIndexConstsDataBegin);
+	CreateConstUploadBuffer(device, m_cubemapIndexConstsUploadHeap, m_cubemapIndexConstsData, m_cubemapIndexConstsDataBegin);
 }
 
 FrameResource::~FrameResource()

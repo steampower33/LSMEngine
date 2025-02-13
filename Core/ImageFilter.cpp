@@ -50,8 +50,7 @@ ImageFilter::ImageFilter(
 	m_samplingConstsBufferData.index = index;
 
 	CreateConstUploadBuffer(
-		device, commandList,
-		m_samplingConstsUploadHeap, m_samplingConstsBufferData, m_samplingConstsBufferDataBegin);
+		device, m_samplingConstsUploadHeap, m_samplingConstsBufferData, m_samplingConstsBufferDataBegin);
 }
 
 void ImageFilter::Update(SamplingConstants& m_combineConsts)

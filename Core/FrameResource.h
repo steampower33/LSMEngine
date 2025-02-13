@@ -31,8 +31,12 @@ public:
 		GlobalConstants (&shadowGlobalConsts)[MAX_LIGHTS],
 		CubemapIndexConstants& cubemapIndexConsts);
 
-	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-	ComPtr<ID3D12GraphicsCommandList> m_commandList;
+	static const UINT commandListCount = 1;
+
+	ID3D12CommandList* m_batchSubmit[commandListCount];
+
+	ComPtr<ID3D12CommandAllocator> m_commandAllocator[commandListCount];
+	ComPtr<ID3D12GraphicsCommandList> m_commandList[commandListCount];
 
 	UINT64 m_fenceValue = 0;
 	UINT m_frameIndex;
