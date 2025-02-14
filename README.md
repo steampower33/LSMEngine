@@ -25,3 +25,9 @@
 - **vcpkg** 
 
 ---
+
+## Assets
+
+- https://www.cgtrader.com/items/4693538/download-page
+- https://freepbr.com/product/vented-metal-panel1/
+- https://freepbr.com/product/worn-painted-metal/

@@ -57,7 +57,7 @@ void MainEngine::Initialize()
 		m_mirror->m_meshConstsBufferData.metallicFactor = 0.5f;
 		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.3f;
 		m_mirror->m_key = "mirror";
-		m_models.insert({ m_mirror->m_key, m_mirror });
+		//m_models.insert({ m_mirror->m_key, m_mirror });
 
 		float degrees = 90.0f;
 		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
@@ -73,16 +73,15 @@ void MainEngine::Initialize()
 		XMStoreFloat4(&m_mirrorPlane, plane);
 	}
 
-	/*{
-		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/DamagedHelmet/", "DamagedHelmet.gltf");
+	{
+		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/Long_Ax/GLTF/", "Long_Ax_1.gltf");
 
 		shared_ptr<Model> helmet = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			meshDatas, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
-		helmet->m_key = "helmet";
+		helmet->m_key = "ax";
 		m_models.insert({ helmet->m_key, helmet });
 	}
-	*/
 
 	{
 		float radius = 0.5f;
@@ -97,8 +96,27 @@ void MainEngine::Initialize()
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		sphere->m_key = "sphere";
+		sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
 		m_models.insert({ sphere->m_key, sphere });
+		m_shapesInfo.sphereNum++;
+	}
+
+	{
+		float radius = 0.5f;
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
+		meshData.albedoFilename = "./Assets/vented/vented-metal-panel1_albedo.png";
+		meshData.normalFilename = "./Assets/vented/vented-metal-panel1_normal-ogl.png";
+		meshData.heightFilename = "./Assets/vented/vented-metal-panel1_height.png";
+		meshData.aoFilename = "./Assets/vented/vented-metal-panel1_ao.png";
+		meshData.metallicFilename = "./Assets/vented/vented-metal-panel1_metallic.png";
+		meshData.roughnessFilename = "./Assets/vented/vented-metal-panel1_roughness.png";
+
+		shared_ptr<Model> sphere = make_shared<Model>(
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
+		sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
+		m_models.insert({ sphere->m_key, sphere });
+		m_shapesInfo.sphereNum++;
 	}
 
 	{
@@ -1282,12 +1300,6 @@ void MainEngine::WorkerThread(int threadIndex)
 				it->second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
 			}
 
-			if (m_guiState.isWireframe)
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
-			else
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
-			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_commandList[threadIndex]);
 
 			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
 			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
