@@ -53,7 +53,7 @@ public:
 	XMFLOAT4X4 m_world;
 	string m_key;
 
-	bool m_useAlbedoMap = true;
+	bool m_useAlbedoMap = false;
 	bool m_useNormalMap = false;
 	bool m_useHeightMap = false;
 	bool m_useAOMap = false;
@@ -69,12 +69,4 @@ public:
 
 	shared_ptr<BoundingSphere> m_boundingSphere;
 
-private:
-	void Initialize(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12CommandQueue>& commandQueue,
-		const vector<MeshData>& meshDatas,
-		CubemapIndexConstants& cubemapIndexConstsBufferData,
-		shared_ptr<TextureManager>& textureManager);
 };

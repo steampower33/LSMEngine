@@ -78,6 +78,7 @@ void PostProcess::Render(
 	ComPtr<ID3D12DescriptorHeap>& dsv,
 	UINT frameIndex)
 {
+
 	m_copyFilter->Render(commandList, m_rtv, srv);
 
 	commandList->SetComputeRootSignature(Graphics::computeRootSignature.Get());

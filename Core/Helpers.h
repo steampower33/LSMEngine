@@ -27,7 +27,7 @@
 #include "DirectXTexEXR.h"
 
 static const UINT FrameCount = 3;
-constexpr UINT NumContexts = 1;
+constexpr UINT NumContexts = 3;
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -51,6 +51,7 @@ struct GuiState {
 	bool isMeshChanged = false;
 	bool isLightChanged = false;
 	bool isEnvChanged = false;
+	bool isMirrorChanged = false;
 };
 
 struct DirtyFlag {
@@ -66,6 +67,8 @@ struct ShapesInfo
 	UINT squareCnt = 0;
 	UINT boxNum = 0;
 	UINT boxCnt = 0;
+	UINT testBeforeCnt = 0;
+	UINT testAfterCnt = 0;
 };
 
 inline string HrToString(HRESULT hr)
@@ -289,7 +292,7 @@ static void CreateIndexBuffer(
 	UpdateSubresources(commandList.Get(), mesh->indexBuffer.Get(), mesh->indexUploadHeap.Get(), 0, 0, 1, &indexData);
 
 	SetBarrier(commandList, mesh->indexBuffer,
-		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 	mesh->indexBufferView.BufferLocation = mesh->indexBuffer->GetGPUVirtualAddress();
 	mesh->indexBufferView.Format = DXGI_FORMAT_R32_UINT;

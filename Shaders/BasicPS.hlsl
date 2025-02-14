@@ -192,6 +192,7 @@ float3 LightRadiance(in Light light, in float3 posWorld, in float3 normalWorld, 
     // Distance attenuation
     float att = saturate((light.fallOffEnd - lightDist)
                          / (light.fallOffEnd - light.fallOffStart));
+    //float att = smoothstep(light.fallOffEnd, light.fallOffStart, lightDist);
 
     // Shadow map
     float shadowFactor = 1.0;

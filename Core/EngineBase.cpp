@@ -67,10 +67,6 @@ void EngineBase::LoadPipeline()
 	{
 		m_frameResources[i] = make_shared<FrameResource>(m_device, m_sceneSize.x, m_sceneSize.y, i);
 	}
-
-	ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_initCommandAllocator)));
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_initCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_initCommandList)));
-	ThrowIfFailed(m_initCommandList->Close());
 }
 
 void EngineBase::InitializeDX12CoreComponents()
@@ -299,6 +295,19 @@ void EngineBase::WaitForGpu()
 
 	// Increment the fence value for the current frame.
 	m_frameResources[m_frameIndex]->m_fenceValue++;
+}
+
+void EngineBase::SignalGPU()
+{
+	const UINT64 fenceValue = m_pCurrFR->m_fenceValue;
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fenceValue));
+	m_pCurrFR->m_fenceValue++;
+
+	if (m_fence->GetCompletedValue() < fenceValue)
+	{
+		ThrowIfFailed(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
+		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+	}
 }
 
 // Prepare to render the next frame.

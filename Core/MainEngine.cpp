@@ -10,13 +10,15 @@ MainEngine::MainEngine() : EngineBase()
 void MainEngine::Initialize()
 {
 	LoadPipeline();
+	LoadGUI();
+	LoadContexts();
 
 	m_pCurrFR = m_frameResources[m_frameIndex].get();
 
-	ThrowIfFailed(m_initCommandAllocator->Reset());
-	ThrowIfFailed(m_initCommandList->Reset(m_initCommandAllocator.Get(), nullptr));
+	ThrowIfFailed(m_pCurrFR->m_commandAllocator[0]->Reset());
+	ThrowIfFailed(m_pCurrFR->m_commandList[0]->Reset(m_pCurrFR->m_commandAllocator[0].Get(), nullptr));
 
-	m_textureManager->Initialize(m_device, m_initCommandList);
+	m_textureManager->Initialize(m_device, m_pCurrFR->m_commandList[0]);
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
@@ -30,14 +32,14 @@ void MainEngine::Initialize()
 		skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
 
 		m_skybox = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
 	{
 		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 20, 20);
 		m_cursorSphere = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
 		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
@@ -48,13 +50,14 @@ void MainEngine::Initialize()
 
 		XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 		m_mirror = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, posMirror);
 		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_mirror->m_meshConstsBufferData.metallicFactor = 0.5f;
 		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.3f;
 		m_mirror->m_key = "mirror";
+		m_models.insert({ m_mirror->m_key, m_mirror });
 
 		float degrees = 90.0f;
 		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
@@ -74,7 +77,7 @@ void MainEngine::Initialize()
 		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/DamagedHelmet/", "DamagedHelmet.gltf");
 
 		shared_ptr<Model> helmet = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			meshDatas, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
 		helmet->m_key = "helmet";
 		m_models.insert({ helmet->m_key, helmet });
@@ -92,7 +95,7 @@ void MainEngine::Initialize()
 		meshData.roughnessFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_roughness.png";
 
 		shared_ptr<Model> sphere = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 		sphere->m_key = "sphere";
 		m_models.insert({ sphere->m_key, sphere });
@@ -102,14 +105,14 @@ void MainEngine::Initialize()
 		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
 		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
 		m_globalConstsData.light[0].direction = XMFLOAT3{ 0.0f, -1.0f, 0.0f };
-		m_globalConstsData.light[0].spotPower = 3.0f;
+		m_globalConstsData.light[0].spotPower = 10.0f;
 		m_globalConstsData.light[0].radius = 0.02f;
 		m_globalConstsData.light[0].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
 		m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
 		m_globalConstsData.light[1].radius = 0.02f;
-		m_globalConstsData.light[1].spotPower = 3.0f;
+		m_globalConstsData.light[1].spotPower = 10.0f;
 		m_globalConstsData.light[1].fallOffEnd = 20.0f;
 		m_globalConstsData.light[1].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
@@ -119,7 +122,7 @@ void MainEngine::Initialize()
 			MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 20, 20);
 			XMFLOAT4 spherePos{ m_globalConstsData.light[i].position.x, m_globalConstsData.light[i].position.y, m_globalConstsData.light[i].position.z, 0.0f };
 			m_lightSphere[i] = make_shared<Model>(
-				m_device, m_initCommandList, m_commandQueue,
+				m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, spherePos);
 			m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
 			m_lightSphere[i]->m_scale = m_globalConstsData.light[i].radius;
@@ -131,22 +134,19 @@ void MainEngine::Initialize()
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare();
 		m_screenSquare = make_shared<Model>(
-			m_device, m_initCommandList, m_commandQueue,
+			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 
 	// 후처리
 	for (int i = 0; i < FrameCount; i++)
 		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_initCommandList, m_sceneSize.x, m_sceneSize.y, m_frameResources[i]->m_globalConstsData.fogSRVIndex);
+			m_device, m_pCurrFR->m_commandList[0], m_sceneSize.x, m_sceneSize.y, m_frameResources[i]->m_globalConstsData.fogSRVIndex);
 
-	ThrowIfFailed(m_initCommandList->Close());
+	ThrowIfFailed(m_pCurrFR->m_commandList[0]->Close());
 
-	ID3D12CommandList* ppCommandLists[] = { m_initCommandList.Get()};
+	ID3D12CommandList* ppCommandLists[] = { m_pCurrFR->m_commandList[0].Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	LoadGUI();
-	LoadContexts();
 
 	m_pCurrFR->m_fenceValue++;
 
@@ -309,6 +309,10 @@ void MainEngine::UpdateGUI()
 				if (ImGui::Button("Square", buttonSize)) { m_shapesInfo.squareCnt++; }
 				ImGui::SameLine();
 				if (ImGui::Button("Box", buttonSize)) { m_shapesInfo.boxCnt++; }
+				if (ImGui::Button("Test", buttonSize))
+				{
+					m_shapesInfo.testAfterCnt++;
+				}
 			}
 			else if (buttonIdx == LIGHT)
 			{
@@ -454,6 +458,11 @@ void MainEngine::UpdateGUI()
 						return ImGui::SliderFloat("##Roughness", &m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
 						});
 
+					if (flag)
+					{
+						m_guiState.isMirrorChanged = true;
+					}
+
 					ImGui::EndTable();
 				}
 			}
@@ -558,7 +567,7 @@ void MainEngine::UpdateGUI()
 			ImGui::Image(dragState.draggedTexture, ImVec2(100, 100));
 
 			ImGui::End();
-			
+
 			// 마우스 놓으면 드래그 종료
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			{
@@ -607,292 +616,153 @@ void MainEngine::Update(float dt)
 			m_frameResources[i]->m_postProcess->Update(m_combineConsts);
 	}
 
-	if (m_guiState.isEnvChanged)
+	if (m_guiState.isMirrorChanged)
 	{
-		m_guiState.isEnvChanged = false;
+		m_guiState.isMirrorChanged = false;
 		m_mirror->OnlyCallConstsMemcpy();
 	}
 
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 }
 
-void MainEngine::WorkerThread(int threadIndex)
-{
-	assert(threadIndex >= 0);
-	assert(threadIndex < NumContexts);
-
-	while (threadIndex >= 0 && threadIndex < NumContexts)
-	{
-		WaitForSingleObject(m_workerBeginRenderFrame[threadIndex], INFINITE);
-
-		{
-			ThrowIfFailed(m_pCurrFR->m_commandAllocator[threadIndex]->Reset());
-			ThrowIfFailed(m_pCurrFR->m_commandList[threadIndex]->Reset(m_pCurrFR->m_commandAllocator[threadIndex].Get(), nullptr));
-
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootSignature(Graphics::rootSignature.Get());
-
-			ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
-			m_pCurrFR->m_commandList[threadIndex]->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
-		}
-
-		CreateShapes();
-
-		// ShadowDepthOnly
-		{
-			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::shadowDepthOnlyPSO.Get());
-
-			m_pCurrFR->m_commandList[threadIndex]->RSSetViewports(1, &m_pCurrFR->m_shadowViewport);
-			m_pCurrFR->m_commandList[threadIndex]->RSSetScissorRects(1, &m_pCurrFR->m_shadowScissorRect);
-			for (UINT i = 0; i < MAX_LIGHTS; i++)
-			{
-				CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_shadowDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart(), i * m_dsvSize);
-				m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-				m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-				m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_shadowGlobalConstsUploadHeap[i].Get()->GetGPUVirtualAddress());
-
-				for (const auto& model : m_models)
-					model.second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-				m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-				m_skybox->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-			}
-
-			// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_DEPTH_WRITE To D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			for (UINT i = 0; i < MAX_LIGHTS; i++)
-				SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
-					D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-
-		{
-			m_pCurrFR->m_commandList[threadIndex]->RSSetViewports(1, &m_sceneViewport);
-			m_pCurrFR->m_commandList[threadIndex]->RSSetScissorRects(1, &m_sceneScissorRect);
-
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-		}
-
-		// FogDepthOnly
-		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-			m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-			for (const auto& model : m_models)
-				model.second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-			m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-			m_skybox->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-		}
-
-		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-			const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
-			m_pCurrFR->m_commandList[threadIndex]->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-			m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-			if (m_guiState.isWireframe)
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxWirePSO.Get());
-			else
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxSolidPSO.Get());
-			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			if (m_guiState.isWireframe)
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::basicWirePSO.Get());
-			else
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::basicSolidPSO.Get());
-			for (const auto& model : m_models)
-				model.second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::basicSimplePSPSO.Get());
-
-			for (UINT i = 0; i < MAX_LIGHTS; i++)
-				m_lightSphere[i]->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			if (m_selected && (m_leftButton || m_rightButton))
-				m_cursorSphere->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			if (m_guiState.isDrawNormals)
-			{
-				for (const auto& model : m_models)
-					model.second->RenderNormal(m_pCurrFR->m_commandList[threadIndex]);
-			}
-
-			// Mirror
-			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::stencilMaskPSO.Get());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
-			m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			if (m_guiState.isWireframe)
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::reflectWirePSO.Get());
-			else
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::reflectSolidPSO.Get());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectConstsUploadHeap.Get()->GetGPUVirtualAddress());
-			m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-			for (const auto& model : m_models)
-				model.second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			if (m_guiState.isWireframe)
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
-			else
-				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
-			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
-			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetBlendFactor(m_blendFactor);
-			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
-			m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-		}
-
-		// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		for (UINT i = 0; i < MAX_LIGHTS; i++)
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-		{
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_floatBuffers,
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
-
-			m_pCurrFR->m_commandList[threadIndex]->ResolveSubresource(
-				m_pCurrFR->m_resolvedBuffers.Get(),   // Resolve 대상 (단일 샘플 텍스처)
-				0,                      // 대상 서브리소스 인덱스
-				m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
-				0,                      // 소스 서브리소스 인덱스
-				m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
-			);
-
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_floatBuffers,
-				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_resolvedBuffers,
-				D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-
-		// PostEffects
-		{
-			// fog
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
-			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-			m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-			m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::postEffectsPSO.Get());
-
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_depthOnlyDSBuffer,
-				D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-			m_screenSquare->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
-
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_depthOnlyDSBuffer,
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_fogBuffer,
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_renderTargets[m_frameIndex],
-			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_sceneBuffer,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		// PostProcess
-		{
-			m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_sceneBuffer,
-				m_pCurrFR->m_sceneRTVHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
-		}
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_sceneBuffer,
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_fogBuffer,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_resolvedBuffers,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
-
-		m_pCurrFR->m_commandList[threadIndex]->RSSetViewports(1, &m_viewport);
-		m_pCurrFR->m_commandList[threadIndex]->RSSetScissorRects(1, &m_scissorRect);
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-		m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-		const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		m_pCurrFR->m_commandList[threadIndex]->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-		m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-		ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
-		m_pCurrFR->m_commandList[threadIndex]->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pCurrFR->m_commandList[threadIndex].Get());
-
-		SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_renderTargets[m_frameIndex],
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-		ThrowIfFailed(m_pCurrFR->m_commandList[threadIndex]->Close());
-
-		SetEvent(m_workerFinishedRenderFrame[threadIndex]);
-	}
-}
-
 void MainEngine::LoadContexts()
 {
 	struct threadwrapper
 	{
-		static unsigned int WINAPI thunk(LPVOID lpParameter)
+		static unsigned int WINAPI generateThunk(LPVOID lpParameter)
+		{
+			ThreadParameter* parameter = reinterpret_cast<ThreadParameter*>(lpParameter);
+			s_app->CreateShapesThread();
+			return 0;
+		}
+
+		static unsigned int WINAPI basicThunk(LPVOID lpParameter)
 		{
 			ThreadParameter* parameter = reinterpret_cast<ThreadParameter*>(lpParameter);
 			s_app->WorkerThread(parameter->threadIndex);
 			return 0;
 		}
+
+		static unsigned int WINAPI fogThunk(LPVOID lpParameter)
+		{
+			s_app->FogWorkerThread();
+			return 0;
+		}
+
+		static unsigned int WINAPI postProcessThunk(LPVOID lpParameter)
+		{
+			s_app->PostProcessWorkerThread();
+			return 0;
+		}
 	};
+
+	m_createShapesWorkerThreadCount = 1;
+	m_createShapesWorkerBegin = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_createShapesWorkerFinished = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_createShapesWorkerHandle = reinterpret_cast<HANDLE>(_beginthreadex(
+		nullptr,
+		0,
+		threadwrapper::generateThunk,
+		nullptr,
+		0,
+		nullptr));
+
+	assert(m_createShapesWorkerBegin != NULL);
+	assert(m_createShapesWorkerFinished != NULL);
+	assert(m_createShapesWorkerHandle != NULL);
 
 	for (int i = 0; i < NumContexts; i++)
 	{
-		m_workerBeginRenderFrame[i] = CreateEvent(
-			NULL,
-			FALSE,
-			FALSE,
-			NULL);
-
-		m_workerFinishedRenderFrame[i] = CreateEvent(
-			NULL,
-			FALSE,
-			FALSE,
-			NULL);
-
+		m_workerBegin[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
+		m_workerFinished[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
 		m_threadParameters[i].threadIndex = i;
-
 		m_threadHandles[i] = reinterpret_cast<HANDLE>(_beginthreadex(
 			nullptr,
 			0,
-			threadwrapper::thunk,
+			threadwrapper::basicThunk,
 			reinterpret_cast<LPVOID>(&m_threadParameters[i]),
 			0,
 			nullptr));
 
-		assert(m_workerBeginRenderFrame[i] != NULL);
-		assert(m_workerFinishedRenderFrame[i] != NULL);
+		assert(m_workerBegin[i] != NULL);
+		assert(m_workerFinished[i] != NULL);
 		assert(m_threadHandles[i] != NULL);
 	}
+
+
+	m_fogWorkerThreadCount = 1;
+	m_fogWorkerBegin = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_fogWorkerFinished = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_fogThreadHandle = reinterpret_cast<HANDLE>(_beginthreadex(
+		nullptr,
+		0,
+		threadwrapper::fogThunk,
+		nullptr,
+		0,
+		nullptr));
+
+	assert(m_fogWorkerBegin != NULL);
+	assert(m_fogWorkerFinished != NULL);
+	assert(m_fogThreadHandle != NULL);
+
+	m_postProcessWorkerThreadCount = 1;
+	m_postProcessWorkerBegin = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_postProcessWorkerFinished = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_postProcessThreadHandle = reinterpret_cast<HANDLE>(_beginthreadex(
+		nullptr,
+		0,
+		threadwrapper::postProcessThunk,
+		nullptr,
+		0,
+		nullptr));
+
+	assert(m_postProcessWorkerBegin != NULL);
+	assert(m_postProcessWorkerFinished != NULL);
+	assert(m_postProcessThreadHandle != NULL);
 }
 
 void MainEngine::Render()
 {
+	SetEvent(m_createShapesWorkerBegin);
 	for (int i = 0; i < NumContexts; i++)
 	{
-		SetEvent(m_workerBeginRenderFrame[i]); // Tell each worker to start drawing.
+		SetEvent(m_workerBegin[i]); // Tell each worker to start drawing.
+	}
+	SetEvent(m_fogWorkerBegin);
+	SetEvent(m_postProcessWorkerBegin);
+
+	{
+		WaitForSingleObject(m_createShapesWorkerFinished, INFINITE);
+		ID3D12CommandList* cmds[1] = { m_pCurrFR->m_createShapesCmdList.Get() };
+		m_commandQueue->ExecuteCommandLists(m_createShapesWorkerThreadCount, cmds);
 	}
 
-	WaitForMultipleObjects(NumContexts, m_workerFinishedRenderFrame, TRUE, INFINITE);
+	{
+		WaitForMultipleObjects(NumContexts, m_workerFinished, TRUE, INFINITE);
+		ID3D12CommandList* cmds[NumContexts];
+		for (UINT i = 0; i < NumContexts; i++)
+			cmds[i] = m_pCurrFR->m_commandList[i].Get();
+		m_commandQueue->ExecuteCommandLists(NumContexts, cmds);
+		//SignalGPU();
+	}
 
-	// Execute the command list.
-	m_commandQueue->ExecuteCommandLists(NumContexts, m_pCurrFR->m_batchSubmit);
+	{
+		WaitForSingleObject(m_fogWorkerFinished, INFINITE);
+		ID3D12CommandList* cmds[1] = { m_pCurrFR->m_fogCmdList.Get() };
+		m_commandQueue->ExecuteCommandLists(m_fogWorkerThreadCount, cmds);
+		//SignalGPU();
+	}
+
+	{
+		WaitForSingleObject(m_postProcessWorkerFinished, INFINITE);
+		ID3D12CommandList* cmds[1] = { m_pCurrFR->m_postProcessCmdList.Get() };
+		m_commandQueue->ExecuteCommandLists(m_postProcessWorkerThreadCount, cmds);
+		//SignalGPU();
+
+	}
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(1, 0));
+	ThrowIfFailed(m_swapChain->Present(0, 0));
 
 	if (multiFrame)
 		MoveToNextFrame();
@@ -1123,16 +993,41 @@ void MainEngine::UpdateMouseControl()
 
 void MainEngine::Destroy()
 {
-	if (multiFrame)
+
 	{
-		WaitForGpu();
-	}
-	else
-	{
-		WaitForPreviousFrame();
+		const UINT64 fenceValue = m_pCurrFR->m_fenceValue;
+		const UINT64 lastCompletedFence = m_fence->GetCompletedValue();
+
+		// Signal and increment the fence value.
+		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_pCurrFR->m_fenceValue));
+		m_pCurrFR->m_fenceValue++;
+
+		// Wait until the previous frame is finished.
+		if (lastCompletedFence < fenceValue)
+		{
+			ThrowIfFailed(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
+			WaitForSingleObject(m_fenceEvent, INFINITE);
+		}
+		CloseHandle(m_fenceEvent);
 	}
 
-	CloseHandle(m_fenceEvent);
+	// Close thread events and thread handles.
+	CloseHandle(m_createShapesWorkerBegin);
+	CloseHandle(m_createShapesWorkerFinished);
+	CloseHandle(m_createShapesWorkerHandle);
+	for (int i = 0; i < NumContexts; i++)
+	{
+		CloseHandle(m_workerBegin[i]);
+		CloseHandle(m_workerFinished[i]);
+		CloseHandle(m_threadHandles[i]);
+	}
+	CloseHandle(m_fogWorkerBegin);
+	CloseHandle(m_fogWorkerFinished);
+	CloseHandle(m_fogThreadHandle);
+	CloseHandle(m_postProcessWorkerBegin);
+	CloseHandle(m_postProcessWorkerFinished);
+	CloseHandle(m_postProcessThreadHandle);
+
 	m_srvAlloc.Destroy();
 
 	// Cleanup
@@ -1146,6 +1041,33 @@ void MainEngine::Destroy()
 
 void MainEngine::CreateShapes()
 {
+	if (m_shapesInfo.testBeforeCnt < m_shapesInfo.testAfterCnt)
+	{
+		cout << m_shapesInfo.testAfterCnt << endl;
+
+		float radius = 0.5f;
+		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
+
+		XMFLOAT3 cameraPos = m_camera->GetEyePos();
+		XMVECTOR posVec{ -5.0f, m_shapesInfo.testAfterCnt * 1.0f, 0.0f, 1.0f };
+		for (UINT i = 0; i < 10; i++)
+		{
+			XMVECTOR offsetVec{ 1.0f, 0.0f, 0.0f, 0.0f };
+			posVec = XMVectorAdd(posVec, offsetVec);
+			XMFLOAT4 position;
+			XMStoreFloat4(&position, posVec);
+
+			shared_ptr<Model> model = make_shared<Model>(
+				m_device, m_pCurrFR->m_createShapesCmdList, m_commandQueue,
+				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
+			model->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
+			m_models.insert({ model->m_key, model });
+			m_shapesInfo.sphereNum++;
+		}
+
+		m_shapesInfo.testBeforeCnt = m_shapesInfo.testAfterCnt;
+	}
+
 	if (m_shapesInfo.sphereCnt > 0)
 	{
 		m_shapesInfo.sphereCnt = 0;
@@ -1155,7 +1077,7 @@ void MainEngine::CreateShapes()
 		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
 
 		shared_ptr<Model> model = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
+			m_device, m_pCurrFR->m_createShapesCmdList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
 		model->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
 		m_models.insert({ model->m_key, model });
@@ -1171,7 +1093,7 @@ void MainEngine::CreateShapes()
 		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
 
 		shared_ptr<Model> model = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
+			m_device, m_pCurrFR->m_createShapesCmdList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
 		model->m_key = "square" + std::to_string(m_shapesInfo.squareNum);
 		m_models.insert({ model->m_key, model });
@@ -1187,7 +1109,7 @@ void MainEngine::CreateShapes()
 		XMFLOAT4 position{ cameraPos.x, cameraPos.y, cameraPos.z + 3.0f, 1.0f };
 
 		shared_ptr<Model> model = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
+			m_device, m_pCurrFR->m_createShapesCmdList, m_commandQueue,
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, position);
 		model->m_key = "box" + std::to_string(m_shapesInfo.boxNum);
 		m_models.insert({ model->m_key, model });
@@ -1202,4 +1124,329 @@ UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement
 	ImGui::Text("%s", label);
 	ImGui::TableSetColumnIndex(1);
 	return uiElement(); // UI 요소 실행 후 반환
+}
+
+void MainEngine::CreateShapesThread()
+{
+	while (true)
+	{
+		WaitForSingleObject(m_createShapesWorkerBegin, INFINITE);
+
+		ThrowIfFailed(m_pCurrFR->m_createShapesCmdAlloc->Reset());
+		ThrowIfFailed(m_pCurrFR->m_createShapesCmdList->Reset(m_pCurrFR->m_createShapesCmdAlloc.Get(), nullptr));
+
+		CreateShapes();
+
+		const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_createShapesCmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+		m_pCurrFR->m_createShapesCmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+		{
+			m_pCurrFR->m_createShapesCmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+			m_pCurrFR->m_createShapesCmdList->RSSetViewports(1, &m_sceneViewport);
+			m_pCurrFR->m_createShapesCmdList->RSSetScissorRects(1, &m_sceneScissorRect);
+			m_pCurrFR->m_createShapesCmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+			ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+			m_pCurrFR->m_createShapesCmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			m_pCurrFR->m_createShapesCmdList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_createShapesCmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
+			m_pCurrFR->m_createShapesCmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_createShapesCmdList->SetPipelineState(Graphics::skyboxWirePSO.Get());
+			else
+				m_pCurrFR->m_createShapesCmdList->SetPipelineState(Graphics::skyboxSolidPSO.Get());
+			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_createShapesCmdList);
+		}
+
+		m_pCurrFR->m_createShapesCmdList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
+
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+			m_lightSphere[i]->Render(m_device, m_pCurrFR->m_createShapesCmdList);
+
+		if (m_selected && (m_leftButton || m_rightButton))
+			m_cursorSphere->Render(m_device, m_pCurrFR->m_createShapesCmdList);
+
+		m_pCurrFR->m_createShapesCmdList->Close();
+
+		SetEvent(m_createShapesWorkerFinished);
+	}
+}
+
+void MainEngine::WorkerThread(int threadIndex)
+{
+	assert(threadIndex >= 0);
+	assert(threadIndex < NumContexts);
+
+	while (threadIndex >= 0 && threadIndex < NumContexts)
+	{
+		WaitForSingleObject(m_workerBegin[threadIndex], INFINITE);
+
+		std::vector<std::shared_ptr<Model>> modelList;
+		{
+			modelList.reserve(m_models.size());
+			for (const auto& pair : m_models)
+			{
+				modelList.push_back(pair.second);
+			}
+		}
+
+		{
+			ThrowIfFailed(m_pCurrFR->m_commandAllocator[threadIndex]->Reset());
+			ThrowIfFailed(m_pCurrFR->m_commandList[threadIndex]->Reset(m_pCurrFR->m_commandAllocator[threadIndex].Get(), nullptr));
+
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+			ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+			m_pCurrFR->m_commandList[threadIndex]->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+		}
+
+		// ShadowDepthOnly
+		{
+			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::shadowDepthOnlyPSO.Get());
+
+			m_pCurrFR->m_commandList[threadIndex]->RSSetViewports(1, &m_pCurrFR->m_shadowViewport);
+			m_pCurrFR->m_commandList[threadIndex]->RSSetScissorRects(1, &m_pCurrFR->m_shadowScissorRect);
+			for (UINT i = 0; i < MAX_LIGHTS; i++)
+			{
+				CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_shadowDepthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart(), i * m_dsvSize);
+				m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+				m_pCurrFR->m_commandList[threadIndex]->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+				m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_shadowGlobalConstsUploadHeap[i].Get()->GetGPUVirtualAddress());
+
+				for (size_t i = threadIndex; i < modelList.size(); i += NumContexts)
+				{
+					modelList[i]->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
+				}
+			}
+
+			// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_DEPTH_WRITE To D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			for (UINT i = 0; i < MAX_LIGHTS; i++)
+				SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
+					D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+
+		{
+			m_pCurrFR->m_commandList[threadIndex]->RSSetViewports(1, &m_sceneViewport);
+			m_pCurrFR->m_commandList[threadIndex]->RSSetScissorRects(1, &m_sceneScissorRect);
+
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		}
+
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
+			m_pCurrFR->m_commandList[threadIndex]->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::basicWirePSO.Get());
+			else
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::basicSolidPSO.Get());
+
+			for (size_t i = threadIndex; i < modelList.size(); i += NumContexts)
+			{
+				modelList[i]->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
+			}
+
+			if (m_guiState.isDrawNormals)
+			{
+				for (size_t i = threadIndex; i < modelList.size(); i += NumContexts)
+				{
+					modelList[i]->RenderNormal(m_pCurrFR->m_commandList[threadIndex]);
+				}
+			}
+
+			// Mirror
+			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::stencilMaskPSO.Get());
+			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
+
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::reflectWirePSO.Get());
+			else
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::reflectSolidPSO.Get());
+			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+			for (auto it = m_models.begin(); it != m_models.end(); ++it)
+			{
+				it->second->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
+			}
+
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
+			else
+				m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
+			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_commandList[threadIndex]);
+
+			m_pCurrFR->m_commandList[threadIndex]->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
+			m_pCurrFR->m_commandList[threadIndex]->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_commandList[threadIndex]->OMSetBlendFactor(m_blendFactor);
+			m_pCurrFR->m_commandList[threadIndex]->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_mirror->Render(m_device, m_pCurrFR->m_commandList[threadIndex]);
+		}
+
+		// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		for (UINT i = 0; i < MAX_LIGHTS; i++)
+			SetBarrier(m_pCurrFR->m_commandList[threadIndex], m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+		ThrowIfFailed(m_pCurrFR->m_commandList[threadIndex]->Close());
+
+		SetEvent(m_workerFinished[threadIndex]);
+	}
+}
+
+void MainEngine::FogWorkerThread()
+{
+	while (true)
+	{
+		WaitForSingleObject(m_fogWorkerBegin, INFINITE);
+
+		ThrowIfFailed(m_pCurrFR->m_fogCmdAlloc->Reset());
+		ThrowIfFailed(m_pCurrFR->m_fogCmdList->Reset(m_pCurrFR->m_fogCmdAlloc.Get(), nullptr));
+
+		// Resolve
+		{
+			SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_floatBuffers,
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+
+			m_pCurrFR->m_fogCmdList->ResolveSubresource(
+				m_pCurrFR->m_resolvedBuffers.Get(),   // Resolve 대상 (단일 샘플 텍스처)
+				0,                      // 대상 서브리소스 인덱스
+				m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
+				0,                      // 소스 서브리소스 인덱스
+				m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
+			);
+
+			SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_floatBuffers,
+				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+			SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_resolvedBuffers,
+				D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+
+		m_pCurrFR->m_fogCmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+		m_pCurrFR->m_fogCmdList->RSSetViewports(1, &m_sceneViewport);
+		m_pCurrFR->m_fogCmdList->RSSetScissorRects(1, &m_sceneScissorRect);
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+		m_pCurrFR->m_fogCmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		m_pCurrFR->m_fogCmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_fogCmdList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_fogCmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+
+		// FogDepthOnly
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_depthOnlyDSVHeap->GetCPUDescriptorHandleForHeapStart());
+			m_pCurrFR->m_fogCmdList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+			m_pCurrFR->m_fogCmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+			m_pCurrFR->m_fogCmdList->SetPipelineState(Graphics::shadowDepthOnlyPSO.Get());
+			for (const auto& model : m_models)
+				model.second->Render(m_device, m_pCurrFR->m_fogCmdList);
+			m_skybox->Render(m_device, m_pCurrFR->m_fogCmdList);
+		}
+
+		// fog
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+			m_pCurrFR->m_fogCmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+			m_pCurrFR->m_fogCmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+			m_pCurrFR->m_fogCmdList->SetPipelineState(Graphics::postEffectsPSO.Get());
+
+			SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_depthOnlyDSBuffer,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			m_screenSquare->Render(m_device, m_pCurrFR->m_fogCmdList);
+
+			SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_depthOnlyDSBuffer,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		}
+
+		SetBarrier(m_pCurrFR->m_fogCmdList, m_pCurrFR->m_resolvedBuffers,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+
+		ThrowIfFailed(m_pCurrFR->m_fogCmdList->Close());
+
+		SetEvent(m_fogWorkerFinished);
+	}
+}
+
+void MainEngine::PostProcessWorkerThread()
+{
+	while (true)
+	{
+		WaitForSingleObject(m_postProcessWorkerBegin, INFINITE);
+
+		ThrowIfFailed(m_pCurrFR->m_postProcessCmdAlloc->Reset());
+		ThrowIfFailed(m_pCurrFR->m_postProcessCmdList->Reset(m_pCurrFR->m_postProcessCmdAlloc.Get(), nullptr));
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_pCurrFR->m_fogBuffer,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_renderTargets[m_frameIndex],
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_pCurrFR->m_sceneBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		{
+			m_pCurrFR->m_postProcessCmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+			m_pCurrFR->m_postProcessCmdList->SetPipelineState(Graphics::samplingPSO.Get());
+
+			m_pCurrFR->m_postProcessCmdList->RSSetViewports(1, &m_sceneViewport);
+			m_pCurrFR->m_postProcessCmdList->RSSetScissorRects(1, &m_sceneScissorRect);
+
+			ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+			m_pCurrFR->m_postProcessCmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			m_pCurrFR->m_postProcessCmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_postProcessCmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+		}
+
+		// PostProcess
+		{
+			m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_postProcessCmdList, m_pCurrFR->m_sceneBuffer,
+				m_pCurrFR->m_sceneRTVHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
+		}
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_pCurrFR->m_sceneBuffer,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_pCurrFR->m_fogBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		m_pCurrFR->m_postProcessCmdList->RSSetViewports(1, &m_viewport);
+		m_pCurrFR->m_postProcessCmdList->RSSetScissorRects(1, &m_scissorRect);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		m_pCurrFR->m_postProcessCmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		m_pCurrFR->m_postProcessCmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+		m_pCurrFR->m_postProcessCmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+		m_pCurrFR->m_postProcessCmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pCurrFR->m_postProcessCmdList.Get());
+
+		SetBarrier(m_pCurrFR->m_postProcessCmdList, m_renderTargets[m_frameIndex],
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+		ThrowIfFailed(m_pCurrFR->m_postProcessCmdList->Close());
+
+		SetEvent(m_postProcessWorkerFinished);
+	}
 }

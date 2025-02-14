@@ -10,22 +10,7 @@ Model::Model(
 	XMFLOAT4 position)
 {
 	m_position = position;
-	Initialize(device, commandList, commandQueue, meshDatas, cubemapIndexConstsBufferData, textureManager);
-}
 
-Model::~Model()
-{
-
-}
-
-void Model::Initialize(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12CommandQueue>& commandQueue,
-	const vector<MeshData>& meshDatas,
-	CubemapIndexConstants& cubemapIndexConstsBufferData,
-	shared_ptr<TextureManager>& textureManager)
-{
 	for (int i = 0; i < meshDatas.size(); i++)
 	{
 		shared_ptr<Mesh> newMesh = make_shared<Mesh>();
@@ -35,10 +20,13 @@ void Model::Initialize(
 
 		textureManager->LoadTextures(device, commandList, commandQueue, meshDatas[i], newMesh, cubemapIndexConstsBufferData);
 
-		CreateConstUploadBuffer(device, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
-
 		if (newMesh->textureIndexConstsBufferData.albedoIndex != 0)
+		{
 			m_meshConstsBufferData.useAlbedoMap = 1;
+			m_useAlbedoMap = true;
+		}
+
+		CreateConstUploadBuffer(device, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
 
 		m_meshes.push_back(newMesh);
 	}
@@ -54,6 +42,11 @@ void Model::Initialize(
 	XMStoreFloat4x4(&m_meshConstsBufferData.worldIT, XMMatrixInverse(nullptr, positionMatrix));
 
 	CreateConstUploadBuffer(device, m_meshConstsUploadHeap, m_meshConstsBufferData, m_meshConstsBufferDataBegin);
+}
+
+Model::~Model()
+{
+
 }
 
 void Model::Update()

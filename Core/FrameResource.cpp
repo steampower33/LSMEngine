@@ -27,14 +27,24 @@ FrameResource::FrameResource(
 	cbvSrvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	dsvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-	for (UINT i = 0; i < commandListCount; i++)
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_createShapesCmdAlloc)));
+	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_createShapesCmdAlloc.Get(), nullptr, IID_PPV_ARGS(&m_createShapesCmdList)));
+	ThrowIfFailed(m_createShapesCmdList->Close());
+
+	for (UINT i = 0; i < NumContexts; i++)
 	{
 		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[i])));
 		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator[i].Get(), nullptr, IID_PPV_ARGS(&m_commandList[i])));
 		ThrowIfFailed(m_commandList[i]->Close());
 	}
 
-	m_batchSubmit[0] = m_commandList[0].Get();
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_fogCmdAlloc)));
+	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_fogCmdAlloc.Get(), nullptr, IID_PPV_ARGS(&m_fogCmdList)));
+	ThrowIfFailed(m_fogCmdList->Close());
+
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_postProcessCmdAlloc)));
+	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_postProcessCmdAlloc.Get(), nullptr, IID_PPV_ARGS(&m_postProcessCmdList)));
+	ThrowIfFailed(m_postProcessCmdList->Close());
 
 	CreateConstUploadBuffer(device, m_globalConstsUploadHeap, m_globalConstsData, m_globalConstsDataBegin);
 

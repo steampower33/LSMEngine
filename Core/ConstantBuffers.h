@@ -33,7 +33,7 @@ struct Light
 	XMFLOAT4X4 d2;
 };
 
-__declspec(align(256)) struct GlobalConstants
+__declspec(align(256)) struct GlobalConstants // 0
 {
 	XMFLOAT4X4 view;
 	XMFLOAT4X4 proj;
@@ -65,7 +65,8 @@ __declspec(align(256)) struct GlobalConstants
 	Light light[MAX_LIGHTS];
 };
 
-__declspec(align(256)) struct MeshConstants {
+__declspec(align(256)) struct MeshConstants // 1
+{
 	XMFLOAT4X4 world;
 
 	XMFLOAT4X4 worldIT;
@@ -75,7 +76,7 @@ __declspec(align(256)) struct MeshConstants {
 	float roughnessFactor = 1.0f;
 	XMFLOAT3 emissionFactor = { 0.0f, 0.0f, 0.0f };
 	float heightScale = 0.0f;
-	UINT useAlbedoMap = 1;
+	UINT useAlbedoMap = 0;
 	UINT useNormalMap = 0;
 	UINT useHeightMap = 0;
 	UINT useAOMap = 0;
@@ -91,7 +92,8 @@ __declspec(align(256)) struct MeshConstants {
 	XMFLOAT4X3 d12;
 };
 
-__declspec(align(256)) struct TextureIndexConstants {
+__declspec(align(256)) struct TextureIndexConstants // 2
+{
 	UINT albedoIndex = 0;
 	UINT diffuseIndex = 0;
 	UINT specularIndex = 0;
@@ -116,7 +118,8 @@ __declspec(align(256)) struct TextureIndexConstants {
 	XMFLOAT4X4 d26;
 };
 
-__declspec(align(256)) struct CubemapIndexConstants {
+__declspec(align(256)) struct CubemapIndexConstants // 3
+{
 	UINT cubemapEnvIndex = 0;
 	UINT cubemapDiffuseIndex = 0;
 	UINT cubemapSpecularIndex = 0;
@@ -131,7 +134,8 @@ __declspec(align(256)) struct CubemapIndexConstants {
 	XMFLOAT4X4 d33;
 };
 
-__declspec(align(256)) struct SamplingConstants {
+__declspec(align(256)) struct SamplingConstants // 4
+{
 	float dx = 0.0f;
 	float dy = 0.0f;
 	float strength = 0.0f;

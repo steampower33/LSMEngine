@@ -103,26 +103,14 @@ protected:
 	void InitializeDescriptorHeaps();
 	void LoadGUI();
 
+	void SignalGPU();
 	void WaitForGpu();
 	void MoveToNextFrame();
 	void WaitForPreviousFrame();
 
-	ComPtr<ID3D12CommandAllocator> m_initCommandAllocator;
-	ComPtr<ID3D12GraphicsCommandList> m_initCommandList;
-
 	// Synchronization objects.
 	HANDLE m_fenceEvent = nullptr;
 	ComPtr<ID3D12Fence> m_fence;
-
-	HANDLE m_workerBeginRenderFrame[NumContexts];
-	HANDLE m_workerFinishedRenderFrame[NumContexts];
-	HANDLE m_threadHandles[NumContexts];
-
-	struct ThreadParameter
-	{
-		int threadIndex;
-	};
-	ThreadParameter m_threadParameters[NumContexts];
 
 	bool multiFrame = true;
 
