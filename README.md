@@ -31,19 +31,25 @@
 
 # 1. Vcpkg 설치
 
+```sh
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 bootstrap-vcpkg.bat
 vcpkg integrate install
+```
 
 # 2. VCPKG_ROOT 환경 변수 구현(프로젝트 폴더 PowerShell 창에서 실행)
 
+```sh
 $env:VCPKG_ROOT = "C:\path\to\vcpkg"
 $env:PATH = "$env:VCPKG_ROOT;$env:PATH"
+```
 
 # 2. Manifest Mode 활성화
 
+```sh
 Project -> Property -> vcpkg -> Use Vcpkg Manifest를 Yes로
+```
 
 ## Assets
 
