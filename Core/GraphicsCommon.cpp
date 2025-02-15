@@ -75,8 +75,9 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurXCSPSO;
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
-	UINT textureSize = 20;
+	UINT textureSize = 100;
 	UINT cubeTextureSize = 10;
+	UINT imguiTextureSize = 4;
 }
 
 void Graphics::InitDXC()
@@ -97,17 +98,13 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
-	UINT textureSize = 50;
-	UINT cubeMapTextureSize = 10;
-	UINT imguiTextureSize = 4;
-
 	CD3DX12_DESCRIPTOR_RANGE1 textureRanges[3];
 	textureRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 		textureSize, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	textureRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
-		cubeMapTextureSize, textureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+		cubeTextureSize, textureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	textureRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
-		imguiTextureSize, textureSize + cubeMapTextureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+		imguiTextureSize, textureSize + cubeTextureSize, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[6] = {};
 	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);

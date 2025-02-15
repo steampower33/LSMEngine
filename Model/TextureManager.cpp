@@ -4,8 +4,9 @@ TextureManager::TextureManager(
 	ComPtr<ID3D12Device> device,
 	HeapAllocator& srvAlloc)
 {
+	m_cubeTextureIndex = Graphics::textureSize;
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-	textureHeapDesc.NumDescriptors = 60;
+	textureHeapDesc.NumDescriptors = Graphics::textureSize + Graphics::cubeTextureSize + Graphics::imguiTextureSize;
 	textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
@@ -23,7 +24,7 @@ void TextureManager::Initialize(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	CreateEmptyTexture(device, commandList, m_heapStartCpu, m_textureCnt);
+	CreateEmptyTexture(device, commandList, m_heapStartCpu, m_textureIndex);
 }
 
 void TextureManager::LoadTextures(
@@ -55,23 +56,25 @@ void TextureManager::LoadTextures(
 void TextureManager::CreateMipMapTexture(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
-	string filename,
+	string filepath,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	string lowerFilename = TransformToLower(filename);
-	if (CheckDuplcateFilename(m_textureInfos, filename, lowerFilename, newMesh, cubemapIndexConstsBufferData))
+
+	string lowerFilepath = TransformToLower(filepath);
+
+	if (CheckDuplcateFilename(m_textureInfos, filepath, lowerFilepath, newMesh, cubemapIndexConstsBufferData))
 	{
-		if (filename.find(".exr") != std::string::npos)
+		if (lowerFilepath.find(".exr") != std::string::npos)
 			CreateEXRTextureBuffer(
 				device, commandList,
-				filename, lowerFilename, newMesh,
-				m_heapStartCpu, m_heapStartGpu, m_textureCnt, m_textureInfos);
+				filepath, lowerFilepath, newMesh,
+				m_heapStartCpu, m_heapStartGpu, m_textureIndex, m_textureInfos);
 		else
 			CreateMipMapTextureBuffer(
 				device, commandList,
-				filename, lowerFilename, newMesh,
-				m_heapStartCpu, m_heapStartGpu, m_textureCnt, m_textureInfos, true);
+				filepath, lowerFilepath, newMesh,
+				m_heapStartCpu, m_heapStartGpu, m_textureIndex, m_textureInfos, true);
 	}
 }
 
@@ -79,71 +82,76 @@ void TextureManager::CreateDDSTexture(
 	ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList,
 	ComPtr<ID3D12CommandQueue> commandQueue,
-	string filename,
+	string filepath,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	string lowerFilename = TransformToLower(filename);
+	string lowerFilepath = TransformToLower(filepath);
 
-	if (CheckDuplcateFilename(m_ddsTextureInfos, filename, lowerFilename, newMesh, cubemapIndexConstsBufferData))
+	if (CheckDuplcateFilename(m_ddsTextureInfos, filepath, lowerFilepath, newMesh, cubemapIndexConstsBufferData))
 	{
-		if (lowerFilename.find("brdf") != std::string::npos)
+		if (lowerFilepath.find("brdf") != std::string::npos)
 			CreateDDSTextureBuffer(
 				device, commandQueue,
-				filename, lowerFilename, newMesh,
-				m_heapStartCpu, m_heapStartGpu, m_textureCnt, m_ddsTextureInfos, cubemapIndexConstsBufferData, false);
+				filepath, lowerFilepath, newMesh,
+				m_heapStartCpu, m_heapStartGpu, m_textureIndex, m_ddsTextureInfos, cubemapIndexConstsBufferData, false);
 		else
 			CreateDDSTextureBuffer(
 				device, commandQueue,
-				filename, lowerFilename, newMesh,
-				m_heapStartCpu, m_heapStartGpu, m_cubeTextureCnt, m_ddsTextureInfos, cubemapIndexConstsBufferData, true);
+				filepath, lowerFilepath, newMesh,
+				m_heapStartCpu, m_heapStartGpu, m_cubeTextureIndex, m_ddsTextureInfos, cubemapIndexConstsBufferData, true);
 	}
 }
 
 bool TextureManager::CheckDuplcateFilename(
 	unordered_map<string, TextureInfo>& textureIdx,
-	const string& filename,
-	const string& lowerFilename,
+	const string& filepath,
+	const string& lowerFilepath,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
 {
-	if (filename.empty())
+	if (filepath.empty())
 		return false;
 
-	auto f = textureIdx.find(filename);
+	std::filesystem::path filePath(filepath);
+
+	std::string filenameExtension = filePath.filename().string();
+
+	auto f = textureIdx.find(filenameExtension);
+
 	if (f != textureIdx.end())
 	{
 		// Check DDS
-		if (f->first.find(".dds") != std::string::npos)
+		if (f->second.ext.find(".dds") != std::string::npos)
 		{
-			if (lowerFilename.find("env") != std::string::npos)
+			if (f->first.find("env") != std::string::npos)
 				cubemapIndexConstsBufferData.cubemapEnvIndex = f->second.heapIndex;
-			else if (lowerFilename.find("diffuse") != std::string::npos)
+			else if (f->first.find("diffuse") != std::string::npos)
 				cubemapIndexConstsBufferData.cubemapDiffuseIndex = f->second.heapIndex;
-			else if (lowerFilename.find("specular") != std::string::npos)
+			else if (f->first.find("specular") != std::string::npos)
 				cubemapIndexConstsBufferData.cubemapSpecularIndex = f->second.heapIndex;
-			else if (lowerFilename.find("brdf") != std::string::npos)
+			else if (f->first.find("brdf") != std::string::npos)
 				cubemapIndexConstsBufferData.brdfIndex = f->second.heapIndex;
 		}
 		else // Check Others
 		{
-			if (lowerFilename.find("albedo") != std::string::npos)
+			if (f->first.find("albedo") != std::string::npos || f->first.find("base") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.albedoIndex = f->second.heapIndex;
-			else if (lowerFilename.find("diffuse") != std::string::npos)
+			else if (f->first.find("diffuse") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.diffuseIndex = f->second.heapIndex;
-			else if (lowerFilename.find("specular") != std::string::npos)
+			else if (f->first.find("specular") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.specularIndex = f->second.heapIndex;
-			else if (lowerFilename.find("normal") != std::string::npos)
+			else if (f->first.find("normal") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.normalIndex = f->second.heapIndex;
-			else if (lowerFilename.find("height") != std::string::npos)
+			else if (f->first.find("height") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.heightIndex = f->second.heapIndex;
-			else if (lowerFilename.find("ao") != std::string::npos)
+			else if (f->first.find("ao") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.aoIndex = f->second.heapIndex;
-			else if (lowerFilename.find("metallic") != std::string::npos)
+			else if (f->first.find("metallic") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.metallicIndex = f->second.heapIndex;
-			else if (lowerFilename.find("roughness") != std::string::npos)
+			else if (f->first.find("roughness") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.roughnessIndex = f->second.heapIndex;
-			else if (lowerFilename.find("emissive") != std::string::npos)
+			else if (f->first.find("emissive") != std::string::npos)
 				newMesh->textureIndexConstsBufferData.emissiveIndex = f->second.heapIndex;
 		}
 

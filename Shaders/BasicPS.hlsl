@@ -1,7 +1,7 @@
 #include "Common.hlsli"
 
-Texture2D texture[50] : register(t0, space0);
-TextureCube skyboxTexture[10] : register(t50, space0);
+Texture2D texture[100] : register(t0, space0);
+TextureCube skyboxTexture[10] : register(t100, space0);
 
 static const uint textureSizeOffset = 50;
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0

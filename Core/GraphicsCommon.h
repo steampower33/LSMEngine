@@ -93,6 +93,7 @@ namespace Graphics
 
 	extern UINT textureSize;
 	extern UINT cubeTextureSize;
+	extern UINT imguiTextureSize;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();

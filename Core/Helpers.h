@@ -337,14 +337,14 @@ static void CreateDDSTextureBuffer(
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
-	UINT& textureCnt,
+	UINT& textureIndex,
 	unordered_map<string, TextureInfo>& textureInfos,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
 	bool isCubeMap)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	cpuHandle.Offset(size * textureCnt);
-	gpuHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureIndex);
+	gpuHandle.Offset(size * textureIndex);
 
 	wstring wideFilename = StringToWString(filepath);
 
@@ -385,13 +385,13 @@ static void CreateDDSTextureBuffer(
 	);
 
 	if (lowerFilepath.find("env") != std::string::npos)
-		cubemapIndexConstsBufferData.cubemapEnvIndex = textureCnt;
+		cubemapIndexConstsBufferData.cubemapEnvIndex = textureIndex;
 	else if (lowerFilepath.find("diffuse") != std::string::npos)
-		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureCnt;
+		cubemapIndexConstsBufferData.cubemapDiffuseIndex = textureIndex;
 	else if (lowerFilepath.find("specular") != std::string::npos)
-		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureCnt;
+		cubemapIndexConstsBufferData.cubemapSpecularIndex = textureIndex;
 	else if (lowerFilepath.find("brdf") != std::string::npos)
-		cubemapIndexConstsBufferData.brdfIndex = textureCnt;
+		cubemapIndexConstsBufferData.brdfIndex = textureIndex;
 	else
 		assert(false && "DDS Texture file does not exist!");
 
@@ -402,11 +402,11 @@ static void CreateDDSTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureCnt, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension, 
 		texture, nullptr, cpuHandle, gpuHandle } });
-	textureCnt++;
+	textureIndex++;
 
-	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
+	wprintf(L"Successfully loaded DDS texture: %s, location is %d\n", wideFilename.c_str(), textureIndex - 1);
 }
 
 static void CreateEXRTextureBuffer(
@@ -417,12 +417,12 @@ static void CreateEXRTextureBuffer(
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
-	UINT& textureCnt,
+	UINT& textureIndex,
 	unordered_map<string, TextureInfo>& textureInfos)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	cpuHandle.Offset(size * textureCnt);
-	gpuHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureIndex);
+	gpuHandle.Offset(size * textureIndex);
 
 	ComPtr<ID3D12Resource> texture;
 
@@ -475,23 +475,23 @@ static void CreateEXRTextureBuffer(
 	);
 
 	if (lowerFilepath.find("albedo") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureIndex;
 	else if (lowerFilepath.find("diffuse") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureIndex;
 	else if (lowerFilepath.find("specular") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureIndex;
 	else if (lowerFilepath.find("normal") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureIndex;
 	else if (lowerFilepath.find("height") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureIndex;
 	else if (lowerFilepath.find("ao") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureIndex;
 	else if (lowerFilepath.find("metallic") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureIndex;
 	else if (lowerFilepath.find("roughness") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureIndex;
 	else if (lowerFilepath.find("emissive") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureIndex;
 	else
 		assert(false && "EXR Texture file does not exist!");
 
@@ -502,11 +502,11 @@ static void CreateEXRTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureCnt, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension, 
 		texture, textureUploadHeap, cpuHandle, gpuHandle } });
-	textureCnt++;
+	textureIndex++;
 
-	wprintf(L"Successfully loaded EXR texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
+	wprintf(L"Successfully loaded EXR texture: %s, location is %d\n", wideFilename.c_str(), textureIndex - 1);
 }
 
 static void CreateMipMapTextureBuffer(
@@ -517,12 +517,12 @@ static void CreateMipMapTextureBuffer(
 	shared_ptr<Mesh>& newMesh,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle,
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
-	UINT& textureCnt,
+	UINT& textureIndex,
 	unordered_map<string, TextureInfo>& textureInfos, const bool useSRGB)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	cpuHandle.Offset(size * textureCnt);
-	gpuHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureIndex);
+	gpuHandle.Offset(size * textureIndex);
 
 	auto image = make_unique<ScratchImage>();
 
@@ -615,23 +615,23 @@ static void CreateMipMapTextureBuffer(
 	);
 
 	if (lowerFilepath.find("albedo") != std::string::npos || lowerFilepath.find("base") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureIndex;
 	else if (lowerFilepath.find("diffuse") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureIndex;
 	else if (lowerFilepath.find("specular") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureIndex;
 	else if (lowerFilepath.find("normal") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureIndex;
 	else if (lowerFilepath.find("height") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureIndex;
 	else if (lowerFilepath.find("ao") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureIndex;
 	else if (lowerFilepath.find("metallic") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureIndex;
 	else if (lowerFilepath.find("roughness") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureIndex;
 	else if (lowerFilepath.find("emissive") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureIndex;
 	else
 		assert(false && "MipMap texture file does not exist!");
 
@@ -642,11 +642,11 @@ static void CreateMipMapTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureCnt, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension, 
 		texture, textureUploadHeap, cpuHandle, gpuHandle } });
-	textureCnt++;
+	textureIndex++;
 
-	wprintf(L"Successfully loaded MipMap texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
+	wprintf(L"Successfully loaded MipMap texture: %s, location is %d\n", wideFilename.c_str(), textureIndex - 1);
 
 }
 
@@ -670,12 +670,12 @@ static void CreateTextureBuffer(
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle,
 	vector<ComPtr<ID3D12Resource>>& textures,
 	vector<ComPtr<ID3D12Resource>>& texturesUploadHeap,
-	UINT& textureCnt,
+	UINT& textureIndex,
 	unordered_map<string, TextureInfo>& textureInfos)
 {
 	UINT size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	cpuHandle.Offset(size * textureCnt);
-	gpuHandle.Offset(size * textureCnt);
+	cpuHandle.Offset(size * textureIndex);
+	gpuHandle.Offset(size * textureIndex);
 
 	auto image = make_unique<ScratchImage>();
 
@@ -724,23 +724,23 @@ static void CreateTextureBuffer(
 	);
 
 	if (lowerFilepath.find("albedo") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.albedoIndex = textureIndex;
 	else if (lowerFilepath.find("diffuse") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.diffuseIndex = textureIndex;
 	else if (lowerFilepath.find("specular") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.specularIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.specularIndex = textureIndex;
 	else if (lowerFilepath.find("normal") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.normalIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.normalIndex = textureIndex;
 	else if (lowerFilepath.find("height") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.heightIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.heightIndex = textureIndex;
 	else if (lowerFilepath.find("ao") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.aoIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.aoIndex = textureIndex;
 	else if (lowerFilepath.find("metallic") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.metallicIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.metallicIndex = textureIndex;
 	else if (lowerFilepath.find("roughness") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.roughnessIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.roughnessIndex = textureIndex;
 	else if (lowerFilepath.find("emissive") != std::string::npos)
-		newMesh->textureIndexConstsBufferData.emissiveIndex = textureCnt;
+		newMesh->textureIndexConstsBufferData.emissiveIndex = textureIndex;
 	else
 		assert(false && "Texture file does not exist!");
 
@@ -751,10 +751,10 @@ static void CreateTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureCnt, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension, 
 		texture, textureUploadHeap, cpuHandle, gpuHandle }});
-	textureCnt++;
+	textureIndex++;
 
-	wprintf(L"Successfully loaded texture: %s, location is %d\n", wideFilename.c_str(), textureCnt - 1);
+	wprintf(L"Successfully loaded texture: %s, location is %d\n", wideFilename.c_str(), textureIndex - 1);
 
 }

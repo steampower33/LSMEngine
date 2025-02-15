@@ -41,7 +41,7 @@ public:
 	void CreateMipMapTexture(
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
-		string filename,
+		string filepath,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
@@ -49,12 +49,12 @@ public:
 		ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList,
 		ComPtr<ID3D12CommandQueue> commandQueue,
-		string filename,
+		string filepath,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
-	UINT m_textureCnt = 0;
-	UINT m_cubeTextureCnt = 50;
+	UINT m_textureIndex = 0;
+	UINT m_cubeTextureIndex;
 
 	vector<ComPtr<ID3D12Resource>> m_textures;
 	vector<ComPtr<ID3D12Resource>> m_texturesUploadHeap;

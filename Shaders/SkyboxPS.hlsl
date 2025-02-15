@@ -1,8 +1,8 @@
 #include "Common.hlsli"
 
-TextureCube skyboxTexture[10] : register(t50, space0);
+TextureCube skyboxTexture[10] : register(t100, space0);
 
-static const uint textureSizeOffset = 50;
+static const uint textureSizeOffset = 100;
 
 float4 main(PSInput input) : SV_TARGET
 {
