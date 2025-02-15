@@ -21,34 +21,34 @@ class TextureManager
 {
 public:
 	TextureManager(
-		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12Device> device,
 		HeapAllocator& srvAlloc);
 
 	~TextureManager() {}
 
 	void Initialize(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList);
+		ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList);
 
 	void LoadTextures(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12CommandQueue>& commandQueue,
+		ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList,
+		ComPtr<ID3D12CommandQueue> commandQueue,
 		const MeshData& meshData,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
 	void CreateMipMapTexture(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList,
 		string filename,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
 	void CreateDDSTexture(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12CommandQueue>& commandQueue,
+		ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList,
+		ComPtr<ID3D12CommandQueue> commandQueue,
 		string filename,
 		shared_ptr<Mesh>& newMesh,
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
@@ -79,8 +79,8 @@ private:
 		CubemapIndexConstants& cubemapIndexConstsBufferData);
 
 	void CreateEmptyTexture(
-		ComPtr<ID3D12Device>& device,
-		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 		UINT& textureCnt);
 };

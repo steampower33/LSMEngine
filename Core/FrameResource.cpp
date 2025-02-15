@@ -1,7 +1,7 @@
 #include "FrameResource.h"
 
 FrameResource::FrameResource(
-	ComPtr<ID3D12Device>& device, float width, float height, UINT frameIndex)
+	ComPtr<ID3D12Device> device, float width, float height, UINT frameIndex)
 {
 	m_width = width;
 	m_height = height;

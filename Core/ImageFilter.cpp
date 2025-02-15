@@ -1,7 +1,7 @@
 #include "ImageFilter.h"
 
 ImageFilter::ImageFilter(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
 	UINT width, UINT height, UINT index, FilterOption option, UINT bloomLevels)
 {
 	cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

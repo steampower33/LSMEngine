@@ -10,9 +10,6 @@
     <Filter Include="Model">
       <UniqueIdentifier>{019cabbb-d251-4b1c-adb4-febbc8e9cd0a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Assets">
-      <UniqueIdentifier>{fe26adc0-1ca5-4247-87f0-d11d100351e3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{4c210d31-d383-449e-9934-375038a079fe}</UniqueIdentifier>
     </Filter>

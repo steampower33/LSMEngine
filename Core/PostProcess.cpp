@@ -1,7 +1,7 @@
 #include "PostProcess.h"
 
 PostProcess::PostProcess(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
 	float width, float height, UINT fogSRVIndex)
 {
 	m_bloomLevels = 3;

@@ -74,16 +74,6 @@ void MainEngine::Initialize()
 	}
 
 	{
-		std::vector<MeshData> meshDatas = GeometryGenerator::ReadFromFile("./Assets/Long_Ax/GLTF/", "Long_Ax_1.gltf");
-
-		shared_ptr<Model> helmet = make_shared<Model>(
-			m_device, m_pCurrFR->m_commandList[0], m_commandQueue,
-			meshDatas, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
-		helmet->m_key = "ax";
-		m_models.insert({ helmet->m_key, helmet });
-	}
-
-	{
 		float radius = 0.5f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
 		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";

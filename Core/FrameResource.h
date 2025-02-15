@@ -16,7 +16,7 @@ class FrameResource
 {
 public:
 	FrameResource(
-		ComPtr<ID3D12Device>& device, float width, float height, UINT frameIndex);
+		ComPtr<ID3D12Device> device, float width, float height, UINT frameIndex);
 
 	~FrameResource();
 

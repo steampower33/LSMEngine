@@ -1,12 +1,12 @@
 #include "Model.h"
 
 Model::Model(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12CommandQueue>& commandQueue,
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList,
+	ComPtr<ID3D12CommandQueue> commandQueue,
 	const vector<MeshData>& meshDatas,
 	CubemapIndexConstants& cubemapIndexConstsBufferData,
-	shared_ptr<TextureManager>& textureManager,
+	shared_ptr<TextureManager> textureManager,
 	XMFLOAT4 position)
 {
 	m_position = position;

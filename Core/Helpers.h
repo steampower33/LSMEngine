@@ -614,7 +614,7 @@ static void CreateMipMapTextureBuffer(
 		cpuHandle // 디스크립터 힙의 핸들
 	);
 
-	if (lowerFilepath.find("albedo") != std::string::npos)
+	if (lowerFilepath.find("albedo") != std::string::npos || lowerFilepath.find("base") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.albedoIndex = textureCnt;
 	else if (lowerFilepath.find("diffuse") != std::string::npos)
 		newMesh->textureIndexConstsBufferData.diffuseIndex = textureCnt;

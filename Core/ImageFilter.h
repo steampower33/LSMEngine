@@ -21,7 +21,7 @@ class ImageFilter
 {
 public:
 	ImageFilter(
-		ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
 		UINT width, UINT height, UINT index, FilterOption option, UINT bloomLevels);
 	~ImageFilter() {}
 

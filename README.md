@@ -14,22 +14,40 @@
 
 해당 라이브러리들은 모두 `vcpkg.json` 내 의존성 목록을 통해 자동 관리됩니다.
 
--- **ImGui** : GUI 라이브러리(프로젝트 내 포함됨)
+- **ImGui** : GUI 라이브러리(프로젝트 내 포함됨)
 
 ---
 
 ## 필수 요구사항
 
 - **Windows 10** 이상 (DirectX 12 지원 환경)
-- **CMake 3.21** 이상 (권장)  
-  또는 **Visual Studio 2022**
+- **Visual Studio 2022**
 - **C++17** 이상
 - **vcpkg** 
 
 ---
+
+## How To Start
+
+# 1. Vcpkg 설치
+
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg
+bootstrap-vcpkg.bat
+vcpkg integrate install
+
+# 2. VCPKG_ROOT 환경 변수 구현(프로젝트 폴더 PowerShell 창에서 실행)
+
+$env:VCPKG_ROOT = "C:\path\to\vcpkg"
+$env:PATH = "$env:VCPKG_ROOT;$env:PATH"
+
+# 2. Manifest Mode 활성화
+
+Project -> Property -> vcpkg -> Use Vcpkg Manifest를 Yes로
 
 ## Assets
 
 - https://www.cgtrader.com/items/4693538/download-page
 - https://freepbr.com/product/vented-metal-panel1/
 - https://freepbr.com/product/worn-painted-metal/
+

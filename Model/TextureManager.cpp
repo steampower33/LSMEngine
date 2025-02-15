@@ -1,7 +1,7 @@
 #include "TextureManager.h"
 
 TextureManager::TextureManager(
-	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12Device> device,
 	HeapAllocator& srvAlloc)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
@@ -20,16 +20,16 @@ TextureManager::TextureManager(
 }
 
 void TextureManager::Initialize(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList)
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList)
 {
 	CreateEmptyTexture(device, commandList, m_heapStartCpu, m_textureCnt);
 }
 
 void TextureManager::LoadTextures(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12CommandQueue>& commandQueue,
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList,
+	ComPtr<ID3D12CommandQueue> commandQueue,
 	const MeshData& meshData,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
@@ -53,8 +53,8 @@ void TextureManager::LoadTextures(
 }
 
 void TextureManager::CreateMipMapTexture(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList,
 	string filename,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
@@ -76,9 +76,9 @@ void TextureManager::CreateMipMapTexture(
 }
 
 void TextureManager::CreateDDSTexture(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	ComPtr<ID3D12CommandQueue>& commandQueue,
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList,
+	ComPtr<ID3D12CommandQueue> commandQueue,
 	string filename,
 	shared_ptr<Mesh>& newMesh,
 	CubemapIndexConstants& cubemapIndexConstsBufferData)
@@ -157,8 +157,8 @@ bool TextureManager::CheckDuplcateFilename(
 
 
 void TextureManager::CreateEmptyTexture(
-	ComPtr<ID3D12Device>& device,
-	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Device> device,
+	ComPtr<ID3D12GraphicsCommandList> commandList,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE textureHandle,
 	UINT& textureCnt)
 {
