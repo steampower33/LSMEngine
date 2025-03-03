@@ -54,7 +54,7 @@ __declspec(align(256)) struct GlobalConstants // 0
 	UINT resolvedSRVIndex = 0;
 
 	UINT fogSRVIndex = 0;
-	float d00;
+	UINT isEnvEnabled = 1;
 	float d01;
 	float d02;
 	

@@ -71,7 +71,7 @@ cbuffer GlobalConstants : register(b0)
     uint resolvedSRVIndex;
     
     uint fogSRVIndex;
-    float d00;
+    uint isEnvEnabled;
     float d01;
     float d02;
     

@@ -27,7 +27,6 @@
 #include "DirectXTexEXR.h"
 
 static const UINT FrameCount = 3;
-constexpr UINT NumContexts = 3;
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
@@ -52,11 +51,13 @@ struct GuiState {
 	bool isLightChanged = false;
 	bool isEnvChanged = false;
 	bool isMirrorChanged = false;
+	bool isPostEffectsEnabled = false;
+	bool isPostEffectsChanged = false;
+	bool isPostProcessEnabled = false;
+	bool isPostProcessChanged = false;
 };
 
 struct DirtyFlag {
-	bool postProcessFlag = false;
-	bool postEffectsFlag = false;
 };
 
 struct ShapesInfo

@@ -66,6 +66,7 @@ public:
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;
 	MeshConstants m_meshConstsBufferData = {};
 	UINT8* m_meshConstsBufferDataBegin;
+	bool isVisible = true;
 
 	shared_ptr<BoundingSphere> m_boundingSphere;
 

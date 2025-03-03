@@ -31,17 +31,8 @@ public:
 		GlobalConstants (&shadowGlobalConsts)[MAX_LIGHTS],
 		CubemapIndexConstants& cubemapIndexConsts);
 
-	ComPtr<ID3D12CommandAllocator> m_createShapesCmdAlloc;
-	ComPtr<ID3D12GraphicsCommandList> m_createShapesCmdList;
-
-	ComPtr<ID3D12CommandAllocator> m_commandAllocator[NumContexts];
-	ComPtr<ID3D12GraphicsCommandList> m_commandList[NumContexts];
-
-	ComPtr<ID3D12CommandAllocator> m_fogCmdAlloc;
-	ComPtr<ID3D12GraphicsCommandList> m_fogCmdList;
-
-	ComPtr<ID3D12CommandAllocator> m_postProcessCmdAlloc;
-	ComPtr<ID3D12GraphicsCommandList> m_postProcessCmdList;
+	ComPtr<ID3D12CommandAllocator> m_cmdAlloc;
+	ComPtr<ID3D12GraphicsCommandList> m_cmdList;
 
 	UINT64 m_fenceValue = 0;
 	UINT m_frameIndex;
@@ -90,7 +81,6 @@ public:
 	shared_ptr<PostProcess> m_postProcess;
 
 private:
-
 	float m_width;
 	float m_height;
 

@@ -23,7 +23,6 @@ public:
 private:
 	// Flags
 	GuiState m_guiState;
-	DirtyFlag m_dirtyFlag;
 
 	SamplingConstants m_combineConsts;
 
@@ -69,42 +68,17 @@ private:
 	static MainEngine* s_app;
 
 private:
-	void LoadContexts();
 	void UpdateMouseControl();
 	void UpdateLight(float dt);
 	void CreateShapes();
 	UINT DrawTableRow(const char* label, std::function<UINT()> uiElement);
 
-
 private:
-	UINT m_createShapesWorkerThreadCount;
-	HANDLE m_createShapesWorkerBegin;
-	HANDLE m_createShapesWorkerFinished;
-	HANDLE m_createShapesWorkerHandle;
-
-	HANDLE m_workerBegin[NumContexts];
-	HANDLE m_workerFinished[NumContexts];
-	HANDLE m_threadHandles[NumContexts];
-
-	UINT m_fogWorkerThreadCount;
-	HANDLE m_fogWorkerBegin;
-	HANDLE m_fogWorkerFinished;
-	HANDLE m_fogThreadHandle;
-
-	UINT m_postProcessWorkerThreadCount;
-	HANDLE m_postProcessWorkerBegin;
-	HANDLE m_postProcessWorkerFinished;
-	HANDLE m_postProcessThreadHandle;
-
-	struct ThreadParameter
-	{
-		int threadIndex;
-	};
-	ThreadParameter m_threadParameters[NumContexts];
-
-	void CreateShapesThread();
-	void WorkerThread(int threadIndex);
-	void FogWorkerThread();
-	void PostProcessWorkerThread();
+	void InitPreFrame();
+	void DepthOnlyPass();
+	void ScenePass();
+	void ResolvePass();
+	void PostEffectsPass();
+	void PostProcessPass();
 
 };

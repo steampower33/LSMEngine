@@ -3,7 +3,7 @@
 Texture2D texture[100] : register(t0, space0);
 TextureCube skyboxTexture[10] : register(t100, space0);
 
-static const uint textureSizeOffset = 50;
+static const uint textureSizeOffset = 100;
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
 
 #define NEAR_PLANE 0.1
@@ -47,7 +47,7 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
     float3 kd = lerp(1.0 - F, 0.0, metallic);
     
     // 앞에서 사용했던 방법과 동일
-    float3 irradiance = skyboxTexture[cubemapDiffuseIndex - textureSizeOffset].SampleLevel(linearWrapSampler, normalWorld, 0.0).rgb;
+    float3 irradiance = isEnvEnabled ? skyboxTexture[cubemapDiffuseIndex - textureSizeOffset].SampleLevel(linearWrapSampler, normalWorld, 0.0).rgb : float3(0.0, 0.0, 0.0);
     
     return kd * albedo * irradiance;
 }
@@ -56,8 +56,8 @@ float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye,
                    float metallic, float roughness)
 {
     float2 specularBRDF = texture[brdfIndex].SampleLevel(linearClampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
-    float3 specularIrradiance = skyboxTexture[cubemapSpecularIndex - textureSizeOffset].
-        SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
+    float3 specularIrradiance = isEnvEnabled ? skyboxTexture[cubemapSpecularIndex - textureSizeOffset].
+        SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb : float3(0.0, 0.0, 0.0);
     
     // 앞에서 사용했던 방법과 동일
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
