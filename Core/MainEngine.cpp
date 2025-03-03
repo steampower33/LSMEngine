@@ -464,6 +464,10 @@ void MainEngine::UpdateGUI()
 				{
 					UINT flag = 0;
 
+					flag += DrawTableRow("Enable", [&]() {
+						return ImGui::Checkbox("##Enable", &m_guiState.isMirrorEnabled);
+						});
+
 					if (flag += DrawTableRow("Alpha", [&]() {
 						return ImGui::SliderFloat("##Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
 						}))
@@ -1047,12 +1051,11 @@ void MainEngine::DepthOnlyPass()
 			m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_shadowGlobalConstsUploadHeap[i].Get()->GetGPUVirtualAddress());
 
 			for (const auto& model : m_models)
-			{
 				if (model.second->isVisible)
 					model.second->Render(m_device, m_pCurrFR->m_cmdList);
-			}
-			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
-			m_skybox->Render(m_device, m_pCurrFR->m_cmdList);
+
+			if (m_guiState.isMirrorEnabled) m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
+			if (m_skybox->isVisible) m_skybox->Render(m_device, m_pCurrFR->m_cmdList);
 		}
 
 		// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_DEPTH_WRITE To D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -1072,9 +1075,11 @@ void MainEngine::DepthOnlyPass()
 		m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		for (const auto& model : m_models)
-			model.second->Render(m_device, m_pCurrFR->m_cmdList);
-		m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
-		m_skybox->Render(m_device, m_pCurrFR->m_cmdList);
+			if (model.second->isVisible)
+				model.second->Render(m_device, m_pCurrFR->m_cmdList);
+
+		if (m_guiState.isMirrorEnabled) m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
+		if (m_skybox->isVisible) m_skybox->Render(m_device, m_pCurrFR->m_cmdList);
 	}
 }
 
@@ -1106,7 +1111,8 @@ void MainEngine::ScenePass()
 		else
 			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::basicSolidPSO.Get());
 		for (const auto& model : m_models)
-			model.second->Render(m_device, m_pCurrFR->m_cmdList);
+			if (model.second->isVisible)
+				model.second->Render(m_device, m_pCurrFR->m_cmdList);
 
 		// lightSphere, cursorSphere
 		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
@@ -1120,36 +1126,40 @@ void MainEngine::ScenePass()
 		if (m_guiState.isDrawNormals)
 		{
 			for (const auto& model : m_models)
-				model.second->RenderNormal(m_pCurrFR->m_cmdList);
+				if (model.second->isVisible)
+					model.second->RenderNormal(m_pCurrFR->m_cmdList);
 		}
 
 		// Mirror
-		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::stencilMaskPSO.Get());
-		m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
+		if (m_guiState.isMirrorEnabled)
+		{
+			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::stencilMaskPSO.Get());
+			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
 
-		if (m_guiState.isWireframe)
-			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::reflectWirePSO.Get());
-		else
-			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::reflectSolidPSO.Get());
-		m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectConstsUploadHeap.Get()->GetGPUVirtualAddress());
-		m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-		for (const auto& model : m_models)
-			model.second->Render(m_device, m_pCurrFR->m_cmdList);
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_cmdList->SetPipelineState(Graphics::reflectWirePSO.Get());
+			else
+				m_pCurrFR->m_cmdList->SetPipelineState(Graphics::reflectSolidPSO.Get());
+			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_reflectConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			for (const auto& model : m_models)
+				model.second->Render(m_device, m_pCurrFR->m_cmdList);
 
-		if (m_guiState.isWireframe)
-			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
-		else
-			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
-		m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_skybox->RenderSkybox(m_device, m_pCurrFR->m_cmdList);
+			if (m_guiState.isWireframe)
+				m_pCurrFR->m_cmdList->SetPipelineState(Graphics::skyboxReflectWirePSO.Get());
+			else
+				m_pCurrFR->m_cmdList->SetPipelineState(Graphics::skyboxReflectSolidPSO.Get());
+			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_skybox->RenderSkybox(m_device, m_pCurrFR->m_cmdList);
 
-		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
-		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
-		m_pCurrFR->m_cmdList->OMSetBlendFactor(m_blendFactor);
-		m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
-		m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
+			m_pCurrFR->m_cmdList->SetPipelineState(Graphics::mirrorBlendSolidPSO.Get());
+			m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+			m_pCurrFR->m_cmdList->OMSetBlendFactor(m_blendFactor);
+			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
+			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
+		}
 	}
 
 	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;

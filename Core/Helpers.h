@@ -50,6 +50,7 @@ struct GuiState {
 	bool isMeshChanged = false;
 	bool isLightChanged = false;
 	bool isEnvChanged = false;
+	bool isMirrorEnabled = false;
 	bool isMirrorChanged = false;
 	bool isPostEffectsEnabled = false;
 	bool isPostEffectsChanged = false;
