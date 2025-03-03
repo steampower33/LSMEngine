@@ -159,16 +159,16 @@ cbuffer SamplingConstants : register(b4)
     
     float gamma;
     uint index;
-    uint hightIndex;
-    uint lowIndex;
+    float d40;
+    float d41;
     
-    float4 d40[2];
-    
-    float4x4 d41;
-    
-    float4x4 d42;
+    float4 d42[2];
     
     float4x4 d43;
+    
+    float4x4 d44;
+    
+    float4x4 d45;
 }
 
 static const float2 poissonDisk[16] =

@@ -36,6 +36,9 @@ public:
 		ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12DescriptorHeap>& heaps);
 
+	bool m_postEffectsEnabled;
+	UINT m_resolvedIndex;
+
 private:
 	UINT cbvSrvUavSize;
 	FilterOption m_option;
@@ -48,6 +51,5 @@ private:
 	SamplingConstants m_samplingConstsBufferData;
 	ComPtr<ID3D12Resource> m_samplingConstsUploadHeap;
 	UINT8* m_samplingConstsBufferDataBegin;
-
 };
 

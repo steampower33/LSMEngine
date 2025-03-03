@@ -506,7 +506,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC combinePSODesc = samplingPSODesc;
 	combinePSODesc.VS = { combineVS->GetBufferPointer(), combineVS->GetBufferSize() };
 	combinePSODesc.PS = { combinePS->GetBufferPointer(), combinePS->GetBufferSize() };
-	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	combinePSODesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&combinePSODesc, IID_PPV_ARGS(&combinePSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC depthOnlyPSODesc = basicSolidPSODesc;

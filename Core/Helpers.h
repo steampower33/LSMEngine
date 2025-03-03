@@ -53,7 +53,7 @@ struct GuiState {
 	bool isMirrorChanged = false;
 	bool isPostEffectsEnabled = false;
 	bool isPostEffectsChanged = false;
-	bool isPostProcessEnabled = false;
+	bool isPostProcessEnabled = true;
 	bool isPostProcessChanged = false;
 };
 

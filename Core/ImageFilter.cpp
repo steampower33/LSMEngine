@@ -73,7 +73,8 @@ void ImageFilter::Render(
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv->GetCPUDescriptorHandleForHeapStart());
 		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart(), cbvSrvUavSize * m_samplingConstsBufferData.index);
+		UINT index = m_postEffectsEnabled ? m_samplingConstsBufferData.index : m_resolvedIndex;
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(srv->GetGPUDescriptorHandleForHeapStart(), cbvSrvUavSize * index);
 		commandList->SetGraphicsRootDescriptorTable(5, srvHandle);
 
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

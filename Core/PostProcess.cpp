@@ -2,7 +2,7 @@
 
 PostProcess::PostProcess(
 	ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
-	float width, float height, UINT fogSRVIndex)
+	float width, float height, UINT fogSRVIndex, UINT resolvedIndex)
 {
 	m_bloomLevels = 3;
 
@@ -19,6 +19,7 @@ PostProcess::PostProcess(
 
 	// CopyFilter
 	m_copyFilter = make_shared<ImageFilter>(device, commandList, width, height, fogSRVIndex, COPY, m_bloomLevels);
+	m_copyFilter->m_resolvedIndex = resolvedIndex;
 	CreateTex2D(device, m_buffer[0], static_cast<UINT>(width), static_cast<UINT>(height), 0, m_heaps, TRUE);
 
 	// BloomDownFilter
@@ -65,7 +66,6 @@ PostProcess::~PostProcess()
 void PostProcess::Update(SamplingConstants& m_combineConsts)
 {
 	m_copyFilter->Update(m_combineConsts);
-
 	m_combineFilter->Update(m_combineConsts);
 }
 

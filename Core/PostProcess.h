@@ -15,7 +15,8 @@ class PostProcess
 {
 public:
 	PostProcess(
-		ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, float width, float height, UINT fogSRVIndex);
+		ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
+		float width, float height, UINT fogSRVIndex, UINT resolvedIndex);
 
 	~PostProcess();
 
@@ -30,8 +31,6 @@ public:
 		ComPtr<ID3D12DescriptorHeap>& dsv,
 		UINT frameIndex);
 
-
-private:
 	UINT m_bloomLevels;
 	UINT m_bufferSize;
 

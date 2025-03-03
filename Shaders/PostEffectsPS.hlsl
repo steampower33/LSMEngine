@@ -40,8 +40,7 @@ float4 main(SamplingPSInput input) : SV_TARGET
         
         float distFog = saturate((dist - fogMin) / (fogMax - fogMin));
         float fogFactor = exp(-distFog * fogStrength);
-
-        // TODO: Fog
+        
         float3 color = texture[resolvedSRVIndex].Sample(linearClampSampler, input.texcoord).rgb;
         
         color = lerp(fogColor, color, fogFactor);

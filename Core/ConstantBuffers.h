@@ -54,7 +54,7 @@ __declspec(align(256)) struct GlobalConstants // 0
 	UINT resolvedSRVIndex = 0;
 
 	UINT fogSRVIndex = 0;
-	UINT isEnvEnabled = 1;
+	UINT isEnvEnabled = 0;
 	float d01;
 	float d02;
 	
@@ -143,14 +143,14 @@ __declspec(align(256)) struct SamplingConstants // 4
 
 	float gamma = 2.2f;
 	UINT index = 0;
-	UINT hightIndex = 0;
-	UINT lowIndex = 0;
+	float d40 = 0;
+	float d41 = 0;
 
-	XMFLOAT4 d40[2];
-
-	XMFLOAT4X4 d41;
-	
-	XMFLOAT4X4 d42;
+	XMFLOAT4 d42[2];
 
 	XMFLOAT4X4 d43;
+	
+	XMFLOAT4X4 d44;
+
+	XMFLOAT4X4 d45;
 };
