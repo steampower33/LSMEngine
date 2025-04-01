@@ -75,12 +75,12 @@ void MainEngine::Initialize()
 	{
 		float radius = 0.5f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
-		meshData.albedoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_albedo.png";
-		meshData.normalFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_normal-dx.png";
-		meshData.heightFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_height.png";
-		meshData.aoFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_ao.png";
-		meshData.metallicFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_metallic.png";
-		meshData.roughnessFilename = "./Assets/worn-painted-metal-ue/worn-painted-metal_roughness.png";
+		meshData.albedoFilename = "./Assets/worn/worn-painted-metal_albedo.png";
+		meshData.normalFilename = "./Assets/worn/worn-painted-metal_normal-dx.png";
+		meshData.heightFilename = "./Assets/worn/worn-painted-metal_height.png";
+		meshData.aoFilename = "./Assets/worn/worn-painted-metal_ao.png";
+		meshData.metallicFilename = "./Assets/worn/worn-painted-metal_metallic.png";
+		meshData.roughnessFilename = "./Assets/worn/worn-painted-metal_roughness.png";
 
 		shared_ptr<Model> sphere = make_shared<Model>(
 			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
@@ -94,7 +94,7 @@ void MainEngine::Initialize()
 		float radius = 0.5f;
 		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
 		meshData.albedoFilename = "./Assets/vented/vented-metal-panel1_albedo.png";
-		meshData.normalFilename = "./Assets/vented/vented-metal-panel1_normal-ogl.png";
+		meshData.normalFilename = "./Assets/vented/vented-metal-panel1_normal-dx.png";
 		meshData.heightFilename = "./Assets/vented/vented-metal-panel1_height.png";
 		meshData.aoFilename = "./Assets/vented/vented-metal-panel1_ao.png";
 		meshData.metallicFilename = "./Assets/vented/vented-metal-panel1_metallic.png";
@@ -649,7 +649,7 @@ void MainEngine::Update(float dt)
 		}
 	}
 
-	m_globalConstsData.isEnvEnabled = m_skybox->isVisible ? 1 : 0;
+	//m_globalConstsData.isEnvEnabled = m_skybox->isVisible ? 1 : 0;
 
 	if (m_guiState.isMirrorChanged)
 	{
