@@ -81,6 +81,9 @@
     <ClCompile Include="Core\FrameResource.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\SphSimulator.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -165,6 +168,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\FrameResource.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SphSimulator.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

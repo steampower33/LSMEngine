@@ -8,6 +8,7 @@
 #include "Ray.h"
 #include <DirectXCollision.h>
 #include <cmath>
+#include "SphSimulator.h"
 
 class MainEngine : public EngineBase
 {
@@ -39,6 +40,7 @@ private:
 	shared_ptr<Model> m_lightSphere[MAX_LIGHTS];
 
 	shared_ptr<Model> m_screenSquare;
+	shared_ptr<SphSimulator> m_sphSimulator;
 
 	ShapesInfo m_shapesInfo;
 
@@ -77,6 +79,7 @@ private:
 	void InitPreFrame();
 	void DepthOnlyPass();
 	void ScenePass();
+	void SphPass();
 	void ResolvePass();
 	void PostEffectsPass();
 	void PostProcessPass();

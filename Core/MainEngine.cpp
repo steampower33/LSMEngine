@@ -21,6 +21,9 @@ void MainEngine::Initialize()
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
+	m_sphSimulator = make_shared<SphSimulator>();
+	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList);
+
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
@@ -72,41 +75,41 @@ void MainEngine::Initialize()
 		XMStoreFloat4(&m_mirrorPlane, plane);
 	}
 
-	{
-		float radius = 0.5f;
-		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
-		meshData.albedoFilename = "./Assets/worn/worn-painted-metal_albedo.png";
-		meshData.normalFilename = "./Assets/worn/worn-painted-metal_normal-dx.png";
-		meshData.heightFilename = "./Assets/worn/worn-painted-metal_height.png";
-		meshData.aoFilename = "./Assets/worn/worn-painted-metal_ao.png";
-		meshData.metallicFilename = "./Assets/worn/worn-painted-metal_metallic.png";
-		meshData.roughnessFilename = "./Assets/worn/worn-painted-metal_roughness.png";
+	//{
+	//	float radius = 0.5f;
+	//	MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
+	//	meshData.albedoFilename = "./Assets/worn/worn-painted-metal_albedo.png";
+	//	meshData.normalFilename = "./Assets/worn/worn-painted-metal_normal-dx.png";
+	//	meshData.heightFilename = "./Assets/worn/worn-painted-metal_height.png";
+	//	meshData.aoFilename = "./Assets/worn/worn-painted-metal_ao.png";
+	//	meshData.metallicFilename = "./Assets/worn/worn-painted-metal_metallic.png";
+	//	meshData.roughnessFilename = "./Assets/worn/worn-painted-metal_roughness.png";
 
-		shared_ptr<Model> sphere = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
-		m_models.insert({ sphere->m_key, sphere });
-		m_shapesInfo.sphereNum++;
-	}
+	//	shared_ptr<Model> sphere = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	//	sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
+	//	m_models.insert({ sphere->m_key, sphere });
+	//	m_shapesInfo.sphereNum++;
+	//}
 
-	{
-		float radius = 0.5f;
-		MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
-		meshData.albedoFilename = "./Assets/vented/vented-metal-panel1_albedo.png";
-		meshData.normalFilename = "./Assets/vented/vented-metal-panel1_normal-dx.png";
-		meshData.heightFilename = "./Assets/vented/vented-metal-panel1_height.png";
-		meshData.aoFilename = "./Assets/vented/vented-metal-panel1_ao.png";
-		meshData.metallicFilename = "./Assets/vented/vented-metal-panel1_metallic.png";
-		meshData.roughnessFilename = "./Assets/vented/vented-metal-panel1_roughness.png";
+	//{
+	//	float radius = 0.5f;
+	//	MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
+	//	meshData.albedoFilename = "./Assets/vented/vented-metal-panel1_albedo.png";
+	//	meshData.normalFilename = "./Assets/vented/vented-metal-panel1_normal-dx.png";
+	//	meshData.heightFilename = "./Assets/vented/vented-metal-panel1_height.png";
+	//	meshData.aoFilename = "./Assets/vented/vented-metal-panel1_ao.png";
+	//	meshData.metallicFilename = "./Assets/vented/vented-metal-panel1_metallic.png";
+	//	meshData.roughnessFilename = "./Assets/vented/vented-metal-panel1_roughness.png";
 
-		shared_ptr<Model> sphere = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
-		sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
-		m_models.insert({ sphere->m_key, sphere });
-		m_shapesInfo.sphereNum++;
-	}
+	//	shared_ptr<Model> sphere = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f));
+	//	sphere->m_key = "sphere" + std::to_string(m_shapesInfo.sphereNum);
+	//	m_models.insert({ sphere->m_key, sphere });
+	//	m_shapesInfo.sphereNum++;
+	//}
 
 	{
 		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
@@ -669,6 +672,7 @@ void MainEngine::Render()
 	CreateShapes();
 	DepthOnlyPass();
 	ScenePass();
+	SphPass();
 	ResolvePass();
 	PostEffectsPass();
 	PostProcessPass();
@@ -1095,7 +1099,7 @@ void MainEngine::ScenePass()
 		m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 		m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-		// Skybox
+		// SkyBox
 		if (m_skybox->isVisible)
 		{
 			if (m_guiState.isWireframe)
@@ -1166,6 +1170,11 @@ void MainEngine::ScenePass()
 	for (UINT i = 0; i < MAX_LIGHTS; i++)
 		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+}
+
+void MainEngine::SphPass()
+{
+
 }
 
 void MainEngine::ResolvePass()

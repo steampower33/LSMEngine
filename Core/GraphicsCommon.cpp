@@ -62,6 +62,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> skyboxReflectWirePSO;
 	ComPtr<ID3D12PipelineState> mirrorBlendSolidPSO;
 	ComPtr<ID3D12PipelineState> mirrorBlendWirePSO;
+	ComPtr<ID3D12PipelineState> sphPSO;
 
 	ComPtr<ID3D12PipelineState> normalPSO;
 	ComPtr<ID3D12PipelineState> samplingPSO;
