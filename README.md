@@ -21,9 +21,10 @@
 ## 필수 요구사항
 
 - **Windows 10** 이상 (DirectX 12 지원 환경)
-- **Visual Studio 2022**
+- **Visual Studio 2019**
 - **C++17** 이상
-- **vcpkg** 
+- **vcpkg**
+- **HLSL 2021 사용가능한 windows SDK version** 이상 (해당 프로젝트에서는 10.0.18362.0이상 사용)
 
 ---
 
@@ -49,6 +50,12 @@ Project -> Property -> vcpkg -> Use Vcpkg Manifest를 Yes로
 ```sh
 mkdir PDB
 mkdir Assets
+```
+
+## 4. 초기 세팅에서 vcpkg를 이용한 컴파일 오류 발생시
+#### 4.1. 다운 받은 파일이 존재함에도 에러발생 시에 유니코드 관련 문제
+```
+windows 표시 언어를 영어(미국)으로 변경
 ```
 
 ## Assets
