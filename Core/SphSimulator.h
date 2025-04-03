@@ -13,6 +13,7 @@
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+using namespace std;
 
 class SphSimulator
 {
@@ -34,40 +35,35 @@ public:
 	};
 
 	// 시뮬레이션 파라미터 (상수 버퍼용)
-	struct SimParams {
+	__declspec(align(256)) struct SimParams {
 		float deltaTime = 0.0f;
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
-		uint32_t numParticles = 0;
+		UINT numParticles = 0;
 
 		XMFLOAT2 minBounds = XMFLOAT2(-5.0f, -5.0f); // 경계 최소값
 		XMFLOAT2 maxBounds = XMFLOAT2(5.0f, 5.0f);   // 경계 최대값
-
-		float boundaryDamping = 0.6f;
-		float padding1;
-		float padding2;
-		float padding3;
 	};
 
 	void Initialize(ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList);
+		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
 private:
-	uint32_t maxParticles = 50;
+	UINT m_maxParticles = 50;
 
-	// Ping Pong 형식으로 버퍼 구성
+	// Ping Pong 형식으로 버퍼 구성(Particle Structured)
 	// 매 프레임 마다 쓰고 읽는 버퍼를 변경
 	// 버퍼당 srv, uav 하나씩
 	ComPtr<ID3D12Resource> m_particleBuffer[2];
 
 	// SRV UAV | SRV UAV | CBV
-	ComPtr<ID3D12DescriptorHeap> m_srvUavHeap;
-	UINT m_srvUavDescriptorSize = 0;
+	ComPtr<ID3D12DescriptorHeap> m_heap;
+	UINT m_cbvSrvUavSize = 0;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE m_particleBufferSrvCpuHandle[2];
-	D3D12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[2];
-	D3D12_CPU_DESCRIPTOR_HANDLE m_particleBufferUavCpuHandle[2];
-	D3D12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[2];
+	ComPtr<ID3D12Resource> m_constsBuffer;
+	GlobalConstants m_constsBufferData;
+	UINT8* m_constsBufferDataBegin = nullptr;
 
 	UINT m_currentReadBufferIndex = 0;
 
+	void CreateStructuredBuffer(ComPtr<ID3D12Device>& device, UINT width, UINT height, UINT index);
 };

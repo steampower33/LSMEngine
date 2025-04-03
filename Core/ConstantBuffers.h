@@ -14,7 +14,7 @@ using namespace DirectX;
 #define LIGHT_SHADOW 0x10
 
 // 조명
-struct Light
+__declspec(align(256)) struct Light
 {
 	XMFLOAT4X4 viewProj; // 그림자 렌더링에 필요
 	XMFLOAT4X4 invProj; // 그림자 렌더링 디버깅용
