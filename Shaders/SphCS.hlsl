@@ -21,7 +21,8 @@ cbuffer SimParams : register(b0) {
     float d2;
 };
 
-#define PI 3.1415926535f
+#define PI 3.1415926535
+#define COR 1.0;
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
@@ -106,16 +107,32 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         bool collided = false;
         float3 reflected_vel = p.velocity;
 
-        if (p.position.x < minBounds.x) { p.velocity *= -0.5; }
-        else if (p.position.x > maxBounds.x) { p.velocity *= -0.5; }
+        if (p.position.x < minBounds.x && p.velocity.x < 0.0)
+        {
+            p.velocity.x *= -COR;
+            p.position.x = minBounds.x;
+        }
+        else if (p.position.x > maxBounds.x && p.velocity.x > 0.0)
+        {
+            p.velocity.x *= -COR;
+            p.position.x = maxBounds.x;
+        }
 
-        if (p.position.y < minBounds.y) { p.velocity *= -0.5; }
-        //else if (p.position.y > maxBounds.y) { p.velocity *= -1; }
+        if (p.position.y < minBounds.y && p.velocity.y < 0.0)
+        {
+            p.velocity.y *= -COR;
+            p.position.y = minBounds.y;
+        }
+        else if (p.position.y > maxBounds.y && p.velocity.y > 0.0)
+        { 
+            p.velocity.y *= -COR;
+            p.position.y = maxBounds.y;
+        }
 
         if (collided) { p.velocity = reflected_vel; }
 
         // 생명 주기 감소
-        p.life -= deltaTime; // 1.0이 1초를 의미한다고 가정
+        //p.life -= deltaTime; // 1.0이 1초를 의미한다고 가정
     }
 
     // 쓰기

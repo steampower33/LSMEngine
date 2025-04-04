@@ -529,7 +529,6 @@ void MainEngine::UpdateGUI()
 				}
 			}
 			ImGui::EndChild();
-
 		}
 		ImGui::PopStyleVar(3);
 		ImGui::PopStyleColor(3);
