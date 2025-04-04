@@ -6,8 +6,9 @@ namespace Graphics
 	ComPtr<IDxcUtils> utils;
 	ComPtr<IDxcIncludeHandler> includeHandler;
 
-	ComPtr<ID3D12RootSignature> rootSignature;
-	ComPtr<ID3D12RootSignature> computeRootSignature;
+	ComPtr<ID3D12RootSignature> basicRootSignature;
+	ComPtr<ID3D12RootSignature> blurComputeRootSignature;
+	ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 	ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 
 	ComPtr<IDxcBlob> basicVS;
@@ -38,6 +39,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsPS;
 
 	ComPtr<IDxcBlob> sphCS;
+	ComPtr<IDxcBlob> sphVS;
+	ComPtr<IDxcBlob> sphGS;
+	ComPtr<IDxcBlob> sphPS;
 
 	D3D12_RASTERIZER_DESC solidRS;
 	D3D12_RASTERIZER_DESC wireRS;
@@ -48,6 +52,7 @@ namespace Graphics
 
 	D3D12_BLEND_DESC disabledBlend;
 	D3D12_BLEND_DESC mirrorBlend;
+	D3D12_BLEND_DESC accumulateBS;
 
 	D3D12_DEPTH_STENCIL_DESC basicDS;
 	D3D12_DEPTH_STENCIL_DESC disabledDS;
@@ -79,6 +84,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
 	ComPtr<ID3D12PipelineState> sphCSPSO;
+	ComPtr<ID3D12PipelineState> sphPSO;
 
 	UINT textureSize = 100;
 	UINT cubeTextureSize = 10;
@@ -93,7 +99,7 @@ void Graphics::InitDXC()
 	ThrowIfFailed(utils->CreateDefaultIncludeHandler(&includeHandler));
 }
 
-void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
+void Graphics::InitBasicRootSignature(ComPtr<ID3D12Device>& device)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -167,10 +173,44 @@ void Graphics::InitRootSignature(ComPtr<ID3D12Device>& device)
 		staticSamplers,
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-	ComPtr<ID3DBlob> signature;
-	ComPtr<ID3DBlob> error;
-	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-	ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+	ComPtr<ID3DBlob> signatureBlob;
+	ComPtr<ID3DBlob> errorBlob;
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
+	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&basicRootSignature)));
+	basicRootSignature->SetName(L"BasicRootSignature");
+}
+
+void Graphics::InitSphRenderRootSignature(ComPtr<ID3D12Device>& device)
+{
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+	{
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
+	// Structured / Constant
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
+	rootParameters[1].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),
+		rootParameters,
+		0,
+		nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> signatureBlob;
+	ComPtr<ID3DBlob> errorBlob;
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
+	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphRenderRootSignature)));
+	sphRenderRootSignature->SetName(L"SphRenderRootSignature");
 }
 
 void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
@@ -206,7 +246,7 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 	ComPtr<ID3DBlob> errorBlob;
 	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
 	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphComputeRootSignature)));
-	sphComputeRootSignature->SetName(L"SPH Compute Root Signature");
+	sphComputeRootSignature->SetName(L"SphComputeRootSignature");
 
 }
 
@@ -263,8 +303,8 @@ void Graphics::InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device)
 	ComPtr<ID3DBlob> signatureBlob;
 	ComPtr<ID3DBlob> errorBlob;
 	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
-	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&computeRootSignature)));
-	computeRootSignature->SetName(L"PostProcessComputeRootSignature");
+	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&blurComputeRootSignature)));
+	blurComputeRootSignature->SetName(L"PostProcessComputeRootSignature");
 }
 
 void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
@@ -325,6 +365,12 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	// Sph
 	const wchar_t sphCSFilename[] = L"./Shaders/SphCS.hlsl";
 	CreateShader(device, sphCSFilename, L"cs_6_0", sphCS);
+	const wchar_t sphVSFilename[] = L"./Shaders/SphVS.hlsl";
+	CreateShader(device, sphVSFilename, L"vs_6_0", sphVS);
+	const wchar_t sphGSFilename[] = L"./Shaders/SphGS.hlsl";
+	CreateShader(device, sphGSFilename, L"gs_6_0", sphGS);
+	const wchar_t sphPSFilename[] = L"./Shaders/SphPS.hlsl";
+	CreateShader(device, sphPSFilename, L"ps_6_0", sphPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -404,6 +450,26 @@ void Graphics::InitBlendStates()
 		mirrorBlend.IndependentBlendEnable = FALSE;
 		mirrorBlend.RenderTarget[0] = rtBlendDesc;
 	}
+
+
+	{
+		D3D12_RENDER_TARGET_BLEND_DESC accumulateBSDesc = {};
+		accumulateBSDesc.BlendEnable = TRUE;                    // 블렌딩 활성화
+		accumulateBSDesc.LogicOpEnable = FALSE;                 // 로직 연산 비활성화 (표준 블렌딩 사용)
+		accumulateBSDesc.SrcBlend = D3D12_BLEND_ONE;          // 소스(Pixel Shader 출력) 계수 = 1
+		accumulateBSDesc.DestBlend = D3D12_BLEND_ONE;         // 대상(Render Target 현재 값) 계수 = 1
+		accumulateBSDesc.BlendOp = D3D12_BLEND_OP_ADD;        // 블렌딩 연산 = 덧셈
+		accumulateBSDesc.SrcBlendAlpha = D3D12_BLEND_ONE;     // 알파 채널 소스 계수 = 1
+		accumulateBSDesc.DestBlendAlpha = D3D12_BLEND_ONE;    // 알파 채널 대상 계수 = 1
+		accumulateBSDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;   // 알파 채널 블렌딩 연산 = 덧셈
+		accumulateBSDesc.LogicOp = D3D12_LOGIC_OP_NOOP;       // 로직 연산 비활성화 상태이므로 무시됨
+		accumulateBSDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // 모든 RGBA 채널에 쓰기 허용
+
+		// 2. Blend Description 설정
+		accumulateBS.AlphaToCoverageEnable = FALSE;                 // 알파-투-커버리지 비활성화 (보통 누적엔 불필요)
+		accumulateBS.IndependentBlendEnable = FALSE;                // 모든 렌더 타겟에 동일한
+		accumulateBS.RenderTarget[0] = accumulateBSDesc;
+	}
 }
 
 void Graphics::InitDepthStencilStates()
@@ -472,11 +538,16 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 	};
 
+	D3D12_INPUT_ELEMENT_DESC sphIE[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	};
+
 	UINT sampleCount = 4;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSolidPSODesc = {};
 	basicSolidPSODesc.InputLayout = { basicIE, _countof(basicIE) };
-	basicSolidPSODesc.pRootSignature = rootSignature.Get();
+	basicSolidPSODesc.pRootSignature = basicRootSignature.Get();
 	basicSolidPSODesc.VS = { basicVS->GetBufferPointer(), basicVS->GetBufferSize() };
 	basicSolidPSODesc.PS = { basicPS->GetBufferPointer(), basicPS->GetBufferSize() };
 	basicSolidPSODesc.RasterizerState = solidRS;
@@ -583,7 +654,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSimplePSPSODesc, IID_PPV_ARGS(&basicSimplePSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC samplingCSPSODesc = {};
-	samplingCSPSODesc.pRootSignature = computeRootSignature.Get();
+	samplingCSPSODesc.pRootSignature = blurComputeRootSignature.Get();
 	samplingCSPSODesc.CS = { samplingCS->GetBufferPointer(), samplingCS->GetBufferSize() };
 	samplingCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&samplingCSPSODesc, IID_PPV_ARGS(&samplingCSPSO)));
@@ -601,12 +672,24 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCSPSODesc.CS = { sphCS->GetBufferPointer(), sphCS->GetBufferSize() };
 	sphCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCSPSODesc, IID_PPV_ARGS(&sphCSPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC sphPSODesc = basicSolidPSODesc;
+	sphPSODesc.pRootSignature = sphRenderRootSignature.Get();
+	sphPSODesc.InputLayout = { sphIE, _countof(sphIE) };
+	sphPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	sphPSODesc.BlendState = accumulateBS;
+	sphPSODesc.VS = { sphVS->GetBufferPointer(), sphVS->GetBufferSize() };
+	sphPSODesc.GS = { sphGS->GetBufferPointer(), sphGS->GetBufferSize() };
+	sphPSODesc.PS = { sphPS->GetBufferPointer(), sphPS->GetBufferSize() };
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphPSODesc, IID_PPV_ARGS(&sphPSO)));
+
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 {
 	InitDXC();
-	InitRootSignature(device);
+	InitBasicRootSignature(device);
+	InitSphRenderRootSignature(device);
 	InitSphComputeRootSignature(device);
 	InitPostProcessComputeRootSignature(device);
 	InitShaders(device);

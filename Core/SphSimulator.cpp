@@ -57,14 +57,14 @@ void SphSimulator::GenerateParticles()
 {
 	m_particlesCPU.resize(m_maxParticles);
 
-	vector<XMFLOAT4> rainbow = {
-		{1.0f, 0.0f, 0.0f, 0.0f},  // Red
-		{1.0f, 0.65f, 0.0f, 0.0f}, // Orange
-		{1.0f, 1.0f, 0.0f, 0.0f},  // Yellow
-		{0.0f, 1.0f, 0.0f, 0.0f},  // Green
-		{0.0f, 0.0f, 1.0f, 0.0f},  // Blue
-		{0.3f, 0.0f, 0.5f, 0.0f},  // Indigo
-		{0.5f, 0.0f, 1.0f, 0.0f}   // Violet/Purple
+	vector<XMFLOAT3> rainbow = {
+		{1.0f, 0.0f, 0.0f},  // Red
+		{1.0f, 0.65f, 0.0f}, // Orange
+		{1.0f, 1.0f, 0.0f},  // Yellow
+		{0.0f, 1.0f, 0.0f},  // Green
+		{0.0f, 0.0f, 1.0f},  // Blue
+		{0.3f, 0.0f, 0.5f},  // Indigo
+		{0.5f, 0.0f, 1.0f}   // Violet/Purple
 	};
 
 	random_device rd;
@@ -72,11 +72,13 @@ void SphSimulator::GenerateParticles()
 	uniform_real_distribution<float> dp(-1.0f, 1.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
+	const float radius = 1.0f / 16.0f;
 	for (auto& p : m_particlesCPU) {
-		p.position = XMFLOAT2(dp(gen), dp(gen));
-		p.color = rainbow[dc(gen)];
+		p.position = XMFLOAT3(dp(gen), dp(gen), 0.0f);
+		p.velocity = XMFLOAT3(dp(gen), 0.0f, 0.0);
+		p.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		p.size = 1.0f;
-		p.life = 5.0f;
+		p.life = -1.0f;
 	}
 }
 
@@ -126,7 +128,7 @@ void SphSimulator::Update(float dt)
 	m_writeIdx = !m_writeIdx;
 }
 
-void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList)
+void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
 	commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
 	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
@@ -150,6 +152,30 @@ void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	const UINT groupSizeX = 64;
 	UINT dispatchX = (m_maxParticles + groupSizeX - 1) / groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
+}
+
+void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
+{
+	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
+	commandList->SetPipelineState(Graphics::sphPSO.Get());
+
+	// Sph Compute 쓰기 버퍼 -> SRV
+	SetUAVBarrier(commandList, m_particleBuffer[m_writeIdx]);
+	SetBarrier(commandList, m_particleBuffer[m_writeIdx],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	ID3D12DescriptorHeap* ppHeap[] = { m_heap.Get() };
+	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
+	commandList->SetGraphicsRootDescriptorTable(0, m_particleBufferSrvGpuHandle[m_writeIdx]); // Structured
+	commandList->SetGraphicsRootConstantBufferView(1, globalConstsUploadHeap->GetGPUVirtualAddress()); // Global
+
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	commandList->DrawInstanced(m_maxParticles, 1, 0, 0);
+
+	//// 상태 다시 되돌리기
+	//SetBarrier(commandList, m_particleBuffer[m_writeIdx],
+	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 }
 
 void SphSimulator::CreateStructuredBuffer(

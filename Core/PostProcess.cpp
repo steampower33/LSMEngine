@@ -80,7 +80,7 @@ void PostProcess::Render(
 {
 	m_copyFilter->Render(commandList, m_rtv, srv);
 
-	commandList->SetComputeRootSignature(Graphics::computeRootSignature.Get());
+	commandList->SetComputeRootSignature(Graphics::blurComputeRootSignature.Get());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_heaps.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

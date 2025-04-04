@@ -18,14 +18,18 @@ using Microsoft::WRL::ComPtr;
 
 namespace Graphics
 {
+	// DXC
 	extern ComPtr<IDxcCompiler3> compiler;
 	extern ComPtr<IDxcUtils> utils;
 	extern ComPtr<IDxcIncludeHandler> includeHandler;
 
-	extern ComPtr<ID3D12RootSignature> rootSignature;
-	extern ComPtr<ID3D12RootSignature> computeRootSignature;
+	// ROOTSIGNATURE
+	extern ComPtr<ID3D12RootSignature> basicRootSignature;
+	extern ComPtr<ID3D12RootSignature> blurComputeRootSignature;
+	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 
+	// SHADER 
 	extern ComPtr<IDxcBlob> basicVS;
 	extern ComPtr<IDxcBlob> basicPS;
 	extern ComPtr<IDxcBlob> simplePS;
@@ -53,6 +57,12 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> postEffectsVS;
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
+	extern ComPtr<IDxcBlob> sphCS;
+	extern ComPtr<IDxcBlob> sphVS;
+	extern ComPtr<IDxcBlob> sphGS;
+	extern ComPtr<IDxcBlob> sphPS;
+
+	// RASTERIZER
 	extern D3D12_RASTERIZER_DESC solidRS;
 	extern D3D12_RASTERIZER_DESC wireRS;
 	extern D3D12_RASTERIZER_DESC solidCCWRS;
@@ -60,14 +70,18 @@ namespace Graphics
 	extern D3D12_RASTERIZER_DESC postProcessingRS;
 	extern D3D12_RASTERIZER_DESC depthBiasRS;
 
+	// BLEND
 	extern D3D12_BLEND_DESC disabledBlend;
 	extern D3D12_BLEND_DESC mirrorBlend;
+	extern D3D12_BLEND_DESC accumulateBS;
 
+	// DEPTH_STENCIL
 	extern D3D12_DEPTH_STENCIL_DESC basicDS;
 	extern D3D12_DEPTH_STENCIL_DESC disabledDS;
 	extern D3D12_DEPTH_STENCIL_DESC maskDS;
 	extern D3D12_DEPTH_STENCIL_DESC drawMaskedDS;
 
+	// PSO
 	extern ComPtr<ID3D12PipelineState> basicSolidPSO;
 	extern ComPtr<ID3D12PipelineState> basicWirePSO;
 	extern ComPtr<ID3D12PipelineState> stencilMaskPSO;
@@ -93,14 +107,17 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphPSO;
 
+	// TEXTURE_SIZE
 	extern UINT textureSize;
 	extern UINT cubeTextureSize;
 	extern UINT imguiTextureSize;
 
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();
-	void InitRootSignature(ComPtr<ID3D12Device>& device);
+	void InitBasicRootSignature(ComPtr<ID3D12Device>& device);
+	void InitSphRenderRootSignature(ComPtr<ID3D12Device>& device);
 	void InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitSphComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitShaders(ComPtr<ID3D12Device>& device);

@@ -48,7 +48,7 @@ public:
 
 	bool m_useFirstPersonView = false;
 
-	XMFLOAT3 m_pos{ 0.0f, 0.0f, -2.0f };
+	XMFLOAT3 m_pos{ 0.0f, 0.0f, -3.0f };
 
 private:
 

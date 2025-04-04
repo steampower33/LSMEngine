@@ -517,96 +517,96 @@ void MainEngine::UpdateGUI()
 		ImGui::EndChild();
 	}
 
-	// Assets Browser
-	{
+	//// Assets Browser
+	//{
 
-		//ImGui::SetNextWindowPos(m_assetsBrowserPos, ImGuiCond_Always);
-		//ImGui::SetNextWindowSize(m_assetsBrowserSize, ImGuiCond_Always);
-		ImGui::BeginChild("Assets Browser", m_assetsBrowserSize, true);
+	//	//ImGui::SetNextWindowPos(m_assetsBrowserPos, ImGuiCond_Always);
+	//	//ImGui::SetNextWindowSize(m_assetsBrowserSize, ImGuiCond_Always);
+	//	ImGui::BeginChild("Assets Browser", m_assetsBrowserSize, true);
 
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+	//	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
 
-		const int numColumns = 10;  // 한 줄에 표시할 아이템 개수
-		int itemIndex = 0;
-		ImVec2 itemSize(120, 160); // 개별 아이템 크기
-		ImVec2 imageSize(100, 100); // 이미지 크기
-		float padding = (itemSize.x - imageSize.x) / 2.0f; // 좌우 여백
+	//	const int numColumns = 10;  // 한 줄에 표시할 아이템 개수
+	//	int itemIndex = 0;
+	//	ImVec2 itemSize(120, 160); // 개별 아이템 크기
+	//	ImVec2 imageSize(100, 100); // 이미지 크기
+	//	float padding = (itemSize.x - imageSize.x) / 2.0f; // 좌우 여백
 
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
-		for (const auto& pair : m_textureManager->m_textureInfos) // 텍스처 리스트 순회
-		{
-			if (itemIndex % numColumns != 0)
-				ImGui::SameLine(); // 같은 줄에 배치
+	//	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0f); // 모서리 둥글게
+	//	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 부모 패널의 패딩
+	//	for (const auto& pair : m_textureManager->m_textureInfos) // 텍스처 리스트 순회
+	//	{
+	//		if (itemIndex % numColumns != 0)
+	//			ImGui::SameLine(); // 같은 줄에 배치
 
-			ImGui::PushID(itemIndex); // 고유 ID 추가
+	//		ImGui::PushID(itemIndex); // 고유 ID 추가
 
-			// 개별 아이템 박스
-			ImGui::BeginChild("MaterialItem", ImVec2(120, 160), true, ImGuiWindowFlags_NoScrollbar);
+	//		// 개별 아이템 박스
+	//		ImGui::BeginChild("MaterialItem", ImVec2(120, 160), true, ImGuiWindowFlags_NoScrollbar);
 
-			// 이미지 정렬 (상/하/좌/우 여백 통일)
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 좌우 여백 맞추기
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10); // 위쪽 여백
-			ImGui::Image((ImTextureID)pair.second.gpuHandle.ptr, imageSize);
+	//		// 이미지 정렬 (상/하/좌/우 여백 통일)
+	//		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 좌우 여백 맞추기
+	//		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10); // 위쪽 여백
+	//		ImGui::Image((ImTextureID)pair.second.gpuHandle.ptr, imageSize);
 
-			// 이미지 클릭 감지
-			if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-			{
-				dragState.isDragging = true;
-				dragState.draggedItem = pair.second.filename;
-				dragState.draggedTexture = (ImTextureID)pair.second.gpuHandle.ptr;
-				ImVec2 mousePos = ImGui::GetMousePos();
-				ImVec2 itemPos = ImGui::GetItemRectMin();
-				dragState.dragOffset = ImVec2(mousePos.x - itemPos.x, mousePos.y - itemPos.y);
-				dragState.albedoTextureIndex = pair.second.heapIndex;
-			}
+	//		// 이미지 클릭 감지
+	//		if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	//		{
+	//			dragState.isDragging = true;
+	//			dragState.draggedItem = pair.second.filename;
+	//			dragState.draggedTexture = (ImTextureID)pair.second.gpuHandle.ptr;
+	//			ImVec2 mousePos = ImGui::GetMousePos();
+	//			ImVec2 itemPos = ImGui::GetItemRectMin();
+	//			dragState.dragOffset = ImVec2(mousePos.x - itemPos.x, mousePos.y - itemPos.y);
+	//			dragState.albedoTextureIndex = pair.second.heapIndex;
+	//		}
 
-			// 구분선 정렬
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-			ImGui::Separator();
+	//		// 구분선 정렬
+	//		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+	//		ImGui::Separator();
 
-			// 텍스트 정렬
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 텍스트 좌우 중앙 정렬
-			ImGui::TextWrapped(pair.second.filename.c_str());
+	//		// 텍스트 정렬
+	//		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding); // 텍스트 좌우 중앙 정렬
+	//		ImGui::TextWrapped(pair.second.filename.c_str());
 
-			ImGui::EndChild();
-			ImGui::PopID(); // ID 제거
+	//		ImGui::EndChild();
+	//		ImGui::PopID(); // ID 제거
 
-			itemIndex++;
-		}
-		ImGui::PopStyleVar(3);
+	//		itemIndex++;
+	//	}
+	//	ImGui::PopStyleVar(3);
 
-		ImGui::EndChild();
+	//	ImGui::EndChild();
 
-		// 드래그 중이면 반투명한 미리보기 표시
-		if (dragState.isDragging)
-		{
-			ImVec2 mousePos = ImGui::GetMousePos();
-			ImVec2 drawPos = ImVec2(mousePos.x - dragState.dragOffset.x, mousePos.y - dragState.dragOffset.y);
+	//	// 드래그 중이면 반투명한 미리보기 표시
+	//	if (dragState.isDragging)
+	//	{
+	//		ImVec2 mousePos = ImGui::GetMousePos();
+	//		ImVec2 drawPos = ImVec2(mousePos.x - dragState.dragOffset.x, mousePos.y - dragState.dragOffset.y);
 
-			// 드래그 이미지를 항상 최상위에 렌더링
-			ImGui::SetNextWindowFocus();
-			ImGui::SetNextWindowPos(drawPos, ImGuiCond_Always);
-			ImGui::SetNextWindowBgAlpha(0.5f); // 반투명 효과
-			ImGui::Begin("DragPreview", nullptr,
-				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-				ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
+	//		// 드래그 이미지를 항상 최상위에 렌더링
+	//		ImGui::SetNextWindowFocus();
+	//		ImGui::SetNextWindowPos(drawPos, ImGuiCond_Always);
+	//		ImGui::SetNextWindowBgAlpha(0.5f); // 반투명 효과
+	//		ImGui::Begin("DragPreview", nullptr,
+	//			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+	//			ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+	//			ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+	//			ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
 
-			ImGui::Image(dragState.draggedTexture, ImVec2(100, 100));
+	//		ImGui::Image(dragState.draggedTexture, ImVec2(100, 100));
 
-			ImGui::End();
+	//		ImGui::End();
 
-			// 마우스 놓으면 드래그 종료
-			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-			{
-				dragState.isReleased = true;
-				dragState.isDragging = false;
-				dragState.draggedItem.clear();
-			}
-		}
-	}
+	//		// 마우스 놓으면 드래그 종료
+	//		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	//		{
+	//			dragState.isReleased = true;
+	//			dragState.isDragging = false;
+	//			dragState.draggedItem.clear();
+	//		}
+	//	}
+	//}
 
 	ImGui::End();
 
@@ -957,12 +957,12 @@ UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement
 
 void MainEngine::SphCalcPass()
 {
-	m_sphSimulator->Render(m_pCurrFR->m_cmdList);
+	m_sphSimulator->Compute(m_pCurrFR->m_cmdList);
 }
 
 void MainEngine::InitPreFrame()
 {
-	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
 	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1131,8 +1131,8 @@ void MainEngine::ScenePass()
 		// lightSphere, cursorSphere
 		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::basicSimplePSPSO.Get());
 
-		for (UINT i = 0; i < MAX_LIGHTS; i++)
-			m_lightSphere[i]->Render(m_device, m_pCurrFR->m_cmdList);
+		/*for (UINT i = 0; i < MAX_LIGHTS; i++)
+			m_lightSphere[i]->Render(m_device, m_pCurrFR->m_cmdList);*/
 
 		if (m_selected && (m_leftButton || m_rightButton))
 			m_cursorSphere->Render(m_device, m_pCurrFR->m_cmdList);
@@ -1175,8 +1175,12 @@ void MainEngine::ScenePass()
 			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
 		}
 
-		// SPH Particles
-
+		// Sph
+		m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+		
+		// 임시 방편
+		// basicRootSignature 및 해당 디스크립터 힙 다시 설정
+		InitPreFrame(); 
 	}
 
 	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;

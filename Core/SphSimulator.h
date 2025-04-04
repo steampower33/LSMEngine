@@ -26,15 +26,16 @@ public:
 
 	// 입자 구조
 	struct Particle {
-		XMFLOAT2 position = XMFLOAT2(0.0f, 0.0f);
-		XMFLOAT2 velocity = XMFLOAT2(0.0f, 0.0f);
-
-		XMFLOAT4 color = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-
-		float life = 0.0f;
+		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p1;
+		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p2;
+		XMFLOAT3 color = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p3;
 		float size = 1.0f;
-		float padding1;
-		float padding2;
+		float life = 0.0f;
+		float p4;
+		float p5;
 	};
 
 	// 시뮬레이션 파라미터 (상수 버퍼용)
@@ -43,14 +44,16 @@ public:
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
 		UINT numParticles = 128;
 
-		XMFLOAT2 minBounds = XMFLOAT2(-5.0f, -5.0f); // 경계 최소값
-		XMFLOAT2 maxBounds = XMFLOAT2(5.0f, 5.0f);   // 경계 최대값
+		XMFLOAT2 minBounds = XMFLOAT2(-1.0f, -1.0f); // 경계 최소값
+		XMFLOAT2 maxBounds = XMFLOAT2(1.0f, 1.0f);   // 경계 최대값
 	};
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 	void Update(float dt);
-	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList);
+	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList);
+	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 private:
 	vector<Particle> m_particlesCPU;
