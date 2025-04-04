@@ -121,6 +121,34 @@ MeshData GeometryGenerator::MakeBox(const float scale) {
 	return meshData;
 }
 
+MeshData GeometryGenerator::MakeBoundsBox() {
+	MeshData meshData;
+
+	meshData.vertices =
+	{
+		// 가까운면
+		{ -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, -1.0f }, // 왼 아
+		{ -1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f }, // 왼 위
+		{  1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f }, // 오 위
+		{  1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f }, // 오 아
+
+		// 먼 면
+		{  1.0f, -1.0f,  1.0f, 0.0f, 1.0f, 0.0f, 0.0f,  1.0f }, // 왼 아
+		{  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  1.0f }, // 왼 위
+		{ -1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  1.0f }, // 오 위
+		{ -1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f,  1.0f }, // 오 아
+	};
+
+	// 12개 라인 정의
+	meshData.indices = {
+		0, 1, 1, 2, 2, 3, 3, 0, // 정면
+		4, 5, 5, 6, 6, 7, 7, 4, // 뒷면
+		0, 7, 1, 6, 2, 5, 3, 4,// 나머지
+	};
+
+	return meshData;
+}
+
 MeshData GeometryGenerator::MakeCylinder(
 	const float bottomRadius, const float topRadius,
 	float height, int sliceCount) {

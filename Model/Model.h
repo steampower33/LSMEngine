@@ -34,6 +34,11 @@ public:
 		ComPtr<ID3D12Device>& device,
 		ComPtr<ID3D12GraphicsCommandList>& commandList);
 
+	void RenderBoundsBox(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
+
 	void RenderSkybox(
 		ComPtr<ID3D12Device>& device,
 		ComPtr<ID3D12GraphicsCommandList>& commandList);
@@ -60,7 +65,7 @@ public:
 	bool m_useMetallicMap = false;
 	bool m_useRoughnessMap = false;
 	bool m_useEmissiveMap = false;
-	float m_scale = 1.0f;
+	XMFLOAT3 m_scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	vector<shared_ptr<Mesh>> m_meshes;
 	ComPtr<ID3D12Resource> m_meshConstsUploadHeap;

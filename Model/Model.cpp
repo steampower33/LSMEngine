@@ -51,7 +51,7 @@ Model::~Model()
 
 void Model::Update()
 {
-	XMMATRIX scaleMatrix = XMMatrixScaling(m_scale, m_scale, m_scale);
+	XMMATRIX scaleMatrix = XMMatrixScaling(m_scale.x, m_scale.y, m_scale.z);
 
 	XMVECTOR translation = XMLoadFloat4(&m_position);
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation);
@@ -129,6 +129,22 @@ void Model::Render(
 
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawIndexedInstanced(mesh->indexBufferCount, 1, 0, 0, 0);
+	}
+}
+
+void Model::RenderBoundsBox(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12GraphicsCommandList>& commandList,
+	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
+{
+	commandList->SetGraphicsRootConstantBufferView(2, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
+
+	for (const auto& mesh : m_meshes)
+	{
+		commandList->IASetVertexBuffers(0, 1, &mesh->vertexBufferView);
+		commandList->IASetIndexBuffer(&mesh->indexBufferView);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		commandList->DrawIndexedInstanced(24, 1, 0, 0, 0);
 	}
 }
 

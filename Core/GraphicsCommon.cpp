@@ -8,8 +8,8 @@ namespace Graphics
 
 	ComPtr<ID3D12RootSignature> basicRootSignature;
 	ComPtr<ID3D12RootSignature> blurComputeRootSignature;
-	ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 	ComPtr<ID3D12RootSignature> sphComputeRootSignature;
+	ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
@@ -42,6 +42,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
 	ComPtr<IDxcBlob> sphPS;
+
+	ComPtr<IDxcBlob> boundsBoxVS;
+	ComPtr<IDxcBlob> boundsBoxPS;
 
 	D3D12_RASTERIZER_DESC solidRS;
 	D3D12_RASTERIZER_DESC wireRS;
@@ -85,6 +88,8 @@ namespace Graphics
 
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
+
+	ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
 	UINT textureSize = 100;
 	UINT cubeTextureSize = 10;
@@ -194,9 +199,10 @@ void Graphics::InitSphRenderRootSignature(ComPtr<ID3D12Device>& device)
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
 	rootParameters[1].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[2].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
@@ -371,6 +377,12 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, sphGSFilename, L"gs_6_0", sphGS);
 	const wchar_t sphPSFilename[] = L"./Shaders/SphPS.hlsl";
 	CreateShader(device, sphPSFilename, L"ps_6_0", sphPS);
+
+	// BoundsBox
+	const wchar_t boundsBoxVSFilename[] = L"./Shaders/BoundsBoxVS.hlsl";
+	CreateShader(device, boundsBoxVSFilename, L"vs_6_0", boundsBoxVS);
+	const wchar_t boundsBoxPSFilename[] = L"./Shaders/BoundsBoxPS.hlsl";
+	CreateShader(device, boundsBoxPSFilename, L"ps_6_0", boundsBoxPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -683,6 +695,12 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	sphPSODesc.PS = { sphPS->GetBufferPointer(), sphPS->GetBufferSize() };
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphPSODesc, IID_PPV_ARGS(&sphPSO)));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC boundsBoxPSODesc = sphPSODesc;
+	boundsBoxPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	boundsBoxPSODesc.VS = { boundsBoxVS->GetBufferPointer(), boundsBoxVS->GetBufferSize() };
+	boundsBoxPSODesc.PS = { boundsBoxPS->GetBufferPointer(), boundsBoxPS->GetBufferSize() };
+	boundsBoxPSODesc.GS = {};
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&boundsBoxPSODesc, IID_PPV_ARGS(&boundsBoxPSO)));
 }
 
 void Graphics::Initialize(ComPtr<ID3D12Device>& device)

@@ -44,9 +44,14 @@ public:
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
 		UINT numParticles = 128;
 
-		XMFLOAT2 minBounds = XMFLOAT2(-1.0f, -1.0f); // 경계 최소값
-		XMFLOAT2 maxBounds = XMFLOAT2(1.0f, 1.0f);   // 경계 최대값
+		XMFLOAT3 minBounds = XMFLOAT3(-1.0f, -1.0f, 0.0f); // 경계 최소값
+		float d1;
+		XMFLOAT3 maxBounds = XMFLOAT3(1.0f, 1.0f, 0.0f);   // 경계 최대값
+		float d2;
 	};
+
+	float minBounds[3] = { -3.0f, -3.0f, 0.0f };
+	float maxBounds[3] = { 3.0f, 3.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -55,6 +60,7 @@ public:
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
+	SimParams m_constantBufferData;
 private:
 	vector<Particle> m_particlesCPU;
 	UINT m_maxParticles = 128;
@@ -72,7 +78,6 @@ private:
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[2];
 
 	ComPtr<ID3D12Resource> m_constantBuffer;
-	SimParams m_constantBufferData;
 	UINT8* m_constantBufferDataBegin = nullptr;
 	UINT m_constantBufferSize = (sizeof(SimParams) + 255) & ~255;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_constantBufferCbvCpuHandle;

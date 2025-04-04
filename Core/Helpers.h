@@ -232,7 +232,6 @@ static void CreateVertexBuffer(
 		nullptr,
 		IID_PPV_ARGS(&mesh->vertexUploadHeap)));
 
-
 	D3D12_SUBRESOURCE_DATA vertexData = {};
 	vertexData.pData = vertices.data();
 	vertexData.RowPitch = vertexBufferSizeInBytes;

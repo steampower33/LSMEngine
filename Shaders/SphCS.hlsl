@@ -15,8 +15,10 @@ cbuffer SimParams : register(b0) {
     float deltaTime;
     float2 gravity;
     uint numParticles;
-    float2 minBounds;
-    float2 maxBounds;
+    float3 minBounds;
+    float d1;
+    float3 maxBounds;
+    float d2;
 };
 
 #define PI 3.1415926535f
@@ -50,7 +52,8 @@ float3 randomDirection(uint2 seed)
 {
     float x = random2(seed) * 2.0f - 1.0f; // [-1, 1]
     float y = random2(seed + uint2(1, 3)) * 2.0f - 1.0f; // 시드를 약간 변경하여 다른 값 생성
-    float z = random2(seed + uint2(5, 7)) * 2.0f - 1.0f;
+    //float z = random2(seed + uint2(5, 7)) * 2.0f - 1.0f;
+    float z = 0.0;
     return normalize(float3(x, y, z)); // 정규화된 방향 벡터
 }
 
@@ -73,8 +76,8 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         uint2 seed = uint2(index, deltaTime); // 또는 uint2(index, uint(totalTime * 1000.0f)) 등
 
         // 랜덤 위치 설정 (예: 원점 근처의 작은 구 영역 내부)
-        float spawnRadius = 0.5f;
-        p.position = float3(0.0, 2.0, 0.0) + randomDirection(seed + uint2(10, 11)) * random2(seed + uint2(12, 13)) * spawnRadius;
+        float spawnRadius = 0.1f;
+        p.position = float3(0.0, 0.0, 0.0) + randomDirection(seed + uint2(10, 11)) * random2(seed + uint2(12, 13)) * spawnRadius;
 
         // 랜덤 속도 설정 (예: 특정 방향 범위 내에서 랜덤 속도)
         float initialSpeedMin = 1.0f;
@@ -83,7 +86,8 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         // 예: 위쪽 반구 방향으로 랜덤하게 발사
         float angle = random2(seed + uint2(3, 4)) * 2.0f * PI;
         float elevation = random2(seed + uint2(5, 6)) * PI * 0.5f; // 0 ~ 90도
-        float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation));
+        //float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation));
+        float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), 0.0f);
         p.velocity = normalize(randomDir + float3(0, 0.5, 0)) * initialSpeed; // 약간 위쪽으로 편향 + 정규화 후 속도 곱하기
 
         // 랜덤 생명 주기 설정 (예: 0.5초 ~ 1.5초 사이)

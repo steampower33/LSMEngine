@@ -75,6 +75,16 @@ void MainEngine::Initialize()
 		XMStoreFloat4(&m_mirrorPlane, plane);
 	}
 
+	{
+		MeshData meshData = GeometryGenerator::MakeBoundsBox();
+
+		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_boundsBox = make_shared<Model>(
+			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, pos);
+		m_boundsBox->m_key = "m_boundsBox";
+	}
+
 	//{
 	//	float radius = 0.5f;
 	//	MeshData meshData = GeometryGenerator::MakeSphere(radius, 100, 100, { 2.0f, 2.0f });
@@ -135,7 +145,8 @@ void MainEngine::Initialize()
 				m_device, m_pCurrFR->m_cmdList, m_commandQueue,
 				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, spherePos);
 			m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
-			m_lightSphere[i]->m_scale = m_globalConstsData.light[i].radius;
+			float radius = m_globalConstsData.light[i].radius;
+			m_lightSphere[i]->m_scale = XMFLOAT3(radius, radius, radius);
 			m_lightSphere[i]->m_meshConstsBufferData.useAlbedoMap = false;
 		}
 	}
@@ -178,7 +189,6 @@ void MainEngine::UpdateGUI()
 
 	ImGui::NewFrame();
 
-	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(m_width, m_height), ImGuiCond_Always);
 	ImGui::Begin("Main Editor", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 
@@ -214,6 +224,7 @@ void MainEngine::UpdateGUI()
 			if (ImGui::Button("Fog", buttonSize)) { buttonIdx = FOG; }
 			if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = POST_PROCESS; }
 			if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = MIRROR; }
+			if (ImGui::Button("SPH", buttonSize)) { buttonIdx = SPH; }
 
 			ImGui::EndChild();
 		}
@@ -338,7 +349,8 @@ void MainEngine::UpdateGUI()
 						DrawTableRow("Radius", [&]() {
 							return ImGui::SliderFloat("##Radius", &m_globalConstsData.light[0].radius, 0.0f, 0.2f);
 							});
-						m_lightSphere[0]->m_scale = m_globalConstsData.light[0].radius;
+						float radius = m_globalConstsData.light[0].radius;
+						m_lightSphere[0]->m_scale = XMFLOAT3(radius, radius, radius);
 						ImGui::EndTable();
 					}
 				}
@@ -351,7 +363,8 @@ void MainEngine::UpdateGUI()
 						DrawTableRow("Radius", [&]() {
 							return ImGui::SliderFloat("##Radius", &m_globalConstsData.light[1].radius, 0.0f, 0.2f);
 							});
-						m_lightSphere[1]->m_scale = m_globalConstsData.light[1].radius;
+						float radius = m_globalConstsData.light[0].radius;
+						m_lightSphere[1]->m_scale = XMFLOAT3(radius, radius, radius);
 						ImGui::EndTable();
 					}
 				}
@@ -496,7 +509,27 @@ void MainEngine::UpdateGUI()
 						ImGui::EndTable();
 				}
 			}
+			else if (buttonIdx == SPH)
+			{
+
+				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
+
+				if (ImGui::BeginTable("SphTable", 2, flags))
+				{
+					UINT flag = 0;
+
+					flag += DrawTableRow("Min Bounds", [&]() {
+						return ImGui::SliderFloat3("##MinBounds", m_sphSimulator->minBounds, -3.0f, 3.0f);
+						});
+
+					flag += DrawTableRow("Max Bounds", [&]() {
+						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->maxBounds, -3.0f, 3.0f);
+						});
+					ImGui::EndTable();
+				}
+			}
 			ImGui::EndChild();
+
 		}
 		ImGui::PopStyleVar(3);
 		ImGui::PopStyleColor(3);
@@ -663,6 +696,20 @@ void MainEngine::Update(float dt)
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 
 	m_sphSimulator->Update(dt);
+
+	// Update BoundsBox
+	{
+		XMVECTOR minB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.minBounds);
+		XMVECTOR maxB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.maxBounds);
+		
+		XMVECTOR size = XMVectorScale(XMVectorSubtract(maxB, minB), 0.5f);
+		XMVECTOR center = XMVectorScale(XMVectorAdd(minB, maxB), 0.5f);
+		
+		XMStoreFloat3(&m_boundsBox->m_scale, size);
+		XMStoreFloat4(&m_boundsBox->m_position, center);
+		m_boundsBox->Update();
+	}
+
 }
 
 void MainEngine::Render()
@@ -1176,11 +1223,17 @@ void MainEngine::ScenePass()
 		}
 
 		// Sph
+		m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
+		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::sphPSO.Get());
 		m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
-		
+
+		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
+		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());
+		m_boundsBox->RenderBoundsBox(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+
 		// 임시 방편
 		// basicRootSignature 및 해당 디스크립터 힙 다시 설정
-		InitPreFrame(); 
+		InitPreFrame();
 	}
 
 	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;

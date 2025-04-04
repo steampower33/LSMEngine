@@ -26,8 +26,8 @@ namespace Graphics
 	// ROOTSIGNATURE
 	extern ComPtr<ID3D12RootSignature> basicRootSignature;
 	extern ComPtr<ID3D12RootSignature> blurComputeRootSignature;
-	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphComputeRootSignature;
+	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 
 	// SHADER 
 	extern ComPtr<IDxcBlob> basicVS;
@@ -61,6 +61,9 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
 	extern ComPtr<IDxcBlob> sphPS;
+
+	extern ComPtr<IDxcBlob> boundsBoxVS;
+	extern ComPtr<IDxcBlob> boundsBoxPS;
 
 	// RASTERIZER
 	extern D3D12_RASTERIZER_DESC solidRS;
@@ -108,6 +111,8 @@ namespace Graphics
 
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
+
+	extern ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
 	// TEXTURE_SIZE
 	extern UINT textureSize;

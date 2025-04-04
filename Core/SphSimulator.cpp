@@ -74,8 +74,8 @@ void SphSimulator::GenerateParticles()
 
 	const float radius = 1.0f / 16.0f;
 	for (auto& p : m_particlesCPU) {
-		p.position = XMFLOAT3(dp(gen), dp(gen), 0.0f);
-		p.velocity = XMFLOAT3(dp(gen), 0.0f, 0.0);
+		p.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		p.velocity = XMFLOAT3(0.0f, 0.0f, 0.0);
 		p.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		p.size = 1.0f;
 		p.life = -1.0f;
@@ -121,6 +121,9 @@ void SphSimulator::Update(float dt)
 {
 	// 일단은 CBV 전체를 업데이트
 	m_constantBufferData.deltaTime = dt;
+	m_constantBufferData.minBounds = XMFLOAT3(minBounds[0], minBounds[1], minBounds[2]);
+	m_constantBufferData.maxBounds = XMFLOAT3(maxBounds[0], maxBounds[1], maxBounds[2]);
+
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
 	// 읽기 쓰기 인덱스 갱신
@@ -157,9 +160,6 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
-	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
-	commandList->SetPipelineState(Graphics::sphPSO.Get());
-
 	// Sph Compute 쓰기 버퍼 -> SRV
 	SetUAVBarrier(commandList, m_particleBuffer[m_writeIdx]);
 	SetBarrier(commandList, m_particleBuffer[m_writeIdx],

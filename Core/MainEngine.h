@@ -40,6 +40,7 @@ private:
 	shared_ptr<Model> m_lightSphere[MAX_LIGHTS];
 
 	shared_ptr<Model> m_screenSquare;
+	shared_ptr<Model> m_boundsBox;
 	shared_ptr<SphSimulator> m_sphSimulator;
 
 	ShapesInfo m_shapesInfo;
@@ -55,6 +56,7 @@ private:
 		MIRROR,
 		SCENE,
 		MATERIAL,
+		SPH,
 	};
 
 	struct DragState {
