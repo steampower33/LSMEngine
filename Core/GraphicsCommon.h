@@ -24,6 +24,7 @@ namespace Graphics
 
 	extern ComPtr<ID3D12RootSignature> rootSignature;
 	extern ComPtr<ID3D12RootSignature> computeRootSignature;
+	extern ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 
 	extern ComPtr<IDxcBlob> basicVS;
 	extern ComPtr<IDxcBlob> basicPS;
@@ -91,6 +92,8 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurXCSPSO;
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
+	extern ComPtr<ID3D12PipelineState> sphCSPSO;
+
 	extern UINT textureSize;
 	extern UINT cubeTextureSize;
 	extern UINT imguiTextureSize;
@@ -98,7 +101,8 @@ namespace Graphics
 	void Initialize(ComPtr<ID3D12Device>& device);
 	void InitDXC();
 	void InitRootSignature(ComPtr<ID3D12Device>& device);
-	void InitComputeRootSignature(ComPtr<ID3D12Device>& device);
+	void InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device);
+	void InitSphComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitShaders(ComPtr<ID3D12Device>& device);
 	void InitRasterizerStates();
 	void InitBlendStates();

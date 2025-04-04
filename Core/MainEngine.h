@@ -72,14 +72,15 @@ private:
 private:
 	void UpdateMouseControl();
 	void UpdateLight(float dt);
-	void CreateShapes();
 	UINT DrawTableRow(const char* label, std::function<UINT()> uiElement);
 
 private:
+	void SphCalcPass();
+
 	void InitPreFrame();
+	void CreateShapes();
 	void DepthOnlyPass();
 	void ScenePass();
-	void SphPass();
 	void ResolvePass();
 	void PostEffectsPass();
 	void PostProcessPass();

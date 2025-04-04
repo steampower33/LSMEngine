@@ -22,7 +22,7 @@ void MainEngine::Initialize()
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
 	m_sphSimulator = make_shared<SphSimulator>();
-	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList);
+	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
@@ -480,20 +480,20 @@ void MainEngine::UpdateGUI()
 						m_blendFactor[2] = m_mirrorAlpha;
 					}
 
-					flag += DrawTableRow("Metallic", [&]() {
-						return ImGui::SliderFloat("##Metallic", &m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
-						});
+						flag += DrawTableRow("Metallic", [&]() {
+							return ImGui::SliderFloat("##Metallic", &m_mirror->m_meshConstsBufferData.metallicFactor, 0.0f, 1.0f);
+							});
 
-					flag += DrawTableRow("Roughness", [&]() {
-						return ImGui::SliderFloat("##Roughness", &m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
-						});
+						flag += DrawTableRow("Roughness", [&]() {
+							return ImGui::SliderFloat("##Roughness", &m_mirror->m_meshConstsBufferData.roughnessFactor, 0.0f, 1.0f);
+							});
 
-					if (flag)
-					{
-						m_guiState.isMirrorChanged = true;
-					}
+						if (flag)
+						{
+							m_guiState.isMirrorChanged = true;
+						}
 
-					ImGui::EndTable();
+						ImGui::EndTable();
 				}
 			}
 			ImGui::EndChild();
@@ -661,6 +661,8 @@ void MainEngine::Update(float dt)
 	}
 
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
+
+	m_sphSimulator->Update(dt);
 }
 
 void MainEngine::Render()
@@ -668,14 +670,17 @@ void MainEngine::Render()
 	ThrowIfFailed(m_pCurrFR->m_cmdAlloc->Reset());
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Reset(m_pCurrFR->m_cmdAlloc.Get(), nullptr));
 
+	SphCalcPass();
+
 	InitPreFrame();
 	CreateShapes();
 	DepthOnlyPass();
 	ScenePass();
-	SphPass();
 	ResolvePass();
 	PostEffectsPass();
 	PostProcessPass();
+
+	ThrowIfFailed(m_pCurrFR->m_cmdList->Close());
 
 	// Execute the command list.
 	ID3D12CommandList* ppCommandLists[] = { m_pCurrFR->m_cmdList.Get() };
@@ -941,6 +946,30 @@ void MainEngine::Destroy()
 	CoUninitialize();
 }
 
+UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement)
+{
+	ImGui::TableNextRow();
+	ImGui::TableSetColumnIndex(0);
+	ImGui::Text("%s", label);
+	ImGui::TableSetColumnIndex(1);
+	return uiElement(); // UI 요소 실행 후 반환
+}
+
+void MainEngine::SphCalcPass()
+{
+	m_sphSimulator->Render(m_pCurrFR->m_cmdList);
+}
+
+void MainEngine::InitPreFrame()
+{
+	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+	m_pCurrFR->m_cmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+}
+
 void MainEngine::CreateShapes()
 {
 	if (m_shapesInfo.testBeforeCnt < m_shapesInfo.testAfterCnt)
@@ -1017,25 +1046,6 @@ void MainEngine::CreateShapes()
 		m_models.insert({ model->m_key, model });
 		m_shapesInfo.boxNum++;
 	}
-}
-
-UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement)
-{
-	ImGui::TableNextRow();
-	ImGui::TableSetColumnIndex(0);
-	ImGui::Text("%s", label);
-	ImGui::TableSetColumnIndex(1);
-	return uiElement(); // UI 요소 실행 후 반환
-}
-
-void MainEngine::InitPreFrame()
-{
-	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::rootSignature.Get());
-
-	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
-	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
-	m_pCurrFR->m_cmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
 void MainEngine::DepthOnlyPass()
@@ -1164,17 +1174,15 @@ void MainEngine::ScenePass()
 			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
 			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
 		}
+
+		// SPH Particles
+
 	}
 
 	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;
 	for (UINT i = 0; i < MAX_LIGHTS; i++)
 		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_shadowDepthOnlyDSBuffer[i],
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-}
-
-void MainEngine::SphPass()
-{
-
 }
 
 void MainEngine::ResolvePass()
@@ -1307,7 +1315,4 @@ void MainEngine::PostProcessPass()
 
 	SetBarrier(m_pCurrFR->m_cmdList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-	ThrowIfFailed(m_pCurrFR->m_cmdList->Close());
-
 }

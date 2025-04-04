@@ -22,7 +22,7 @@ FrameResource::FrameResource(
 	m_shadowScissorRect.bottom = static_cast<LONG>(m_shadowHeight);
 
 	m_frameIndex = frameIndex;
-	
+
 	rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	cbvSrvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	dsvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -109,6 +109,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_depthOnlyDSVHeap)));
+		m_depthOnlyDSVHeap->SetName(L"m_depthOnlyDSVHeap");
 
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -165,6 +166,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_shadowDepthOnlyDSVHeap)));
+		m_shadowDepthOnlyDSVHeap->SetName(L"m_shadowDepthOnlyDSVHeap");
 
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -227,6 +229,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_floatRTVHeap)));
+		m_floatRTVHeap->SetName(L"m_floatRTVHeap");
 
 		UINT sampleCount = 4;
 		CreateBuffer(device, m_floatBuffers, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,
@@ -238,6 +241,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_floatDSVHeap)));
+		m_floatDSVHeap->SetName(L"m_floatDSVHeap");
 
 		D3D12_RESOURCE_DESC depthStencilDesc = {};
 		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -280,6 +284,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_resolvedRTVHeap)));
+		m_resolvedRTVHeap->SetName(L"m_resolvedRTVHeap");
 
 		UINT sampleCount = 1;
 		CreateBuffer(device, m_resolvedBuffers, m_width, m_height, sampleCount,
@@ -295,6 +300,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_fogRTVHeap)));
+		m_fogRTVHeap->SetName(L"m_fogRTVHeap");
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_fogRTVHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -312,6 +318,7 @@ void FrameResource::InitializeDescriptorHeaps(
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
+		m_sceneRTVHeap->SetName(L"m_sceneRTVHeap");
 
 		UINT sampleCount = 1;
 		CreateBuffer(device, m_sceneBuffer, static_cast<UINT>(m_width), static_cast<UINT>(m_height), sampleCount,

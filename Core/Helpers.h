@@ -122,7 +122,7 @@ static void SetUAVBarrier(
 
 static void CreateBuffer(
 	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer,
-	UINT width, UINT height, UINT sampleCount, 
+	UINT width, UINT height, UINT sampleCount,
 	DXGI_FORMAT format, D3D12_SRV_DIMENSION srvDimension, D3D12_RESOURCE_STATES initState,
 	ComPtr<ID3D12DescriptorHeap> rtvHeap, UINT rtvIndex, ComPtr<ID3D12DescriptorHeap> srvHeap, UINT srvIndex)
 {
@@ -309,7 +309,7 @@ static void CreateConstUploadBuffer(
 	T& constsBufferData,
 	UINT8*& constsBufferDataBegin)
 {
-	const UINT constantsSize = sizeof(T);
+	const UINT constantsSize = (sizeof(T) + 255) & ~255;
 
 	auto uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(constantsSize);
@@ -404,7 +404,7 @@ static void CreateDDSTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureIndex, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension,
 		texture, nullptr, cpuHandle, gpuHandle } });
 	textureIndex++;
 
@@ -437,10 +437,10 @@ static void CreateEXRTextureBuffer(
 
 	vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed(PrepareUpload(
-		device.Get(), 
-		image.get()->GetImages(), 
-		image.get()->GetImageCount(), 
-		metaData, 
+		device.Get(),
+		image.get()->GetImages(),
+		image.get()->GetImageCount(),
+		metaData,
 		subresources));
 
 	// upload is implemented by application developer. Here's one solution using <d3dx12.h>
@@ -504,7 +504,7 @@ static void CreateEXRTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureIndex, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension,
 		texture, textureUploadHeap, cpuHandle, gpuHandle } });
 	textureIndex++;
 
@@ -644,7 +644,7 @@ static void CreateMipMapTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureIndex, filepath, filename, extension, 
+		textureIndex, filepath, filename, extension,
 		texture, textureUploadHeap, cpuHandle, gpuHandle } });
 	textureIndex++;
 
@@ -753,8 +753,8 @@ static void CreateTextureBuffer(
 	std::string filenameExtension = filePath.filename().string();
 
 	textureInfos.insert({ filenameExtension, TextureInfo{
-		textureIndex, filepath, filename, extension, 
-		texture, textureUploadHeap, cpuHandle, gpuHandle }});
+		textureIndex, filepath, filename, extension,
+		texture, textureUploadHeap, cpuHandle, gpuHandle } });
 	textureIndex++;
 
 	wprintf(L"Successfully loaded texture: %s, location is %d\n", wideFilename.c_str(), textureIndex - 1);

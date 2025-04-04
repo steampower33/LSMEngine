@@ -84,8 +84,12 @@ void EngineBase::InitializeDX12CoreComponents()
 		{
 			debugController->EnableDebugLayer();
 
-			// Enable additional debug layers.
-			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+			//// Enable additional debug layers.
+			//dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+		}
+		else
+		{
+			OutputDebugStringA("WARNING: Unable to enable D3D12 debug layer.\n");
 		}
 	}
 #endif
@@ -366,7 +370,7 @@ void EngineBase::GetHardwareAdapter(
 				adapterIndex,
 				requestHighPerformanceAdapter == true ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED,
 				IID_PPV_ARGS(&adapter)));
-				++adapterIndex)
+			++adapterIndex)
 		{
 			DXGI_ADAPTER_DESC1 desc;
 			adapter->GetDesc1(&desc);

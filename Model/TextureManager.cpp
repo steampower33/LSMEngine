@@ -10,6 +10,7 @@ TextureManager::TextureManager(
 	textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
+	m_textureHeap->SetName(L"m_textureHeap");
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE heapStartCpu(m_textureHeap->GetCPUDescriptorHandleForHeapStart());
 	m_heapStartCpu = heapStartCpu;
