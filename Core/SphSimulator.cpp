@@ -24,18 +24,29 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_cbvSrvUavHeap->SetName(L"SPH SRV/UAV/CBV Heap");
 
 	// StructuredBuffer 생성
-	CreateStructuredBufferWithViews(device, 0, m_particleDataSize, L"Particle");
-	CreateStructuredBufferWithViews(device, 1, m_particleDataSize, L"Particle");
-	CreateStructuredBufferWithViews(device, 2, m_particleHashDataSize, L"ParticleHash");
+	CreateStructuredBufferWithViews(device, 0, 0, 1, m_particleDataSize, L"Particle");
+	CreateStructuredBufferWithViews(device, 1, 2, 3, m_particleDataSize, L"Particle");
+	CreateStructuredBufferWithViews(device, 2, 5, 6, m_particleHashDataSize, L"ParticleHash");
 
 	// 파티클 데이터 업로드
+	// buffer 0 초기 상태 -> UAV
 	UploadAndCopyData(device, commandList, m_particleDataSize, m_particlesUploadBuffer, L"Particle", m_particleBuffers[0], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 	// 파티클 해시 데이터 업로드
+	// buffer 2(Hash) 초기 상태 -> SRV
 	UploadAndCopyData(device, commandList, m_particleHashDataSize, m_particlesHashUploadBuffer, L"ParticleHash", m_particleBuffers[2], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	// Buffer 1 첫 사용 상태 설정 - COMMON -> SRV
+	// Buffer 1 초기 상태 - COMMON -> SRV
 	SetBarrier(commandList, m_particleBuffers[1],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	// ConstantBuffer 설정
+	m_constantBufferData.minBounds = XMFLOAT3(minBounds[0], minBounds[1], minBounds[2]);
+	m_constantBufferData.maxBounds = XMFLOAT3(maxBounds[0], maxBounds[1], maxBounds[2]);
+	m_constantBufferData.cellSize = cellSize;
+	m_constantBufferData.gridDimX = static_cast<UINT>((maxBounds[0] - minBounds[0]) / cellSize);
+	m_constantBufferData.gridDimY = static_cast<UINT>((maxBounds[1] - minBounds[1]) / cellSize);
+	m_constantBufferData.gridDimZ = static_cast<UINT>((maxBounds[2] - minBounds[2]) / cellSize);
 
 	CreateConstUploadBuffer(device, m_constantBuffer, m_constantBufferData, m_constantBufferDataBegin);
 
@@ -87,7 +98,6 @@ void SphSimulator::GenerateParticles()
 	uniform_real_distribution<float> dp(-1.0f, 1.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
-	const float radius = 1.0f / 16.0f;
 	for (auto& p : m_particles) {
 		p.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		p.velocity = XMFLOAT3(0.0f, 0.0f, 0.0);
@@ -98,11 +108,6 @@ void SphSimulator::GenerateParticles()
 
 	// Particle Hash Data
 	m_particlesHashes.resize(m_maxParticles);
-	for (UINT i = 0; i < m_maxParticles; i++)
-	{
-		m_particlesHashes[i].particleID = i;
-		m_particlesHashes[i].hashValue = 0;
-	}
 
 }
 
@@ -127,13 +132,13 @@ void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
 	uploadData.RowPitch = totalDataSize;
 	uploadData.SlicePitch = totalDataSize;
 
-	// 대상 버퍼(Buffer 0) 상태 전이: COMMON -> COPY_DEST
+	// 대상 버퍼 상태 전이: COMMON -> COPY_DEST
 	SetBarrier(commandList, destBuffer,
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 
 	UpdateSubresources(commandList.Get(), m_particleBuffers[0].Get(), uploadBuffer.Get(), 0, 0, 1, &uploadData);
 
-	// 대상 버퍼(Buffer 0) 상태 전이: COPY_DEST -> UAV
+	// 대상 버퍼 상태 전이: COMMON -> destBufferState
 	SetBarrier(commandList, destBuffer,
 		D3D12_RESOURCE_STATE_COPY_DEST, destBufferState);
 
@@ -145,7 +150,11 @@ void SphSimulator::Update(float dt)
 	m_constantBufferData.deltaTime = dt;
 	m_constantBufferData.minBounds = XMFLOAT3(minBounds[0], minBounds[1], minBounds[2]);
 	m_constantBufferData.maxBounds = XMFLOAT3(maxBounds[0], maxBounds[1], maxBounds[2]);
-
+	m_constantBufferData.cellSize = cellSize;
+	m_constantBufferData.gridDimX = static_cast<UINT>((maxBounds[0] - minBounds[0]) / cellSize);
+	m_constantBufferData.gridDimY = static_cast<UINT>((maxBounds[1] - minBounds[1]) / cellSize);
+	m_constantBufferData.gridDimZ = static_cast<UINT>((maxBounds[2] - minBounds[2]) / cellSize);
+	
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
 	// 읽기 쓰기 인덱스 갱신
@@ -155,26 +164,84 @@ void SphSimulator::Update(float dt)
 
 void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
-	commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
-	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
+	commandList ->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
+
+	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
+	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
+
+	CalcHashes(commandList); // 해시 연산
+	BitonicSort(commandList);
+	CalcSPH(commandList);
+}
+
+void SphSimulator::CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList)
+{
+	commandList->SetPipelineState(Graphics::sphCalcHashCSPSO.Get());
 
 	// m_particleBuffers[readIdx] -> UAV -> SRV
 	// SRV로 사용하기전 UAV 쓰기 작업 기다림
 	SetUAVBarrier(commandList, m_particleBuffers[m_readIdx]);
 	SetBarrier(commandList, m_particleBuffers[m_readIdx],
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	// m_particleBuffers[writeIdx] -> SRV -> UAV
+
+	SetBarrier(commandList, m_particleBuffers[m_hashIdx],
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetComputeRootDescriptorTable(0, m_particleBufferSrvGpuHandle[m_readIdx]); // SRV
+	commandList->SetComputeRootDescriptorTable(1, m_particleBufferUavGpuHandle[m_hashIdx]); // UAV
+	commandList->SetComputeRootDescriptorTable(2, m_constantBufferCbvGpuHandle); // CBV
+
+	const UINT groupSizeX = 256;
+	UINT dispatchX = (m_maxParticles + groupSizeX - 1) / groupSizeX;
+	commandList->Dispatch(dispatchX, 1, 1);
+}
+
+void SphSimulator::BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList)
+{
+	// 만약 상수 버퍼를 사용하고싶다면,
+	// Multiframe-Inflite 방식일때는 프레임 개수만큼 만들어서 사용해야함.
+	// 지금은 루트 상수를 사용해서 처리
+
+	commandList->SetPipelineState(Graphics::bitonicSortCSPSO.Get());
+
+	commandList->SetComputeRootDescriptorTable(1, m_particleBufferUavGpuHandle[m_hashIdx]); // UAV
+
+	UINT groupSizeX = 256; // HLSL의 numthreads와 일치
+	UINT dispatchX = (m_maxParticles + groupSizeX - 1) / groupSizeX;
+
+	for (uint32_t k = 2; k <= m_maxParticles; k *= 2)
+	{
+		for (uint32_t j = k / 2; j > 0; j /= 2)
+		{
+			commandList->SetComputeRoot32BitConstant(4, k, 0);
+			commandList->SetComputeRoot32BitConstant(4, j, 1);
+			SetUAVBarrier(commandList, m_particleBuffers[m_hashIdx]);
+
+			commandList->Dispatch(dispatchX, 1, 1);
+		}
+	}
+}
+
+void SphSimulator::CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList)
+{
+	// SPH 연산
+	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
+
+	// 쓰기 버퍼 상태 -> SRV -> UAV
 	SetBarrier(commandList, m_particleBuffers[m_writeIdx],
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
-	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
-
+	// Hash 버퍼 UAV -> SRV
+	SetUAVBarrier(commandList, m_particleBuffers[m_hashIdx]);
+	SetBarrier(commandList, m_particleBuffers[m_hashIdx],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	
 	commandList->SetComputeRootDescriptorTable(0, m_particleBufferSrvGpuHandle[m_readIdx]); // SRV
 	commandList->SetComputeRootDescriptorTable(1, m_particleBufferUavGpuHandle[m_writeIdx]); // UAV
 	commandList->SetComputeRootDescriptorTable(2, m_constantBufferCbvGpuHandle); // CBV
+	commandList->SetComputeRootDescriptorTable(3, m_particleBufferSrvGpuHandle[2]); // SRV - Hash
 
-	const UINT groupSizeX = 64;
+	const UINT groupSizeX = 256;
 	UINT dispatchX = (m_maxParticles + groupSizeX - 1) / groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
 }
@@ -202,7 +269,7 @@ void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 // StructuredBuffer를 생성하고, m_cbvSrvUavHeap의 index 위치에 SRV, index + 1위치에 UAV를 생성
 void SphSimulator::CreateStructuredBufferWithViews(
-	ComPtr<ID3D12Device>& device, UINT index, UINT dataSize, wstring dataName)
+	ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, wstring dataName)
 {
 	UINT particleDataSize = static_cast<UINT>(dataSize * m_maxParticles);
 
@@ -216,9 +283,9 @@ void SphSimulator::CreateStructuredBufferWithViews(
 		&bufferDescParticles,
 		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
-		IID_PPV_ARGS(&m_particleBuffers[index])));
-	wstring bufferName = dataName + to_wstring(index);
-	m_particleBuffers[index]->SetName(bufferName.c_str());
+		IID_PPV_ARGS(&m_particleBuffers[bufferIndex])));
+	wstring bufferName = dataName + to_wstring(bufferIndex);
+	m_particleBuffers[bufferIndex]->SetName(bufferName.c_str());
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -230,15 +297,15 @@ void SphSimulator::CreateStructuredBufferWithViews(
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
 	// SRV 버퍼 설정
-	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * index * 2);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * srvIndex);
 
 	device->CreateShaderResourceView(
-		m_particleBuffers[index].Get(),
+		m_particleBuffers[bufferIndex].Get(),
 		&srvDesc, srvHandle
 	);
 
 	// UAV 버퍼 설정
-	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (index * 2 + 1));
+	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * uavIndex);
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -250,6 +317,7 @@ void SphSimulator::CreateStructuredBufferWithViews(
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
 	device->CreateUnorderedAccessView(
-		m_particleBuffers[index].Get(),
+		m_particleBuffers[bufferIndex].Get(),
 		nullptr, &uavDesc, uavHandle);
 }
+

@@ -38,6 +38,8 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsVS;
 	ComPtr<IDxcBlob> postEffectsPS;
 
+	ComPtr<IDxcBlob> sphCalcHashCS;
+	ComPtr<IDxcBlob> bitonicSortCS;
 	ComPtr<IDxcBlob> sphCS;
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
@@ -86,6 +88,8 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurXCSPSO;
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
+	ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
+	ComPtr<ID3D12PipelineState> bitonicSortCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -229,16 +233,19 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
-	// SRV, UAV, CBV
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[3];
+	// SRV, UAV, CBV, SRV
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[4];
 	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+	CD3DX12_ROOT_PARAMETER1 rootParameters[5];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
 	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
 	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
+	rootParameters[3].InitAsDescriptorTable(1, &ranges[3]);
+	rootParameters[4].InitAsConstants(2, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
@@ -369,6 +376,10 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
 
 	// Sph
+	const wchar_t sphCalcHashCSFilename[] = L"./Shaders/SphCalcHashCS.hlsl";
+	CreateShader(device, sphCalcHashCSFilename, L"cs_6_0", sphCalcHashCS);
+	const wchar_t bitonicSortCSFilename[] = L"./Shaders/BitonicSortCS.hlsl";
+	CreateShader(device, bitonicSortCSFilename, L"cs_6_0", bitonicSortCS);
 	const wchar_t sphCSFilename[] = L"./Shaders/SphCS.hlsl";
 	CreateShader(device, sphCSFilename, L"cs_6_0", sphCS);
 	const wchar_t sphVSFilename[] = L"./Shaders/SphVS.hlsl";
@@ -679,6 +690,18 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	blurYCSPSODesc.CS = { blurYCS->GetBufferPointer(), blurYCS->GetBufferSize() };
 	ThrowIfFailed(device->CreateComputePipelineState(&blurYCSPSODesc, IID_PPV_ARGS(&blurYCSPSO)));
 
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcHashCSPSODesc = {};
+	sphCalcHashCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCalcHashCSPSODesc.CS = { sphCalcHashCS->GetBufferPointer(), sphCalcHashCS->GetBufferSize() };
+	sphCalcHashCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcHashCSPSODesc, IID_PPV_ARGS(&sphCalcHashCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC bitonicSortCSPSODesc = {};
+	bitonicSortCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	bitonicSortCSPSODesc.CS = { bitonicSortCS->GetBufferPointer(), bitonicSortCS->GetBufferSize() };
+	bitonicSortCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&bitonicSortCSPSODesc, IID_PPV_ARGS(&bitonicSortCSPSO)));
+	
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCSPSODesc = {};
 	sphCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphCSPSODesc.CS = { sphCS->GetBufferPointer(), sphCS->GetBufferSize() };

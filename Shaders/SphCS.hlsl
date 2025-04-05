@@ -11,27 +11,41 @@ struct Particle {
     float p5;
 };
 
+struct ParticleHash
+{
+    uint particleID; // 원래 파티클 인덱스
+    uint hashValue;  // 계산된 해시 값
+};
+
 cbuffer SimParams : register(b0) {
     float deltaTime;
     float2 gravity;
     uint numParticles;
     float3 minBounds;
-    float d1;
+    float gridX;
     float3 maxBounds;
-    float d2;
+    float gridY;
+
+    float gridZ;
+    float p1;
+    float p2;
+    float p3;
 };
 
+#define GROUP_SIZE_X 256
 #define PI 3.1415926535
-#define COR 1.0;
+#define COR 1.0
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+
+StructuredBuffer<ParticleHash> ParticlesHashes : register(t1);
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)
 // 입력 시드(seed)를 기반으로 랜덤 값을 생성합니다.
 float random(uint seed)
 {
-    // 간단한 해싱 알고리즘 (예: PCG 계열의 일부 또는 단순화된 버전)
+    // 간단한 해싱 알고리즘
     seed = seed * 747796405u + 2891336453u;
     uint result = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
     result = (result >> 22u) ^ result;
@@ -39,7 +53,7 @@ float random(uint seed)
     return float(result) / 4294967295.0f; // 2^32 - 1 로 나눔
 }
 
-// 2개의 uint를 시드로 받는 버전 (더 나은 분포를 위해)
+// 2개의 uint를 시드로 받는 버전
 float random2(uint2 seed)
 {
     // 시드를 결합하여 하나의 uint로 만듭니다.
@@ -58,7 +72,7 @@ float3 randomDirection(uint2 seed)
     return normalize(float3(x, y, z)); // 정규화된 방향 벡터
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     uint index = dispatchThreadID.x;
@@ -70,6 +84,8 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     Particle p = ParticlesInput[index];
     float halfSize = p.size * 0.5;
 
+    ParticleHash hashInfo = ParticlesHashes[index];
+
     // 생명 주기 확인 및 파티클 업데이트 로직
     if (p.life <= 0.0f) {
 
@@ -77,11 +93,11 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         // deltaTime를 더하거나 XOR 하는 등 다양하게 조합 가능
         uint2 seed = uint2(index, deltaTime); // 또는 uint2(index, uint(totalTime * 1000.0f)) 등
 
-        // 랜덤 위치 설정 (예: 원점 근처의 작은 구 영역 내부)
+        // 랜덤 위치 설정
         float spawnRadius = 0.1f;
         p.position = float3(0.0, 0.0, 0.0) + randomDirection(seed + uint2(10, 11)) * random2(seed + uint2(12, 13)) * spawnRadius;
 
-        // 랜덤 속도 설정 (예: 특정 방향 범위 내에서 랜덤 속도)
+        // 랜덤 속도 설정
         float initialSpeedMin = 1.0f;
         float initialSpeedMax = 3.0f;
         float initialSpeed = lerp(initialSpeedMin, initialSpeedMax, random2(seed + uint2(1, 2)));
@@ -92,7 +108,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), 0.0f);
         p.velocity = normalize(randomDir + float3(0, 0.5, 0)) * initialSpeed; // 약간 위쪽으로 편향 + 정규화 후 속도 곱하기
 
-        // 랜덤 생명 주기 설정 (예: 0.5초 ~ 1.5초 사이)
+        // 랜덤 생명 주기 설정
         float minLife = 0.5f;
         float maxLife = 1.5f;
         p.life = lerp(minLife, maxLife, random2(seed + uint2(9, 10)));
@@ -134,6 +150,13 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
         // 생명 주기 감소
         //p.life -= deltaTime; // 1.0이 1초를 의미한다고 가정
+    }
+
+    if ((hashInfo.hashValue % 2) == 0) {
+        p.color = float3(1.0, 0.0, 0.0); // Red if even
+    }
+    else {
+        p.color = float3(0.0, 1.0, 0.0); // Green if odd
     }
 
     // 쓰기

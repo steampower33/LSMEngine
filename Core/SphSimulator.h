@@ -26,14 +26,14 @@ public:
 
 	// 입자 구조
 	struct Particle {
-		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 position;
 		float p1;
-		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 velocity;
 		float p2;
-		XMFLOAT3 color = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 color;
 		float p3;
-		float size = 1.0f;
-		float life = 0.0f;
+		float size;
+		float life;
 		float p4;
 		float p5;
 	};
@@ -50,10 +50,15 @@ public:
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
 		UINT numParticles = 128;
 
-		XMFLOAT3 minBounds = XMFLOAT3(-1.0f, -1.0f, 0.0f); // 경계 최소값
-		float d1;
-		XMFLOAT3 maxBounds = XMFLOAT3(1.0f, 1.0f, 0.0f);   // 경계 최대값
-		float d2;
+		XMFLOAT3 minBounds;
+		float gridDimX;
+		XMFLOAT3 maxBounds;
+		float gridDimY;
+
+		float gridDimZ;
+		float cellSize;
+		float p2;
+		float p3;
 	};
 
 	float minBounds[3] = { -3.0f, -3.0f, 0.0f };
@@ -69,6 +74,8 @@ public:
 	SimParams m_constantBufferData;
 private:
 	UINT m_maxParticles = 128;
+	const float radius = 1.0f / 16.0f;
+	const float cellSize = radius * 4.0f;
 	UINT m_particleDataSize = 0;
 	vector<Particle> m_particles;
 	UINT m_particleHashDataSize = 0;
@@ -82,6 +89,8 @@ private:
 	// Ping Pong 형식으로 버퍼 구성(Particle Structured)
 	// 매 프레임 마다 쓰고 읽는 버퍼를 변경
 	// 버퍼당 srv, uav 하나씩
+	// 초기 상태
+	// SRV | UAV | UAV
 	ComPtr<ID3D12Resource> m_particleBuffers[3];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
 	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
@@ -97,10 +106,15 @@ private:
 	// 초기에 Update함수를 먼저 거치기에 read는 0번, write는 1번으로 시작 할수 있도록 초기에 설정
 	UINT m_readIdx = 1;
 	UINT m_writeIdx = 0;
+	UINT m_hashIdx = 2;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
-		ComPtr<ID3D12Device>& device, UINT index, UINT dataSize, wstring dataName);
+		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, wstring dataName);
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
+
+	void CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
 };
