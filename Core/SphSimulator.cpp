@@ -67,6 +67,7 @@ void SphSimulator::GenerateParticles()
 		{0.5f, 0.0f, 1.0f}   // Violet/Purple
 	};
 
+
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_real_distribution<float> dp(-1.0f, 1.0f);
@@ -77,7 +78,7 @@ void SphSimulator::GenerateParticles()
 		p.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		p.velocity = XMFLOAT3(0.0f, 0.0f, 0.0);
 		p.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		p.size = 1.0f;
+		p.size = radius;
 		p.life = -1.0f;
 	}
 }

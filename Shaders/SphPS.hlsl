@@ -27,7 +27,6 @@ cbuffer GlobalConstants : register(b0)
     float4x4 d03;
     float4x4 d04;
     float4x4 d05;
-
 }
 
 struct PSInput

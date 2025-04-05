@@ -68,6 +68,7 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
     }
 
     Particle p = ParticlesInput[index];
+    float halfSize = p.size * 0.5;
 
     // 생명 주기 확인 및 파티클 업데이트 로직
     if (p.life <= 0.0f) {
@@ -107,26 +108,26 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
         bool collided = false;
         float3 reflected_vel = p.velocity;
 
-        if (p.position.x < minBounds.x && p.velocity.x < 0.0)
+        if (p.position.x - halfSize < minBounds.x && p.velocity.x < 0.0)
         {
             p.velocity.x *= -COR;
-            p.position.x = minBounds.x;
+            p.position.x = minBounds.x + halfSize;
         }
-        else if (p.position.x > maxBounds.x && p.velocity.x > 0.0)
+        else if (p.position.x + halfSize > maxBounds.x && p.velocity.x > 0.0)
         {
             p.velocity.x *= -COR;
-            p.position.x = maxBounds.x;
+            p.position.x = maxBounds.x - halfSize;
         }
 
-        if (p.position.y < minBounds.y && p.velocity.y < 0.0)
+        if (p.position.y - halfSize < minBounds.y && p.velocity.y < 0.0)
         {
             p.velocity.y *= -COR;
-            p.position.y = minBounds.y;
+            p.position.y = minBounds.y + halfSize;
         }
-        else if (p.position.y > maxBounds.y && p.velocity.y > 0.0)
+        else if (p.position.y + halfSize > maxBounds.y && p.velocity.y > 0.0)
         { 
             p.velocity.y *= -COR;
-            p.position.y = maxBounds.y;
+            p.position.y = maxBounds.y - halfSize;
         }
 
         if (collided) { p.velocity = reflected_vel; }

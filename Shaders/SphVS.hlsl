@@ -65,7 +65,7 @@ GSInput main(uint vertexID : SV_VertexID)
 
     output.color = p.color * saturate(p.life / fadeLife);
     output.life = p.life;
-    output.radius = p.size * 0.1;
+    output.radius = p.size;
 
     return output;
 }
