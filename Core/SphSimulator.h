@@ -38,6 +38,12 @@ public:
 		float p5;
 	};
 
+	struct ParticleHash
+	{
+		UINT particleID; // 원래 파티클 인덱스
+		UINT hashValue;  // 계산된 해시 값
+	};
+
 	// 시뮬레이션 파라미터 (상수 버퍼용)
 	__declspec(align(256)) struct SimParams {
 		float deltaTime = 0.0f;
@@ -62,20 +68,25 @@ public:
 
 	SimParams m_constantBufferData;
 private:
-	vector<Particle> m_particlesCPU;
 	UINT m_maxParticles = 128;
+	UINT m_particleDataSize = 0;
+	vector<Particle> m_particles;
+	UINT m_particleHashDataSize = 0;
+	vector<ParticleHash> m_particlesHashes;
 
-	// SRV UAV | SRV UAV | CBV
-	ComPtr<ID3D12DescriptorHeap> m_heap;
+	// Ping-Pong         | SimParams | Hash    |
+	// SRV UAV | SRV UAV | CBV       | SRV UAV |
+	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	UINT m_cbvSrvUavSize = 0;
 
 	// Ping Pong 형식으로 버퍼 구성(Particle Structured)
 	// 매 프레임 마다 쓰고 읽는 버퍼를 변경
 	// 버퍼당 srv, uav 하나씩
-	ComPtr<ID3D12Resource> m_particleBuffer[2];
-	ComPtr<ID3D12Resource> m_uploadBuffer;
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[2];
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[2];
+	ComPtr<ID3D12Resource> m_particleBuffers[3];
+	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
+	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[3];
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[3];
 
 	ComPtr<ID3D12Resource> m_constantBuffer;
 	UINT8* m_constantBufferDataBegin = nullptr;
@@ -88,7 +99,8 @@ private:
 	UINT m_writeIdx = 0;
 
 	void GenerateParticles();
-	void CreateStructuredBuffer(ComPtr<ID3D12Device>& device, UINT width, UINT height, UINT index);
-	void UploadAndCopyParticleData(ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList);
+	void CreateStructuredBufferWithViews(
+		ComPtr<ID3D12Device>& device, UINT index, UINT dataSize, wstring dataName);
+	void UploadAndCopyData(ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
 };

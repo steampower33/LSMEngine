@@ -478,7 +478,7 @@ void Graphics::InitBlendStates()
 		accumulateBSDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // 모든 RGBA 채널에 쓰기 허용
 
 		// 2. Blend Description 설정
-		accumulateBS.AlphaToCoverageEnable = FALSE;                 // 알파-투-커버리지 비활성화 (보통 누적엔 불필요)
+		accumulateBS.AlphaToCoverageEnable = TRUE;                 // 알파-투-커버리지 비활성화 (보통 누적엔 불필요)
 		accumulateBS.IndependentBlendEnable = FALSE;                // 모든 렌더 타겟에 동일한
 		accumulateBS.RenderTarget[0] = accumulateBSDesc;
 	}
