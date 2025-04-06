@@ -58,7 +58,11 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
 	extern ComPtr<IDxcBlob> sphCalcHashCS;
-	extern ComPtr<IDxcBlob> bitonicSortCS;
+	extern ComPtr<IDxcBlob> sphBitonicSortCS;
+	extern ComPtr<IDxcBlob> sphFlagGenerationCS;
+	extern ComPtr<IDxcBlob> sphLocalScanCS;
+	extern ComPtr<IDxcBlob> sphScatterCellInfoCS;
+	extern ComPtr<IDxcBlob> sphCalcEndIndicesCS;
 	extern ComPtr<IDxcBlob> sphCS;
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
@@ -112,7 +116,11 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
-	extern ComPtr<ID3D12PipelineState> bitonicSortCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphScatterCellInfoCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphCalcEndIndicesCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -137,8 +145,8 @@ namespace Graphics
 
 	void CreateShader(
 		ComPtr<ID3D12Device>& device,
-		const wchar_t* filename,
-		const wchar_t* targetProfile, // Shader Target Profile
+		wstring filename,
+		wstring targetProfile, // Shader Target Profile
 		ComPtr<IDxcBlob>& shaderBlob);
 
 }

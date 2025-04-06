@@ -179,6 +179,9 @@
     <None Include="Shaders\Common.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\SphCommon.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\BasicPS.hlsl">
@@ -265,7 +268,19 @@
     <FxCompile Include="Shaders\SphCalcHashCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\BitonicSortCS.hlsl">
+    <FxCompile Include="Shaders\SphBitonicSortCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphFlagGenerationCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphLocalScanCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphScatterCellInfoCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphCalcEndIndicesCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

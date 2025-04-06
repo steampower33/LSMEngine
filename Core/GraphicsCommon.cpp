@@ -39,7 +39,11 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsPS;
 
 	ComPtr<IDxcBlob> sphCalcHashCS;
-	ComPtr<IDxcBlob> bitonicSortCS;
+	ComPtr<IDxcBlob> sphBitonicSortCS;
+	ComPtr<IDxcBlob> sphFlagGenerationCS;
+	ComPtr<IDxcBlob> sphLocalScanCS;
+	ComPtr<IDxcBlob> sphScatterCellInfoCS;
+	ComPtr<IDxcBlob> sphCalcEndIndicesCS;
 	ComPtr<IDxcBlob> sphCS;
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
@@ -89,7 +93,11 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
 	ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
-	ComPtr<ID3D12PipelineState> bitonicSortCSPSO;
+	ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
+	ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
+	ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
+	ComPtr<ID3D12PipelineState> sphScatterCellInfoCSPSO;
+	ComPtr<ID3D12PipelineState> sphCalcEndIndicesCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -234,18 +242,20 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 	}
 
 	// SRV, UAV, CBV, SRV
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[4];
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[5];
 	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[5];
+	CD3DX12_ROOT_PARAMETER1 rootParameters[6];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
 	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
 	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
 	rootParameters[3].InitAsDescriptorTable(1, &ranges[3]);
-	rootParameters[4].InitAsConstants(2, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[4].InitAsDescriptorTable(1, &ranges[4]);
+	rootParameters[5].InitAsConstants(2, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
@@ -323,77 +333,55 @@ void Graphics::InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device)
 void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 {
 	// Basic
-	const wchar_t basicVSFilename[] = L"./Shaders/BasicVS.hlsl";
-	CreateShader(device, basicVSFilename, L"vs_6_0", basicVS);
-	const wchar_t basicPSFilename[] = L"./Shaders/BasicPS.hlsl";
-	CreateShader(device, basicPSFilename, L"ps_6_0", basicPS);
-	const wchar_t simplePSFilename[] = L"./Shaders/SimplePS.hlsl";
-	CreateShader(device, simplePSFilename, L"ps_6_0", simplePS);
+	CreateShader(device, L"BasicVS.hlsl", L"vs_6_0", basicVS);
+	CreateShader(device, L"BasicPS.hlsl", L"ps_6_0", basicPS);
+	CreateShader(device, L"SimplePS.hlsl", L"ps_6_0", simplePS);
 
 	// Normal
-	const wchar_t normalVSFilename[] = L"./Shaders/NormalVS.hlsl";
-	CreateShader(device, normalVSFilename, L"vs_6_0", normalVS);
-	const wchar_t normalGSFilename[] = L"./Shaders/NormalGS.hlsl";
-	CreateShader(device, normalGSFilename, L"gs_6_0", normalGS);
-	const wchar_t normalPSFilename[] = L"./Shaders/NormalPS.hlsl";
-	CreateShader(device, normalPSFilename, L"ps_6_0", normalPS);
+	CreateShader(device, L"NormalVS.hlsl", L"vs_6_0", normalVS);
+	CreateShader(device, L"NormalGS.hlsl", L"gs_6_0", normalGS);
+	CreateShader(device, L"NormalPS.hlsl", L"ps_6_0", normalPS);
 
 	// Skybox
-	const wchar_t skyboxVSFilename[] = L"./Shaders/SkyboxVS.hlsl";
-	CreateShader(device, skyboxVSFilename, L"vs_6_0", skyboxVS);
-	const wchar_t skyboxPSFilename[] = L"./Shaders/SkyboxPS.hlsl";
-	CreateShader(device, skyboxPSFilename, L"ps_6_0", skyboxPS);
+	CreateShader(device, L"SkyboxVS.hlsl", L"vs_6_0", skyboxVS);
+	CreateShader(device, L"SkyboxPS.hlsl", L"ps_6_0", skyboxPS);
 
 	// Sampling
-	const wchar_t samplingVSFilename[] = L"./Shaders/SamplingVS.hlsl";
-	CreateShader(device, samplingVSFilename, L"vs_6_0", samplingVS);
-	const wchar_t samplingPSFilename[] = L"./Shaders/SamplingPS.hlsl";
-	CreateShader(device, samplingPSFilename, L"ps_6_0", samplingPS);
+	CreateShader(device, L"SamplingVS.hlsl", L"vs_6_0", samplingVS);
+	CreateShader(device, L"SamplingPS.hlsl", L"ps_6_0", samplingPS);
+
 	// Combine
-	const wchar_t combineVSFilename[] = L"./Shaders/CombineVS.hlsl";
-	CreateShader(device, combineVSFilename, L"vs_6_0", combineVS);
-	const wchar_t combinePSFilename[] = L"./Shaders/CombinePS.hlsl";
-	CreateShader(device, combinePSFilename, L"ps_6_0", combinePS);
+	CreateShader(device, L"CombineVS.hlsl", L"vs_6_0", combineVS);
+	CreateShader(device, L"CombinePS.hlsl", L"ps_6_0", combinePS);
 
 	// SamplingCS, BlurXCS, BlurYCS
-	const wchar_t samplingCSFilename[] = L"./Shaders/SamplingCS.hlsl";
-	CreateShader(device, samplingCSFilename, L"cs_6_0", samplingCS);
-	const wchar_t blurXCSFilename[] = L"./Shaders/BlurXCS.hlsl";
-	CreateShader(device, blurXCSFilename, L"cs_6_0", blurXCS);
-	const wchar_t blurYCSFilename[] = L"./Shaders/BlurYCS.hlsl";
-	CreateShader(device, blurYCSFilename, L"cs_6_0", blurYCS);
+	CreateShader(device, L"SamplingCS.hlsl", L"cs_6_0", samplingCS);
+	CreateShader(device, L"BlurXCS.hlsl", L"cs_6_0", blurXCS);
+	CreateShader(device, L"BlurYCS.hlsl", L"cs_6_0", blurYCS);
 
 	// DepthOnly
-	const wchar_t depthOnlyVSFilename[] = L"./Shaders/DepthOnlyVS.hlsl";
-	CreateShader(device, depthOnlyVSFilename, L"vs_6_0", depthOnlyVS);
-	const wchar_t depthOnlyPSFilename[] = L"./Shaders/DepthOnlyPS.hlsl";
-	CreateShader(device, depthOnlyPSFilename, L"ps_6_0", depthOnlyPS);
+	CreateShader(device, L"DepthOnlyVS.hlsl", L"vs_6_0", depthOnlyVS);
+	CreateShader(device, L"DepthOnlyPS.hlsl", L"ps_6_0", depthOnlyPS);
 
 	// PostEffects
-	const wchar_t postEffectsVSFilename[] = L"./Shaders/PostEffectsVS.hlsl";
-	CreateShader(device, postEffectsVSFilename, L"vs_6_0", postEffectsVS);
-	const wchar_t postEffectsPSFilename[] = L"./Shaders/PostEffectsPS.hlsl";
-	CreateShader(device, postEffectsPSFilename, L"ps_6_0", postEffectsPS);
+	CreateShader(device, L"PostEffectsVS.hlsl", L"vs_6_0", postEffectsVS);
+	CreateShader(device, L"PostEffectsPS.hlsl", L"ps_6_0", postEffectsPS);
 
 	// Sph
-	const wchar_t sphCalcHashCSFilename[] = L"./Shaders/SphCalcHashCS.hlsl";
-	CreateShader(device, sphCalcHashCSFilename, L"cs_6_0", sphCalcHashCS);
-	const wchar_t bitonicSortCSFilename[] = L"./Shaders/BitonicSortCS.hlsl";
-	CreateShader(device, bitonicSortCSFilename, L"cs_6_0", bitonicSortCS);
-	const wchar_t sphCSFilename[] = L"./Shaders/SphCS.hlsl";
-	CreateShader(device, sphCSFilename, L"cs_6_0", sphCS);
-	const wchar_t sphVSFilename[] = L"./Shaders/SphVS.hlsl";
-	CreateShader(device, sphVSFilename, L"vs_6_0", sphVS);
-	const wchar_t sphGSFilename[] = L"./Shaders/SphGS.hlsl";
-	CreateShader(device, sphGSFilename, L"gs_6_0", sphGS);
-	const wchar_t sphPSFilename[] = L"./Shaders/SphPS.hlsl";
-	CreateShader(device, sphPSFilename, L"ps_6_0", sphPS);
+	CreateShader(device, L"SphCalcHashCS.hlsl", L"cs_6_0", sphCalcHashCS);
+	CreateShader(device, L"SphBitonicSortCS.hlsl", L"cs_6_0", sphBitonicSortCS);
+	CreateShader(device, L"SphFlagGenerationCS.hlsl", L"cs_6_0", sphFlagGenerationCS);
+	CreateShader(device, L"SphLocalScanCS.hlsl", L"cs_6_0", sphLocalScanCS);
+	CreateShader(device, L"SphScatterCellInfoCS.hlsl", L"cs_6_0", sphScatterCellInfoCS);
+	CreateShader(device, L"SphCalcEndIndicesCS.hlsl", L"cs_6_0", sphCalcEndIndicesCS);
+	CreateShader(device, L"SphCS.hlsl", L"cs_6_0", sphCS);
+	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
+	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
+	CreateShader(device, L"SphPS.hlsl", L"ps_6_0", sphPS);
 
 	// BoundsBox
-	const wchar_t boundsBoxVSFilename[] = L"./Shaders/BoundsBoxVS.hlsl";
-	CreateShader(device, boundsBoxVSFilename, L"vs_6_0", boundsBoxVS);
-	const wchar_t boundsBoxPSFilename[] = L"./Shaders/BoundsBoxPS.hlsl";
-	CreateShader(device, boundsBoxPSFilename, L"ps_6_0", boundsBoxPS);
+	CreateShader(device, L"BoundsBoxVS.hlsl", L"vs_6_0", boundsBoxVS);
+	CreateShader(device, L"BoundsBoxPS.hlsl", L"ps_6_0", boundsBoxPS);
 }
 
 void Graphics::InitRasterizerStates()
@@ -696,12 +684,36 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCalcHashCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcHashCSPSODesc, IID_PPV_ARGS(&sphCalcHashCSPSO)));
 
-	D3D12_COMPUTE_PIPELINE_STATE_DESC bitonicSortCSPSODesc = {};
-	bitonicSortCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
-	bitonicSortCSPSODesc.CS = { bitonicSortCS->GetBufferPointer(), bitonicSortCS->GetBufferSize() };
-	bitonicSortCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&bitonicSortCSPSODesc, IID_PPV_ARGS(&bitonicSortCSPSO)));
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphBitonicSortCSPSODesc = {};
+	sphBitonicSortCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphBitonicSortCSPSODesc.CS = { sphBitonicSortCS->GetBufferPointer(), sphBitonicSortCS->GetBufferSize() };
+	sphBitonicSortCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphBitonicSortCSPSODesc, IID_PPV_ARGS(&sphBitonicSortCSPSO)));
 	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphFlagGenerationCSPSODesc = {};
+	sphFlagGenerationCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphFlagGenerationCSPSODesc.CS = { sphFlagGenerationCS->GetBufferPointer(), sphFlagGenerationCS->GetBufferSize() };
+	sphFlagGenerationCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphFlagGenerationCSPSODesc, IID_PPV_ARGS(&sphFlagGenerationCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphLocalScanCSPSODesc = {};
+	sphLocalScanCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphLocalScanCSPSODesc.CS = { sphLocalScanCS->GetBufferPointer(), sphLocalScanCS->GetBufferSize() };
+	sphLocalScanCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphLocalScanCSPSODesc, IID_PPV_ARGS(&sphLocalScanCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphScatterCellInfoCSPSODesc = {};
+	sphScatterCellInfoCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphScatterCellInfoCSPSODesc.CS = { sphScatterCellInfoCS->GetBufferPointer(), sphScatterCellInfoCS->GetBufferSize() };
+	sphScatterCellInfoCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphScatterCellInfoCSPSODesc, IID_PPV_ARGS(&sphScatterCellInfoCSPSO)));
+	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcEndIndicesCSPSODesc = {};
+	sphCalcEndIndicesCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCalcEndIndicesCSPSODesc.CS = { sphCalcEndIndicesCS->GetBufferPointer(), sphCalcEndIndicesCS->GetBufferSize() };
+	sphCalcEndIndicesCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcEndIndicesCSPSODesc, IID_PPV_ARGS(&sphCalcEndIndicesCSPSO)));
+
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCSPSODesc = {};
 	sphCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphCSPSODesc.CS = { sphCS->GetBufferPointer(), sphCS->GetBufferSize() };
@@ -742,12 +754,14 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 
 void Graphics::CreateShader(
 	ComPtr<ID3D12Device>& device,
-	const wchar_t* filename,
-	const wchar_t* targetProfile,
+	wstring filename,
+	wstring targetProfile,
 	ComPtr<IDxcBlob>& shaderBlob)
 {
+	wstring shaderBaseName = L"./Shaders/";
+	filename = shaderBaseName + filename;
 	ComPtr<IDxcBlobEncoding> source;
-	ThrowIfFailed(utils->LoadFile(filename, nullptr, &source));
+	ThrowIfFailed(utils->LoadFile(filename.c_str(), nullptr, &source));
 
 	DxcBuffer buffer = {};
 	buffer.Ptr = source->GetBufferPointer();
@@ -767,7 +781,7 @@ void Graphics::CreateShader(
 #if defined(_DEBUG)
 	args = {
 		L"-E", L"main",
-		L"-T", targetProfile,
+		L"-T", targetProfile.c_str(),
 		L"-I", shaderIncludePath.c_str(),
 		L"-Zi",
 		L"-Od",

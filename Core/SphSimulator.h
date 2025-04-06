@@ -18,6 +18,9 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
+#define STRUCTURED_CNT 6
+#define CONSTANT_CNT 1
+
 class SphSimulator
 {
 public:
@@ -26,29 +29,35 @@ public:
 
 	// 입자 구조
 	struct Particle {
-		XMFLOAT3 position;
+		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float p1;
-		XMFLOAT3 velocity;
+		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float p2;
-		XMFLOAT3 color;
+		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		float p3;
-		float size;
-		float life;
+		float size = 0.0f;
+		float life = -1.0f;
 		float p4;
 		float p5;
 	};
 
 	struct ParticleHash
 	{
-		UINT particleID; // 원래 파티클 인덱스
-		UINT hashValue;  // 계산된 해시 값
+		UINT particleID = 0; // 원래 파티클 인덱스
+		UINT hashValue = 0;  // 계산된 해시 값
+		UINT flag = 0; // 그룹 시작 플래그
+	};
+
+	struct ScanResult
+	{
+		UINT groupID = 0;
 	};
 
 	// 시뮬레이션 파라미터 (상수 버퍼용)
 	__declspec(align(256)) struct SimParams {
 		float deltaTime = 0.0f;
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
-		UINT numParticles = 128;
+		UINT numParticles = 256;
 
 		XMFLOAT3 minBounds;
 		float gridDimX;
@@ -73,16 +82,22 @@ public:
 
 	SimParams m_constantBufferData;
 private:
-	UINT m_maxParticles = 128;
+	UINT m_maxParticles = 256;
 	const float radius = 1.0f / 16.0f;
 	const float cellSize = radius * 4.0f;
 	UINT m_particleDataSize = 0;
-	vector<Particle> m_particles;
 	UINT m_particleHashDataSize = 0;
-	vector<ParticleHash> m_particlesHashes;
+	UINT m_localScanDataSize = 0;
+	UINT m_testGroupSizeX = 0;
+	UINT m_testCnt = 0;
 
-	// Ping-Pong         | SimParams | Hash    |
-	// SRV UAV | SRV UAV | CBV       | SRV UAV |
+	vector<Particle> m_particles;
+	vector<ParticleHash> m_particlesHashes;
+	vector<ScanResult> m_localScan;
+	vector<ScanResult> m_partialSums;
+
+	// Ping-Pong       | SimParams | Hash    |
+	// SRV UAV SRV UAV | CBV       | SRV UAV |
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	UINT m_cbvSrvUavSize = 0;
 
@@ -91,11 +106,12 @@ private:
 	// 버퍼당 srv, uav 하나씩
 	// 초기 상태
 	// SRV | UAV | UAV
-	ComPtr<ID3D12Resource> m_particleBuffers[3];
+	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
 	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[3];
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[3];
+	ComPtr<ID3D12Resource> m_scanResultsUploadBuffer;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[STRUCTURED_CNT];
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[STRUCTURED_CNT];
 
 	ComPtr<ID3D12Resource> m_constantBuffer;
 	UINT8* m_constantBufferDataBegin = nullptr;
@@ -107,14 +123,19 @@ private:
 	UINT m_readIdx = 1;
 	UINT m_writeIdx = 0;
 	UINT m_hashIdx = 2;
+	UINT m_scanIdx = 3;
+	UINT m_partialIdx = 4;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
-		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, wstring dataName);
+		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName);
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
 
 	void CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void CalcHashRange(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
 };

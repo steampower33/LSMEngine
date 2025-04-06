@@ -1,17 +1,10 @@
-struct ParticleHash
-{
-    uint particleID; // 원래 파티클 인덱스
-    uint hashValue;  // 계산된 해시 값
-};
-
+#include "SphCommon.hlsli"
 
 cbuffer BitonicParams : register(b1)
 {
     uint k;
     uint j;
 }
-
-#define GROUP_SIZE_X 256
 
 RWStructuredBuffer<ParticleHash> hashes : register(u0);
 

@@ -1,21 +1,4 @@
-struct Particle {
-    float3 position;
-    float p1;
-    float3 velocity;
-    float p2;
-    float3 color;
-    float p3;
-    float size;
-    float life;
-    float p4;
-    float p5;
-};
-
-struct ParticleHash
-{
-    uint particleID; // 원래 파티클 인덱스
-    uint hashValue;  // 계산된 해시 값
-};
+#include "SphCommon.hlsli"
 
 cbuffer SimParams : register(b0) {
     float deltaTime;
@@ -36,8 +19,6 @@ cbuffer SimParams : register(b0) {
 StructuredBuffer<Particle> ParticlesInput : register(t0);
 // 출력 (particleID, hashValue) 버퍼 (UAV)
 RWStructuredBuffer<ParticleHash> ParticleHashesOutput : register(u0);
-
-#define GROUP_SIZE_X 256    
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
@@ -63,4 +44,5 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     ParticleHashesOutput[index].particleID = index;
     ParticleHashesOutput[index].hashValue = hashValue;
+    ParticleHashesOutput[index].flag = 0;
 }
