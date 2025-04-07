@@ -5,12 +5,12 @@ cbuffer SimParams : register(b0) {
     float2 gravity;
     uint numParticles;
     float3 minBounds;
-    float gridX;
+    uint gridDimX;
     float3 maxBounds;
-    float gridY;
+    uint gridDimY;
 
-    float gridZ;
-    float p1;
+    uint gridDimZ;
+    float cellSize;
     float p2;
     float p3;
 };
@@ -18,10 +18,9 @@ cbuffer SimParams : register(b0) {
 #define PI 3.1415926535
 #define COR 1.0
 
-StructuredBuffer<Particle> ParticlesInput : register(t0);
-RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+StructuredBuffer<ParticleHash> ParticlesHashes : register(t0);
 
-StructuredBuffer<ParticleHash> ParticlesHashes : register(t1);
+RWStructuredBuffer<Particle> Particles : register(u0);
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)
 // 입력 시드(seed)를 기반으로 랜덤 값을 생성합니다.
@@ -65,7 +64,7 @@ void main(uint tid : SV_GroupThreadID,
         return;
     }
 
-    Particle p = ParticlesInput[index];
+    Particle p = Particles[index];
     float halfSize = p.size * 0.5;
 
     ParticleHash hashInfo = ParticlesHashes[index];
@@ -145,5 +144,5 @@ void main(uint tid : SV_GroupThreadID,
     }
 
     // 쓰기
-    ParticlesOutput[index] = p;
+    Particles[index] = p;
 }

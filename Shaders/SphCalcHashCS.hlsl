@@ -5,20 +5,18 @@ cbuffer SimParams : register(b0) {
     float2 gravity;
     uint numParticles;
     float3 minBounds;
-    float gridDimX;
+    uint gridDimX;
     float3 maxBounds;
-    float gridDimY;
+    uint gridDimY;
 
-    float gridDimZ;
+    uint gridDimZ;
     float cellSize;
-    float p2;
+    uint cellCnt;
     float p3;
 };
 
-// 입력 파티클 버퍼 (SRV)
-StructuredBuffer<Particle> ParticlesInput : register(t0);
-// 출력 (particleID, hashValue) 버퍼 (UAV)
-RWStructuredBuffer<ParticleHash> ParticleHashesOutput : register(u0);
+RWStructuredBuffer<Particle> Particles : register(u0);
+RWStructuredBuffer<ParticleHash> ParticleHashes : register(u1);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -28,8 +26,8 @@ void main(uint tid : SV_GroupThreadID,
     uint index = groupIdx.x * GROUP_SIZE_X + tid;
     if (index >= MAX_PARTICLES) return; // 경계 체크
 
-    Particle p = ParticlesInput[index];
-    ParticleHash result = ParticleHashesOutput[index];
+    Particle p = Particles[index];
+    ParticleHash result = ParticleHashes[index];
 
     // 파티클 위치 p.position 을 그리드 최소 바운더리 위치를 기준으로 상대 위치로 변환
     float3 relativePos = p.position - minBounds;
@@ -44,7 +42,11 @@ void main(uint tid : SV_GroupThreadID,
         uint(cellID.y) * gridDimX +
         uint(cellID.z) * gridDimX * gridDimY;
 
-    ParticleHashesOutput[index].particleID = index;
-    ParticleHashesOutput[index].hashValue = hashValue;
-    ParticleHashesOutput[index].flag = 0;
+    ParticleHashes[index].particleID = index;
+    ParticleHashes[index].hashValue = hashValue;
+    ParticleHashes[index].flag = 0;
+
+    Particles[index].density = 0.0;
+    Particles[index].force = float3(0.0, 0.0, 0.0);
+    Particles[index].pressure = 0.0;
 }

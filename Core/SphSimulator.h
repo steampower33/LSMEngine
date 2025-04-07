@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 8
+#define STRUCTURED_CNT 7
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -30,15 +30,13 @@ public:
 	// 입자 구조
 	struct Particle {
 		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p1;
-		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p2;
-		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		float p3;
 		float size = 0.0f;
+		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
-		float p4;
-		float p5;
+		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		float density = 0.0f;
+		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float pressure = 0.0f;
 	};
 
 	struct ParticleHash
@@ -67,13 +65,13 @@ public:
 		UINT numParticles;
 
 		XMFLOAT3 minBounds;
-		float gridDimX;
+		UINT gridDimX;
 		XMFLOAT3 maxBounds;
-		float gridDimY;
+		UINT gridDimY;
 
-		float gridDimZ;
+		UINT gridDimZ;
 		float cellSize;
-		float p2;
+		UINT cellCnt;
 		float p3;
 	};
 
@@ -132,15 +130,13 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_constantBufferCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferCbvGpuHandle;
 
-	// 초기에 Update함수를 먼저 거치기에 read는 0번, write는 1번으로 시작 할수 있도록 초기에 설정
-	UINT m_readIdx = 1;
-	UINT m_writeIdx = 0;
-	UINT m_hashIdx = 2;
-	UINT m_scanIdx = 3;
-	UINT m_blockIdx = 4;
-	UINT m_blockSumIdx = 5;
-	UINT m_compactCellIdx = 6;
-	UINT m_cellMapIdx = 7;
+	UINT m_particleIdx = 0;
+	UINT m_hashIdx = 1;
+	UINT m_scanIdx = 2;
+	UINT m_blockIdx = 3;
+	UINT m_blockSumIdx = 4;
+	UINT m_compactCellIdx = 5;
+	UINT m_cellMapIdx = 6;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(

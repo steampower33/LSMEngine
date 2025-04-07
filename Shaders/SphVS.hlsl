@@ -1,3 +1,4 @@
+#include "SphCommon.hlsli"
 
 cbuffer GlobalConstants : register(b0)
 {
@@ -29,19 +30,6 @@ cbuffer GlobalConstants : register(b0)
     float4x4 d05;
 
 }
-
-struct Particle {
-    float3 position;
-    float p1;
-    float3 velocity;
-    float p2;
-    float3 color;
-    float p3;
-    float size;
-    float life;
-    float p4;
-    float p5;
-};
 
 struct GSInput
 {

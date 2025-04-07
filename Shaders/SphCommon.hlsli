@@ -1,14 +1,12 @@
 struct Particle {
     float3 position;
-    float p1;
-    float3 velocity;
-    float p2;
-    float3 color;
-    float p3;
     float size;
+    float3 velocity;
     float life;
-    float p4;
-    float p5;
+    float3 color;
+    float density;
+    float3 force;
+    float pressure;
 };
 
 struct ParticleHash
