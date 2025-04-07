@@ -23,10 +23,17 @@ struct ScanResult
     uint groupID;
 };
 
+struct CompactCell
+{
+    uint hashValue;
+    uint startIndex;
+    uint endIndex;
+};
+
 #ifndef GROUP_SIZE_X
-    #define GROUP_SIZE_X 256
+    #define GROUP_SIZE_X 512
 #endif
 
 #ifndef MAX_PARTICLES
-    #define MAX_PARTICLES 256
+    #define MAX_PARTICLES 1024
 #endif

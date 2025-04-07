@@ -277,10 +277,16 @@
     <FxCompile Include="Shaders\SphLocalScanCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphScatterCellInfoCS.hlsl">
+    <FxCompile Include="Shaders\SphScatterCompactCell.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\SphCalcEndIndicesCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphLocalScanBlockCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphFinalAdditionCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -519,11 +519,11 @@ void MainEngine::UpdateGUI()
 					UINT flag = 0;
 
 					flag += DrawTableRow("Min Bounds", [&]() {
-						return ImGui::SliderFloat3("##MinBounds", m_sphSimulator->minBounds, -3.0f, 3.0f);
+						return ImGui::SliderFloat3("##MinBounds", m_sphSimulator->m_minBounds, -3.0f, 3.0f);
 						});
 
 					flag += DrawTableRow("Max Bounds", [&]() {
-						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->maxBounds, -3.0f, 3.0f);
+						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->m_maxBounds, -3.0f, 3.0f);
 						});
 					ImGui::EndTable();
 				}

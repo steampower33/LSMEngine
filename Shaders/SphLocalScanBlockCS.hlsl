@@ -1,23 +1,22 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<ParticleHash> SortedHashes : register(t0);
-RWStructuredBuffer<ScanResult> LocalScan : register(u0);
-RWStructuredBuffer<ScanResult> PartialSum : register(u1);
+StructuredBuffer<ScanResult> LocalScan : register(t0);
+RWStructuredBuffer<ScanResult> PartialSum : register(u0);
 
 groupshared uint shMem[GROUP_SIZE_X];
 
 // 병렬 스캔 구현
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid       : SV_GroupThreadID,
-          uint3 gtid     : SV_DispatchThreadID,
-          uint groupIdx  : SV_GroupID)
+    uint3 gtid : SV_DispatchThreadID,
+    uint groupIdx : SV_GroupID)
 {
     uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
     uint loadedFlag = 0;
     if (globalIndex < MAX_PARTICLES)
     {
-        loadedFlag = SortedHashes[globalIndex].flag;
+        loadedFlag = LocalScan[globalIndex].groupID;
     }
 
     // 공유 메모리에 복사
@@ -43,7 +42,7 @@ void main(uint tid       : SV_GroupThreadID,
         shMem[GROUP_SIZE_X - 1] = 0;
     }
     GroupMemoryBarrierWithGroupSync();
-    
+
     for (uint dDown = GROUP_SIZE_X >> 1; dDown > 0; dDown >>= 1)
     {
         uint idx = (tid + 1) * (dDown << 1) - 1;
@@ -59,11 +58,8 @@ void main(uint tid       : SV_GroupThreadID,
 
     if (globalIndex < MAX_PARTICLES)
     {
-        LocalScan[globalIndex].groupID = shMem[tid];
+        PartialSum[globalIndex].groupID = shMem[tid];
     }
     GroupMemoryBarrierWithGroupSync();
-    
-    if (globalIndex % GROUP_SIZE_X == GROUP_SIZE_X - 1)
-        PartialSum[globalIndex / GROUP_SIZE_X].groupID = shMem[tid];
 }
 

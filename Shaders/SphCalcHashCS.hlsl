@@ -24,7 +24,7 @@ RWStructuredBuffer<ParticleHash> ParticleHashesOutput : register(u0);
 void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     uint index = dispatchThreadID.x;
-    if (index >= numParticles) return; // 경계 체크
+    if (index >= MAX_PARTICLES) return; // 경계 체크
 
     Particle p = ParticlesInput[index];
     ParticleHash result = ParticleHashesOutput[index];

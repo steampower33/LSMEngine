@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 6
+#define STRUCTURED_CNT 7
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -53,11 +53,18 @@ public:
 		UINT groupID = 0;
 	};
 
+	struct CompactCell
+	{
+		UINT hashValue = 0;
+		UINT startIndex = 0;
+		UINT endIndex = 0;
+	};
+
 	// 시뮬레이션 파라미터 (상수 버퍼용)
 	__declspec(align(256)) struct SimParams {
 		float deltaTime = 0.0f;
 		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
-		UINT numParticles = 256;
+		UINT numParticles;
 
 		XMFLOAT3 minBounds;
 		float gridDimX;
@@ -70,8 +77,8 @@ public:
 		float p3;
 	};
 
-	float minBounds[3] = { -3.0f, -3.0f, 0.0f };
-	float maxBounds[3] = { 3.0f, 3.0f, 0.0f };
+	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
+	float m_maxBounds[3] = { 4.0f, 4.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -82,14 +89,21 @@ public:
 
 	SimParams m_constantBufferData;
 private:
-	UINT m_maxParticles = 256;
-	const float radius = 1.0f / 16.0f;
-	const float cellSize = radius * 4.0f;
-	UINT m_particleDataSize = 0;
-	UINT m_particleHashDataSize = 0;
-	UINT m_localScanDataSize = 0;
-	UINT m_testGroupSizeX = 0;
-	UINT m_testCnt = 0;
+	const UINT m_maxParticles = 1024;
+	const UINT m_groupSizeX = 512;
+	const float m_radius = 1.0f / 16.0f;
+	const float m_cellSize = m_radius * 4.0f;
+	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
+	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];
+	float m_gridDimZ = m_maxBounds[2] - m_minBounds[2];
+	UINT m_cellCnt = static_cast<UINT>(m_gridDimX / m_cellSize) * static_cast<UINT>(m_gridDimY / m_cellSize);
+
+	const UINT m_particleDataSize = sizeof(Particle);
+	const UINT m_particleHashDataSize = sizeof(ParticleHash);
+	const UINT m_scanResultDataSize = sizeof(ScanResult);
+	const UINT m_scanResultDataCnt = static_cast<UINT>((m_maxParticles) / m_groupSizeX);
+	const UINT m_compactCellDataSize = sizeof(CompactCell);
+	const UINT m_compactCellDataCnt = m_cellCnt;
 
 	vector<Particle> m_particles;
 	vector<ParticleHash> m_particlesHashes;
@@ -124,7 +138,9 @@ private:
 	UINT m_writeIdx = 0;
 	UINT m_hashIdx = 2;
 	UINT m_scanIdx = 3;
-	UINT m_partialIdx = 4;
+	UINT m_blockIdx = 4;
+	UINT m_blockSumIdx = 5;
+	UINT m_compactCellIdx = 6;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
@@ -137,5 +153,6 @@ private:
 	void CalcHashRange(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
 };
