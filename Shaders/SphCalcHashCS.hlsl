@@ -21,9 +21,11 @@ StructuredBuffer<Particle> ParticlesInput : register(t0);
 RWStructuredBuffer<ParticleHash> ParticleHashesOutput : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
-void main(uint3 dispatchThreadID : SV_DispatchThreadID)
+void main(uint tid : SV_GroupThreadID,
+    uint3 gtid : SV_DispatchThreadID,
+    uint groupIdx : SV_GroupID)
 {
-    uint index = dispatchThreadID.x;
+    uint index = groupIdx.x * GROUP_SIZE_X + tid;
     if (index >= MAX_PARTICLES) return; // 경계 체크
 
     Particle p = ParticlesInput[index];

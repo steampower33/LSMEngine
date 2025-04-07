@@ -9,10 +9,11 @@ cbuffer BitonicParams : register(b1)
 RWStructuredBuffer<ParticleHash> hashes : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
-void main(int3 gID : SV_GroupID, int3 gtID : SV_GroupThreadID,
-    uint3 dtID : SV_DispatchThreadID)
+void main(uint tid : SV_GroupThreadID,
+    uint3 gtid : SV_DispatchThreadID,
+    uint groupIdx : SV_GroupID)
 {
-    uint i = dtID.x;
+    uint i = groupIdx.x * GROUP_SIZE_X + tid;
 
     uint l = i ^ j;
     if (l > i)
