@@ -68,34 +68,35 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     ParticleHash hashInfo = ParticlesHashes[index];
 
-    // 생명 주기 확인 및 파티클 업데이트 로직
-    if (p.life <= 0.0f) {
+    //// 생명 주기 확인 및 파티클 업데이트 로직
+    //if (p.life <= 0.0f) {
 
-        // 고유한 시드 생성 (파티클 인덱스와 프레임 카운트/시간 조합)
-        // deltaTime를 더하거나 XOR 하는 등 다양하게 조합 가능
-        uint2 seed = uint2(index, deltaTime); // 또는 uint2(index, uint(totalTime * 1000.0f)) 등
+    //    // 고유한 시드 생성 (파티클 인덱스와 프레임 카운트/시간 조합)
+    //    // deltaTime를 더하거나 XOR 하는 등 다양하게 조합 가능
+    //    uint2 seed = uint2(index, deltaTime); // 또는 uint2(index, uint(totalTime * 1000.0f)) 등
 
-        // 랜덤 위치 설정
-        float spawnRadius = 0.1f;
-        p.position = float3(0.0, 0.0, 0.0) + randomDirection(seed + uint2(10, 11)) * random2(seed + uint2(12, 13)) * spawnRadius;
+    //    // 랜덤 위치 설정
+    //    float spawnRadius = 0.1f;
+    //    p.position = float3(0.0, 0.0, 0.0) + randomDirection(seed + uint2(10, 11)) * random2(seed + uint2(12, 13)) * spawnRadius;
 
-        // 랜덤 속도 설정
-        float initialSpeedMin = 1.0f;
-        float initialSpeedMax = 3.0f;
-        float initialSpeed = lerp(initialSpeedMin, initialSpeedMax, random2(seed + uint2(1, 2)));
-        // 예: 위쪽 반구 방향으로 랜덤하게 발사
-        float angle = random2(seed + uint2(3, 4)) * 2.0f * PI;
-        float elevation = random2(seed + uint2(5, 6)) * PI * 0.5f; // 0 ~ 90도
-        //float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation));
-        float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), 0.0f);
-        p.velocity = normalize(randomDir + float3(0, 0.5, 0)) * initialSpeed; // 약간 위쪽으로 편향 + 정규화 후 속도 곱하기
+    //    // 랜덤 속도 설정
+    //    float initialSpeedMin = 1.0f;
+    //    float initialSpeedMax = 3.0f;
+    //    float initialSpeed = lerp(initialSpeedMin, initialSpeedMax, random2(seed + uint2(1, 2)));
+    //    // 예: 위쪽 반구 방향으로 랜덤하게 발사
+    //    float angle = random2(seed + uint2(3, 4)) * 2.0f * PI;
+    //    float elevation = random2(seed + uint2(5, 6)) * PI * 0.5f; // 0 ~ 90도
+    //    //float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation));
+    //    float3 randomDir = float3(cos(angle) * cos(elevation), sin(elevation), 0.0f);
+    //    p.velocity = normalize(randomDir + float3(0, 0.5, 0)) * initialSpeed; // 약간 위쪽으로 편향 + 정규화 후 속도 곱하기
 
-        // 랜덤 생명 주기 설정
-        float minLife = 0.5f;
-        float maxLife = 1.5f;
-        p.life = lerp(minLife, maxLife, random2(seed + uint2(9, 10)));
-    }
-    else {
+    //    // 랜덤 생명 주기 설정
+    //    float minLife = 0.5f;
+    //    float maxLife = 1.5f;
+    //    p.life = lerp(minLife, maxLife, random2(seed + uint2(9, 10)));
+    //}
+    //else 
+    {
         // 중력 적용
         p.velocity += float3(gravity, 0.0) * deltaTime;
 

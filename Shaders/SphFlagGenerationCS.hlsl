@@ -3,14 +3,17 @@
 RWStructuredBuffer<ParticleHash> SortedHashes : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
-void main(uint3 dispatchThreadID : SV_DispatchThreadID)
+void main(uint tid : SV_GroupThreadID,
+    uint3 gtid : SV_DispatchThreadID,
+    uint groupIdx : SV_GroupID)
 {
-    uint index = dispatchThreadID.x;
-    if (index == 0)
-        SortedHashes[index].flag = 1;
-    else if (index >= MAX_PARTICLES)
+    uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
+
+    if (globalIndex == 0)
+        SortedHashes[globalIndex].flag = 1;
+    else if (globalIndex >= MAX_PARTICLES)
         return;
     
-    if (SortedHashes[index - 1].hashValue != SortedHashes[index].hashValue)
-        SortedHashes[index].flag = 1;
+    if (SortedHashes[globalIndex - 1].hashValue != SortedHashes[globalIndex].hashValue)
+        SortedHashes[globalIndex].flag = 1;
 }

@@ -3,22 +3,30 @@
 StructuredBuffer<ParticleHash> SortedParticleHashes : register(t0);
 StructuredBuffer<ScanResult> ScanResults : register(t1);
 RWStructuredBuffer<CompactCell> CompactCells : register(u0);
+RWStructuredBuffer<int> CellMap : register(u1);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
-void main(uint tid       : SV_GroupThreadID,
+void main(uint tid : SV_GroupThreadID,
 	uint3 gtid : SV_DispatchThreadID,
 	uint groupIdx : SV_GroupID)
 {
 	uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
-	uint maxGroupCnt = ScanResults[MAX_PARTICLES - 1].groupID + 1;
+	uint maxGroupCnt = ScanResults[MAX_PARTICLES - 1].groupID + SortedParticleHashes[MAX_PARTICLES - 1].flag;
+
+	uint groupId = ScanResults[globalIndex].groupID;
+
+	if (groupId >= maxGroupCnt)
+		return;
 
 	if (SortedParticleHashes[globalIndex].flag == 1)
 	{
-		CompactCells[globalIndex].hashValue = SortedParticleHashes[globalIndex].hashValue;
-		CompactCells[globalIndex].startIndex = globalIndex;
+		CompactCells[groupId].hashValue = SortedParticleHashes[globalIndex].hashValue;
+		CompactCells[groupId].startIndex = globalIndex;
+		CompactCells[groupId].endIndex = 0;
 	}
-	GroupMemoryBarrierWithGroupSync();
 
-	CompactCells[globalIndex].endIndex = (globalIndex == maxGroupCnt) ? MAX_PARTICLES : CompactCells[globalIndex + 1].startIndex;
+	CompactCells[groupId].endIndex = (groupId == maxGroupCnt - 1) ? MAX_PARTICLES - 1 : CompactCells[groupId + 1].startIndex;
+
+	CellMap[CompactCells[groupId].hashValue] = groupId;
 }

@@ -511,7 +511,6 @@ void MainEngine::UpdateGUI()
 			}
 			else if (buttonIdx == SPH)
 			{
-
 				ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable;
 
 				if (ImGui::BeginTable("SphTable", 2, flags))

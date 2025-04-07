@@ -280,9 +280,6 @@
     <FxCompile Include="Shaders\SphScatterCompactCell.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphCalcEndIndicesCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\SphLocalScanBlockCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>

@@ -45,7 +45,6 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphLocalScanBlockCS;
 	ComPtr<IDxcBlob> sphFinalAdditionCS;
 	ComPtr<IDxcBlob> sphScatterCompactCellCS;
-	ComPtr<IDxcBlob> sphCalcEndIndicesCS;
 	ComPtr<IDxcBlob> sphCS;
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
@@ -101,7 +100,6 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphLocalScanBlockCSPSO;
 	ComPtr<ID3D12PipelineState> sphFinalAdditionCSPSO;
 	ComPtr<ID3D12PipelineState> sphScatterCompactCellCSPSO;
-	ComPtr<ID3D12PipelineState> sphCalcEndIndicesCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -379,7 +377,6 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphLocalScanBlockCS.hlsl", L"cs_6_0", sphLocalScanBlockCS);
 	CreateShader(device, L"SphFinalAdditionCS.hlsl", L"cs_6_0", sphFinalAdditionCS);
 	CreateShader(device, L"SphScatterCompactCell.hlsl", L"cs_6_0", sphScatterCompactCellCS);
-	CreateShader(device, L"SphCalcEndIndicesCS.hlsl", L"cs_6_0", sphCalcEndIndicesCS);
 	CreateShader(device, L"SphCS.hlsl", L"cs_6_0", sphCS);
 	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
 	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
@@ -726,12 +723,6 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	sphScatterCompactCellCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphScatterCompactCellCSPSODesc, IID_PPV_ARGS(&sphScatterCompactCellCSPSO)));
 	
-	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcEndIndicesCSPSODesc = {};
-	sphCalcEndIndicesCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
-	sphCalcEndIndicesCSPSODesc.CS = { sphCalcEndIndicesCS->GetBufferPointer(), sphCalcEndIndicesCS->GetBufferSize() };
-	sphCalcEndIndicesCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcEndIndicesCSPSODesc, IID_PPV_ARGS(&sphCalcEndIndicesCSPSO)));
-
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCSPSODesc = {};
 	sphCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphCSPSODesc.CS = { sphCS->GetBufferPointer(), sphCS->GetBufferSize() };

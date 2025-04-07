@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 7
+#define STRUCTURED_CNT 8
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -77,8 +77,8 @@ public:
 		float p3;
 	};
 
-	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
-	float m_maxBounds[3] = { 4.0f, 4.0f, 0.0f };
+	float m_minBounds[3] = { -2.0f, -2.0f, 0.0f };
+	float m_maxBounds[3] = { 2.0f, 2.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -104,11 +104,10 @@ private:
 	const UINT m_scanResultDataCnt = static_cast<UINT>((m_maxParticles) / m_groupSizeX);
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
 	const UINT m_compactCellDataCnt = m_cellCnt;
+	const UINT m_cellMapDataSize = sizeof(int);
+	const UINT m_cellMapDataCnt = m_cellCnt;
 
 	vector<Particle> m_particles;
-	vector<ParticleHash> m_particlesHashes;
-	vector<ScanResult> m_localScan;
-	vector<ScanResult> m_partialSums;
 
 	// Ping-Pong       | SimParams | Hash    |
 	// SRV UAV SRV UAV | CBV       | SRV UAV |
@@ -141,6 +140,7 @@ private:
 	UINT m_blockIdx = 4;
 	UINT m_blockSumIdx = 5;
 	UINT m_compactCellIdx = 6;
+	UINT m_cellMapIdx = 7;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
@@ -154,5 +154,6 @@ private:
 	void FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
 };
