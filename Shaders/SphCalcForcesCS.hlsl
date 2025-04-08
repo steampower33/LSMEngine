@@ -1,10 +1,11 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<ParticleHash> SortedHashes : register(t0);
-StructuredBuffer<CompactCell> CompactCells : register(t1);
-StructuredBuffer<int> CellMap : register(t2);
+StructuredBuffer<Particle> ParticlesInput : register(t0);
+//StructuredBuffer<ParticleHash> SortedHashes : register(t1);
+//StructuredBuffer<CompactCell> CompactCells : register(t2);
+//StructuredBuffer<int> CellMap : register(t3);
 
-RWStructuredBuffer<Particle> Particles : register(u0);
+RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -15,9 +16,9 @@ void main(uint tid : SV_GroupThreadID,
 
 	if (index >= maxParticles) return;
 
-	Particle p_i = Particles[index];
+	Particle p_i = ParticlesInput[index];
 
-	float radius = p_i.radius * 2;
+	float h = cellSize;
 
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
 	float3 viscosityForce = float3(0.0, 0.0, 0.0);
@@ -33,7 +34,7 @@ void main(uint tid : SV_GroupThreadID,
 		// 자기자신 제외
 		if (index == j) continue;
 
-		Particle p_j = Particles[j];
+		Particle p_j = ParticlesInput[j];
 
 		float rho_j = p_j.density;
 		float pressure_j = p_j.pressure;
@@ -43,7 +44,7 @@ void main(uint tid : SV_GroupThreadID,
 
 		float dist = length(x_ij);
 
-		if (dist >= radius)
+		if (dist >= h)
 			continue;
 
 		if (dist < 1e-3f)
@@ -52,15 +53,17 @@ void main(uint tid : SV_GroupThreadID,
 		float3 gradPressure =
 			rho_i * mass *
 			(pressure_i / (rho_i * rho_i) + pressure_j / (rho_j * rho_j)) *
-			CubicSplineGrad(dist * 2.0 / radius) * x_ij / dist;
+			CubicSplineGrad(dist / h) * x_ij / dist;
 		float3 laplacianVelocity =
 			2.0 * mass / rho_j * (vel_i - vel_j) /
-			(dist * dist + 0.01 * radius * radius) *
-			CubicSplineGrad(dist * 2.0 / radius) * dot(x_ij, x_ij / dist);
+			(dist * dist + 0.01f * h * h) *
+			CubicSplineGrad(dist / h) * dot(x_ij, x_ij / dist);
 
 		pressureForce -= mass / rho_i * gradPressure;
 		viscosityForce += mass * viscosity * laplacianVelocity;
 	}
-	Particles[index].force = pressureForce + viscosityForce;
 
+	p_i.force = pressureForce + viscosityForce + externalForce;
+
+	ParticlesOutput[index] = p_i;
 }

@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 7
+#define STRUCTURED_CNT 8
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -72,11 +72,11 @@ public:
 
 		int gridDimZ;
 		UINT maxParticles;
-		float mass = 1.0f;
-		float pressureCoeff = 0.1f;
+		float mass = 4.0f;
+		float pressureCoeff = 0.5f;
 
-		float density0 = 10.0f;
-		float viscosity = 10.0f;
+		float density0 = 0.5f;
+		float viscosity = 1.0f;
 	};
 
 	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
@@ -90,10 +90,10 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
-	const UINT m_maxParticles = 16;
+	const UINT m_maxParticles = 8192;
 	const UINT m_groupSizeX = 512;
-	const float m_radius = 1.0f / 16.0f;
-	float m_cellSize = m_radius * 4;
+	const float m_radius = 0.5f / 16.0f;
+	float m_cellSize = m_radius * 2.0f;
 	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
 	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];
 	float m_gridDimZ = m_maxBounds[2] - m_minBounds[2];
@@ -135,13 +135,14 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_constantBufferCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferCbvGpuHandle;
 
-	UINT m_particleIdx = 0;
-	UINT m_hashIdx = 1;
-	UINT m_scanIdx = 2;
-	UINT m_blockIdx = 3;
-	UINT m_blockSumIdx = 4;
-	UINT m_compactCellIdx = 5;
-	UINT m_cellMapIdx = 6;
+	UINT m_particleA = 1;
+	UINT m_particleB = 0;
+	UINT m_hashIdx = 2;
+	UINT m_scanIdx = 3;
+	UINT m_blockIdx = 4;
+	UINT m_blockSumIdx = 5;
+	UINT m_compactCellIdx = 6;
+	UINT m_cellMapIdx = 7;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(

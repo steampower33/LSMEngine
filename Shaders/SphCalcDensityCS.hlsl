@@ -1,10 +1,11 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<ParticleHash> SortedHashes : register(t0);
-StructuredBuffer<CompactCell> CompactCells : register(t1);
-StructuredBuffer<int> CellMap : register(t2);
+StructuredBuffer<Particle> ParticlesInput : register(t0);
+//StructuredBuffer<ParticleHash> SortedHashes : register(t1);
+//StructuredBuffer<CompactCell> CompactCells : register(t2);
+//StructuredBuffer<int> CellMap : register(t3);
 
-RWStructuredBuffer<Particle> Particles : register(u0);
+RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -14,23 +15,25 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= maxParticles) return;
 
-	Particle p = Particles[index];
-	float radius = p.radius * 2;
+	Particle p = ParticlesInput[index];
 
-	float density = 0.0;
+	float h = cellSize;
+
+	p.density = 0.0;
 	for (int j = 0; j < maxParticles; j++)
 	{
 		if (index == j) continue;
 
-		Particle p_j = Particles[j];
+		Particle p_j = ParticlesInput[j];
 
 		float dist = length(p.position - p_j.position);
 
-		if (dist >= radius)
+		if (dist >= h)
 			continue;
 
-		density += mass * CubicSpline(dist * 2.0f / radius);
+		p.density += mass * CubicSpline(dist / h);
 	}
-	Particles[index].density = density;
-	Particles[index].pressure = pressureCoeff * (pow(density / density0, 7.0f) - 1.0);
+	p.pressure = pressureCoeff * (pow(p.density / density0, 7.0f) - 1.0);
+
+	ParticlesOutput[index] = p;
 }
