@@ -524,6 +524,26 @@ void MainEngine::UpdateGUI()
 					flag += DrawTableRow("Max Bounds", [&]() {
 						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->m_maxBounds, -3.0f, 3.0f);
 						});
+
+					flag += DrawTableRow("Mass", [&]() {
+						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 10.0f);
+						});
+
+					flag += DrawTableRow("PressureCoeff", [&]() {
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 10.0f);
+						});
+
+					flag += DrawTableRow("Density0", [&]() {
+						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 10.0f);
+						});
+					
+					flag += DrawTableRow("Viscosity", [&]() {
+						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 10.0f);
+						});
+					
+					flag += DrawTableRow("CellSize", [&]() {
+						return ImGui::SliderFloat("##CellSize", &m_sphSimulator->m_cellSize, 0.1f, 5.0f);
+						});
 					ImGui::EndTable();
 				}
 			}

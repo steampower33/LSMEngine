@@ -286,7 +286,13 @@
     <FxCompile Include="Shaders\SphFinalAdditionCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphCalcDensityForcesCS.hlsl">
+    <FxCompile Include="Shaders\SphCalcDensityCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphCalcForcesCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphClearCellMapCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -14,7 +14,7 @@ void main(uint tid       : SV_GroupThreadID,
     uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
     uint loadedFlag = 0;
-    if (globalIndex < MAX_PARTICLES)
+    if (globalIndex < maxParticles)
     {
         loadedFlag = LocalScan[globalIndex].groupID;
     }
@@ -56,7 +56,7 @@ void main(uint tid       : SV_GroupThreadID,
         GroupMemoryBarrierWithGroupSync();
     }
 
-    if (globalIndex < MAX_PARTICLES)
+    if (globalIndex < maxParticles)
     {
         PartialSum[globalIndex].groupID = shMem[tid];
     }

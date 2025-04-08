@@ -1,20 +1,5 @@
 #include "SphCommon.hlsli"
 
-cbuffer SimParams : register(b0) {
-    float deltaTime;
-    float2 gravity;
-    uint numParticles;
-    float3 minBounds;
-    uint gridDimX;
-    float3 maxBounds;
-    uint gridDimY;
-
-    uint gridDimZ;
-    float cellSize;
-    uint cellCnt;
-    float p3;
-};
-
 RWStructuredBuffer<Particle> Particles : register(u0);
 RWStructuredBuffer<ParticleHash> ParticleHashes : register(u1);
 
@@ -24,7 +9,7 @@ void main(uint tid : SV_GroupThreadID,
     uint groupIdx : SV_GroupID)
 {
     uint index = groupIdx.x * GROUP_SIZE_X + tid;
-    if (index >= MAX_PARTICLES) return; // 경계 체크
+    if (index >= maxParticles) return; // 경계 체크
 
     Particle p = Particles[index];
     ParticleHash result = ParticleHashes[index];

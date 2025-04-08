@@ -63,8 +63,10 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphLocalScanCS;
 	extern ComPtr<IDxcBlob> sphLocalScanBlockCS;
 	extern ComPtr<IDxcBlob> sphFinalAdditionCS;
+	extern ComPtr<IDxcBlob> sphClearCellMapCS;
 	extern ComPtr<IDxcBlob> sphScatterCompactCellCS;
-	extern ComPtr<IDxcBlob> sphCalcDensityForcesCS;
+	extern ComPtr<IDxcBlob> sphCalcDensityCS;
+	extern ComPtr<IDxcBlob> sphCalcForcesCS;
 	extern ComPtr<IDxcBlob> sphCS;
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
@@ -123,8 +125,10 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphLocalScanBlockCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphFinalAdditionCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphClearCellMapCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphScatterCompactCellCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphCalcDensityForcesCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
 

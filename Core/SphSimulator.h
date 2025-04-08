@@ -30,7 +30,7 @@ public:
 	// 입자 구조
 	struct Particle {
 		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float size = 0.0f;
+		float radius = 0.0f;
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
 		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
@@ -60,23 +60,27 @@ public:
 
 	// 시뮬레이션 파라미터 (상수 버퍼용)
 	__declspec(align(256)) struct SimParams {
-		float deltaTime = 0.0f;
-		XMFLOAT2 gravity = XMFLOAT2(0.0f, -9.8f); // 중력
+		float deltaTime;
 		UINT numParticles;
-
-		XMFLOAT3 minBounds;
-		UINT gridDimX;
-		XMFLOAT3 maxBounds;
-		UINT gridDimY;
-
-		UINT gridDimZ;
 		float cellSize;
 		UINT cellCnt;
-		float p3;
+
+		XMFLOAT3 minBounds;
+		int gridDimX;
+		XMFLOAT3 maxBounds;
+		int gridDimY;
+
+		int gridDimZ;
+		UINT maxParticles;
+		float mass = 1.0f;
+		float pressureCoeff = 0.1f;
+
+		float density0 = 10.0f;
+		float viscosity = 10.0f;
 	};
 
-	float m_minBounds[3] = { -2.0f, -2.0f, 0.0f };
-	float m_maxBounds[3] = { 2.0f, 2.0f, 0.0f };
+	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
+	float m_maxBounds[3] = { 4.0f, 4.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -86,20 +90,21 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
-private:
-	const UINT m_maxParticles = 1024;
+	const UINT m_maxParticles = 16;
 	const UINT m_groupSizeX = 512;
 	const float m_radius = 1.0f / 16.0f;
-	const float m_cellSize = m_radius * 4.0f;
+	float m_cellSize = m_radius * 4;
 	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
 	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];
 	float m_gridDimZ = m_maxBounds[2] - m_minBounds[2];
 	UINT m_cellCnt = static_cast<UINT>(m_gridDimX / m_cellSize) * static_cast<UINT>(m_gridDimY / m_cellSize);
 
+private:
+
 	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
 	const UINT m_scanResultDataSize = sizeof(ScanResult);
-	const UINT m_scanResultDataCnt = static_cast<UINT>((m_maxParticles) / m_groupSizeX);
+	const UINT m_scanResultDataCnt = static_cast<UINT>((m_maxParticles - 1 + m_groupSizeX) / m_groupSizeX);
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
 	const UINT m_compactCellDataCnt = m_cellCnt;
 	const UINT m_cellMapDataSize = sizeof(int);

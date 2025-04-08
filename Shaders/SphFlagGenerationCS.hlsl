@@ -11,7 +11,7 @@ void main(uint tid : SV_GroupThreadID,
 
     if (globalIndex == 0)
         SortedHashes[globalIndex].flag = 1;
-    else if (globalIndex >= MAX_PARTICLES)
+    else if (globalIndex >= maxParticles)
         return;
     
     if (SortedHashes[globalIndex - 1].hashValue != SortedHashes[globalIndex].hashValue)

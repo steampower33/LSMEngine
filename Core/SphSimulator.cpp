@@ -47,11 +47,11 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	SetBarrier(commandList, m_structuredBuffer[4],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	// CompactCell 초기 상태 -> SRV - 맨처음 쉐이더에서 초기화
+	// CompactCell 초기 상태 -> SRV
 	SetBarrier(commandList, m_structuredBuffer[5],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	// CellMap 초기 상태 -> SRV - 맨처음 쉐이더에서 초기화
+	// CellMap 초기 상태 -> SRV
 	SetBarrier(commandList, m_structuredBuffer[6],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
@@ -106,17 +106,20 @@ void SphSimulator::GenerateParticles()
 
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> dp(-1.0f, 1.0f);
+	uniform_real_distribution<float> dp(-3.0f, 3.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
-	const int n = 1 << 5;
+	const int n = 1 << 2;
 	for (UINT i = 0; i < m_maxParticles; i++)
 	{
-		m_particles[i].position.x = m_minBounds[0] +
+		m_particles[i].position.x = dp(gen);
+		m_particles[i].position.y = dp(gen);
+		/*m_particles[i].position.x = m_minBounds[0] +
 			(m_maxBounds[0] - m_minBounds[0] - (m_maxBounds[0] - m_minBounds[0]) / n) / n * (1 + (i % n));
 		m_particles[i].position.y = m_minBounds[1] +
 			(m_maxBounds[1] - m_minBounds[1] - (m_maxBounds[1] - m_minBounds[1]) / n) / n * (1 + (i / n));
-		m_particles[i].size = m_radius;
+		*/
+		m_particles[i].radius = m_radius;
 	}
 }
 
@@ -155,11 +158,12 @@ void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
 void SphSimulator::Update(float dt)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = dt;
+	m_constantBufferData.deltaTime = 1.0f / 2400;
+;
 	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
-	m_constantBufferData.cellSize = m_cellSize;
 	m_constantBufferData.cellCnt = m_cellCnt;
+	m_constantBufferData.maxParticles = m_maxParticles;
 	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
 	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);
 	m_constantBufferData.gridDimZ = static_cast<UINT>((m_maxBounds[2] - m_minBounds[2]) / m_cellSize);
@@ -301,19 +305,31 @@ void SphSimulator::FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList)
 
 void SphSimulator::ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
+
+	// CellMap
+	commandList->SetPipelineState(Graphics::sphClearCellMapCSPSO.Get());
+
+	SetBarrier(commandList, m_structuredBuffer[m_cellMapIdx], // CellMap : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetComputeRootDescriptorTable(4, m_particleBufferUavGpuHandle[m_cellMapIdx]);
+
+	UINT cellDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
+	commandList->Dispatch(cellDispatchX, 1, 1);
+
+	// ScatterCompactCell
 	commandList->SetPipelineState(Graphics::sphScatterCompactCellCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);    // Hash : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_compactCellIdx], // CompactCell : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	SetUAVBarrier(commandList, m_structuredBuffer[m_scanIdx]);    // Scan : UAV -> SRV
 	SetBarrier(commandList, m_structuredBuffer[m_scanIdx],	      // Same
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetBarrier(commandList, m_structuredBuffer[m_cellMapIdx],     // CellMap : SRV -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_compactCellIdx], // CompactCell : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellMapIdx]); // CellMap : UAV -> UAV
 	
 	commandList->SetComputeRootDescriptorTable(0, m_particleBufferSrvGpuHandle[m_hashIdx]);
 	commandList->SetComputeRootDescriptorTable(1, m_particleBufferSrvGpuHandle[m_scanIdx]);
@@ -322,11 +338,13 @@ void SphSimulator::ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandL
 
 	UINT dispatchX = (m_maxParticles + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
+	
 }
 
 void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	commandList->SetPipelineState(Graphics::sphCalcDensityForcesCSPSO.Get());
+	// Density
+	commandList->SetPipelineState(Graphics::sphCalcDensityCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleIdx]);    // Particle : UAV -> UAV
 	SetUAVBarrier(commandList, m_structuredBuffer[m_compactCellIdx]); // CompactCell : UAV -> SRV
@@ -345,6 +363,14 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 	commandList->SetComputeRootDescriptorTable(8, m_constantBufferCbvGpuHandle); // CBV
 
 	UINT dispatchX = (m_maxParticles + m_groupSizeX - 1) / m_groupSizeX;
+	commandList->Dispatch(dispatchX, 1, 1);
+
+	// Forces
+	commandList->SetPipelineState(Graphics::sphCalcForcesCSPSO.Get());
+	
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleIdx]);    // Particle : UAV -> UAV
+	
+	// 디스크립터  설정은 Density와 동일
 	commandList->Dispatch(dispatchX, 1, 1);
 }
 
