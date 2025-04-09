@@ -37,16 +37,21 @@ void main(uint tid : SV_GroupThreadID,
 		float rndVelY = random(baseSeed + 4u);
 		float rndLife = random(baseSeed + 5u);
 
-		p.position = float3(lerp(minBounds.x, maxBounds.x, rndPosX),
+		/*p.position = float3(lerp(minBounds.x, maxBounds.x, rndPosX),
 			lerp(minBounds.y, maxBounds.y, rndPosY),
+			0.0f);*/
+
+		p.position = float3(lerp(3.0f, maxBounds.x, rndPosX),
+			lerp(3.0, maxBounds.y, rndPosY),
 			0.0f);
 
 		float vRange = 1.0f;
-		p.velocity = float3(lerp(-vRange, vRange, rndVelX),
+		//lerp(-vRange, vRange, rndVelX)
+		p.velocity = float3(-1.0f,
 			lerp(-vRange, vRange, rndVelY),
 			0.0f);
 
-		p.life = 10.0f;
+		p.life = lerp(0, 20.0, rndLife);
 	}
 	else
 	{
@@ -77,7 +82,7 @@ void main(uint tid : SV_GroupThreadID,
 			p.position.y = maxBounds.y - radius + epsilon;
 		}
 
-		//p.life -= deltaTime;
+		p.life -= deltaTime;
 
 	}
 	// ¾²±â

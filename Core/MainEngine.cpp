@@ -190,6 +190,7 @@ void MainEngine::UpdateGUI()
 	ImGui::NewFrame();
 
 	ImGui::SetNextWindowSize(ImVec2(m_width, m_height), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 	ImGui::Begin("Main Editor", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 
 	{
@@ -206,7 +207,7 @@ void MainEngine::UpdateGUI()
 
 		// 왼쪽 패널의 너비 설정
 		float leftPaneWidth = 60.0f;
-		static int buttonIdx = 0;
+		static int buttonIdx = SPH;
 		ImVec2 buttonSize(leftPaneWidth, 30); // 패널 너비와 동일하게 설정
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f); // 자식 패널의 테두리 크기
@@ -525,25 +526,83 @@ void MainEngine::UpdateGUI()
 						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->m_maxBounds, -3.0f, 3.0f);
 						});
 
+					float minValue = 0.05f;
+					float maxValue = 10.0f;
+					float stepValue = 0.05f;
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 5.0f);
+						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, minValue, maxValue);
 						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##MassMinusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.mass - stepValue >= minValue)
+							m_sphSimulator->m_constantBufferData.mass -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##MassPlusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.mass + stepValue <= maxValue)
+							m_sphSimulator->m_constantBufferData.mass += stepValue;
+					}
 
+					float pressureCoeffMin = 1.0f;
+					float pressureCoeffMax = 1000.0f;
+					float pressureCoeffStep = 5.0f;
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 5.0f);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, pressureCoeffMin, pressureCoeffMax);
 						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff - pressureCoeffStep >= pressureCoeffMin)
+							m_sphSimulator->m_constantBufferData.pressureCoeff -= pressureCoeffStep;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff + pressureCoeffStep <= pressureCoeffMax)
+							m_sphSimulator->m_constantBufferData.pressureCoeff += pressureCoeffStep;
+					}
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 5.0f);
+						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, minValue, maxValue);
 						});
-					
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##Density0MinusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.density0 - stepValue >= minValue)
+							m_sphSimulator->m_constantBufferData.density0 -= stepValue;
+					}
+
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##Density0PlusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.density0 + stepValue <= maxValue)
+							m_sphSimulator->m_constantBufferData.density0 += stepValue;
+					}
+
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 5.0f);
+						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, minValue, maxValue);
 						});
-					
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##ViscosityMinusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.viscosity - stepValue >= minValue)
+							m_sphSimulator->m_constantBufferData.viscosity -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##ViscosityPlusBtn")) {
+						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= maxValue)
+							m_sphSimulator->m_constantBufferData.viscosity += stepValue;
+					}
+
 					flag += DrawTableRow("CellSize", [&]() {
-						return ImGui::SliderFloat("##CellSize", &m_sphSimulator->m_cellSize, 0.1f, 5.0f);
+						return ImGui::SliderFloat("##CellSize", &m_sphSimulator->m_cellSize, minValue, maxValue);
 						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##CellSizeMinusBtn")) {
+						if (m_sphSimulator->m_cellSize - stepValue >= minValue)
+							m_sphSimulator->m_cellSize -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##CellSizePlusBtn")) {
+						if (m_sphSimulator->m_cellSize + stepValue <= maxValue)
+							m_sphSimulator->m_cellSize += stepValue;
+					}
+
 					ImGui::EndTable();
 				}
 			}
@@ -719,10 +778,10 @@ void MainEngine::Update(float dt)
 	{
 		XMVECTOR minB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.minBounds);
 		XMVECTOR maxB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.maxBounds);
-		
+
 		XMVECTOR size = XMVectorScale(XMVectorSubtract(maxB, minB), 0.5f);
 		XMVECTOR center = XMVectorScale(XMVectorAdd(minB, maxB), 0.5f);
-		
+
 		XMStoreFloat3(&m_boundsBox->m_scale, size);
 		XMStoreFloat4(&m_boundsBox->m_position, center);
 		m_boundsBox->Update();

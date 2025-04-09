@@ -72,11 +72,11 @@ public:
 
 		int gridDimZ;
 		UINT maxParticles;
-		float mass = 2.0f;
-		float pressureCoeff = 1.0f;
+		float mass = 0.5f;
+		float pressureCoeff = 5.0f;
 
 		float density0 = 1.0f;
-		float viscosity = 1.0f;
+		float viscosity = 0.5f;
 	};
 
 	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
@@ -90,7 +90,7 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
-	const UINT m_maxParticles = 8192;
+	const UINT m_maxParticles = 4096;
 	const UINT m_groupSizeX = 512;
 	const float m_radius = 0.5f / 16.0f;
 	float m_cellSize = m_radius * 4.0f;

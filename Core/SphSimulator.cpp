@@ -111,19 +111,21 @@ void SphSimulator::GenerateParticles()
 
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> dp(-2.0f, 2.0f);
+	uniform_real_distribution<float> dpx(m_minBounds[0], m_maxBounds[0]);
+	uniform_real_distribution<float> dpy(m_minBounds[1], 2.0f);
+	uniform_real_distribution<float> dl(0.0f, 10.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
 	const int n = 1 << 4;
 	for (UINT i = 0; i < m_maxParticles; i++)
 	{
-		/*m_particles[i].position.x = dp(gen);
-		m_particles[i].position.y = dp(gen);*/
+		m_particles[i].position.x = dpx(gen);
+		m_particles[i].position.y = dpy(gen);
 		/*m_particles[i].position.x = m_minBounds[0] +
 			(m_maxBounds[0] - m_minBounds[0] - (m_maxBounds[0] - m_minBounds[0]) / n) / n * (1 + (i % n));
 		m_particles[i].position.y = m_minBounds[1] +
 			(m_maxBounds[1] - m_minBounds[1] - (m_maxBounds[1] - m_minBounds[1]) / n) / n * (1 + (i / n));*/
-		
+		m_particles[i].life = dl(gen);
 		m_particles[i].radius = m_radius;
 	}
 }
