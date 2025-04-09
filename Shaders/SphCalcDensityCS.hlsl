@@ -31,7 +31,9 @@ void main(uint tid : SV_GroupThreadID,
 		if (dist >= h)
 			continue;
 
-		p.density += mass * CubicSpline(dist / h);
+		float w_kernel = CubicSpline(dist / h);
+
+		p.density += mass * w_kernel;
 	}
 	p.pressure = pressureCoeff * (pow(p.density / density0, 7.0f) - 1.0);
 

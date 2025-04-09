@@ -526,19 +526,19 @@ void MainEngine::UpdateGUI()
 						});
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 10.0f);
+						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 5.0f);
 						});
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 10.0f);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 5.0f);
 						});
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 10.0f);
+						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 5.0f);
 						});
 					
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 10.0f);
+						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 5.0f);
 						});
 					
 					flag += DrawTableRow("CellSize", [&]() {

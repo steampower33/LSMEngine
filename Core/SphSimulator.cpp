@@ -131,7 +131,7 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 1.0f / (60.0f * 40.0f);
+	m_constantBufferData.deltaTime = 1.0f / (60.0f * 10.0f);
 
 	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);

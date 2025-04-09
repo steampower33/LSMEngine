@@ -58,6 +58,8 @@ cbuffer SimParams : register(b0) {
 
 float CubicSpline(float q)
 {
+    if (q < 0.0)
+        return 0.0;
     float coeff = 3.0 / (2.0 * PI);
 
     if (q < 1.0)
@@ -70,6 +72,8 @@ float CubicSpline(float q)
 
 float CubicSplineGrad(float q)
 {
+    if (q < 0.0)
+        return 0.0;
     float coeff = 3.0 / (2.0 * PI);
 
     if (q < 1.0)

@@ -50,14 +50,16 @@ void main(uint tid : SV_GroupThreadID,
 		if (dist < 1e-3f)
 			continue;
 
+		float w_kernel = CubicSplineGrad(dist / h);
+
 		float3 gradPressure =
 			rho_i * mass *
 			(pressure_i / (rho_i * rho_i) + pressure_j / (rho_j * rho_j)) *
-			CubicSplineGrad(dist / h) * x_ij / dist;
+			w_kernel * x_ij / dist;
 		float3 laplacianVelocity =
 			2.0 * mass / rho_j * (vel_i - vel_j) /
 			(dist * dist + 0.01f * h * h) *
-			CubicSplineGrad(dist / h) * dot(x_ij, x_ij / dist);
+			w_kernel * dot(x_ij, x_ij / dist);
 
 		pressureForce -= mass / rho_i * gradPressure;
 		viscosityForce += mass * viscosity * laplacianVelocity;
