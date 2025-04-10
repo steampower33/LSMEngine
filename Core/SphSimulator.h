@@ -37,6 +37,8 @@ public:
 		float density = 0.0f;
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
+		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p1;
 	};
 
 	struct ParticleHash
@@ -62,7 +64,7 @@ public:
 	__declspec(align(256)) struct SimParams {
 		float deltaTime;
 		UINT numParticles;
-		float cellSize;
+		float smoothingRadius;
 		UINT cellCnt;
 
 		XMFLOAT3 minBounds;
@@ -72,15 +74,15 @@ public:
 
 		int gridDimZ;
 		UINT maxParticles;
-		float mass = 0.5f;
-		float pressureCoeff = 5.0f;
+		float mass = 1.0f;
+		float pressureCoeff = 0.1f;
 
 		float density0 = 1.0f;
-		float viscosity = 0.5f;
+		float viscosity = 0.1f;
 	};
 
-	float m_minBounds[3] = { -4.0f, -4.0f, 0.0f };
-	float m_maxBounds[3] = { 4.0f, 4.0f, 0.0f };
+	float m_minBounds[3] = { -8.0f, -8.0f, 0.0f };
+	float m_maxBounds[3] = { 8.0f, 8.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -90,9 +92,10 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
-	const UINT m_maxParticles = 4096;
+	const UINT m_maxParticles = 1024;
 	const UINT m_groupSizeX = 512;
-	const float m_radius = 0.5f / 16.0f;
+	const float m_radius = 1.0f / 16.0;
+	float m_smoothingRadius = 1.0f;
 	float m_cellSize = m_radius * 4.0f;
 	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
 	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];

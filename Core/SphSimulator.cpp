@@ -64,7 +64,7 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_constantBufferData.numParticles = m_maxParticles;
 	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
-	m_constantBufferData.cellSize = m_cellSize;
+	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
 	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);
 	m_constantBufferData.gridDimZ = static_cast<UINT>((m_maxBounds[2] - m_minBounds[2]) / m_cellSize);
@@ -116,16 +116,28 @@ void SphSimulator::GenerateParticles()
 	uniform_real_distribution<float> dl(0.0f, 10.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
-	const int n = 1 << 4;
+	const int n = 1 << 5;
+
+	float middle_x = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
+	float middle_y = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
+
+	float spacing = n * m_radius * 2.0f;
+	float min_x = middle_x - spacing;
+	float max_x = middle_x + spacing;
+
+	float min_y = middle_y - spacing;
+	float max_y = middle_y + spacing;
+
 	for (UINT i = 0; i < m_maxParticles; i++)
 	{
-		m_particles[i].position.x = dpx(gen);
-		m_particles[i].position.y = dpy(gen);
-		/*m_particles[i].position.x = m_minBounds[0] +
-			(m_maxBounds[0] - m_minBounds[0] - (m_maxBounds[0] - m_minBounds[0]) / n) / n * (1 + (i % n));
-		m_particles[i].position.y = m_minBounds[1] +
-			(m_maxBounds[1] - m_minBounds[1] - (m_maxBounds[1] - m_minBounds[1]) / n) / n * (1 + (i / n));*/
-		m_particles[i].life = dl(gen);
+		//m_particles[i].position.x = dpx(gen);
+		//m_particles[i].position.y = dpy(gen);
+
+		m_particles[i].position.x = min_x +
+			(max_x - min_x - (max_x - min_x) / n) / n * (1 + (i % n));
+		m_particles[i].position.y = min_y +
+			(max_y - min_y - (max_y - min_y) / n) / n * (1 + (i / n));
+		//m_particles[i].life = dl(gen);
 		m_particles[i].radius = m_radius;
 	}
 }
@@ -133,12 +145,12 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 1.0f / (60.0f * 10.0f);
+	m_constantBufferData.deltaTime = 1.0f / 120.0f;
 
 	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
 	m_constantBufferData.cellCnt = m_cellCnt;
-	m_constantBufferData.cellSize = m_cellSize;
+	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.maxParticles = m_maxParticles;
 	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
 	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);

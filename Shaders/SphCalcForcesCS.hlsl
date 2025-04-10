@@ -18,16 +18,9 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	float h = cellSize;
-
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
 	float3 viscosityForce = float3(0.0, 0.0, 0.0);
 	float3 externalForce = float3(0.0, -9.8f * mass, 0.0);
-
-	float rho_i = p_i.density;
-	float pressure_i = p_i.pressure;
-	float3 pos_i = p_i.position;
-	float3 vel_i = p_i.velocity;
 
 	for (int j = 0; j < maxParticles; j++)
 	{
@@ -36,36 +29,26 @@ void main(uint tid : SV_GroupThreadID,
 
 		Particle p_j = ParticlesInput[j];
 
-		float rho_j = p_j.density;
-		float pressure_j = p_j.pressure;
-		float3 pos_j = p_j.position;
-		float3 vel_j = p_j.velocity;
-		float3 x_ij = pos_i - pos_j;
-
+		float3 x_ij = p_i.predictedPosition - p_j.position;
 		float dist = length(x_ij);
 
-		if (dist >= h)
-			continue;
+		if (dist < 1e-3f) continue;
 
-		if (dist < 1e-3f)
-			continue;
+		float vRange = 1.0f;
+		uint baseSeed = index * 17u;
+		float rndVelX = random(baseSeed + 3u);
+		float rndVelY = random(baseSeed + 4u);
+		/*float3 dir_ij = dist == 0 ? 
+			float3(lerp(-vRange, vRange, rndVelX), lerp(-vRange, vRange, rndVelY), 0.0f) :
+			x_ij / dist;*/
 
-		float w_kernel = CubicSplineGrad(dist / h);
+		float3 dir_ij = x_ij / dist;
 
-		float3 gradPressure =
-			rho_i * mass *
-			(pressure_i / (rho_i * rho_i) + pressure_j / (rho_j * rho_j)) *
-			w_kernel * x_ij / dist;
-		float3 laplacianVelocity =
-			2.0 * mass / rho_j * (vel_i - vel_j) /
-			(dist * dist + 0.01f * h * h) *
-			w_kernel * dot(x_ij, x_ij / dist);
-
-		pressureForce -= mass / rho_i * gradPressure;
-		viscosityForce += mass * viscosity * laplacianVelocity;
+		float slope = SmoothingKernelDerivative(dist, smoothingRadius);
+		float sharedPressure = (p_i.pressure + p_j.pressure) * 0.5;
+		pressureForce -= p_j.pressure * dir_ij * slope * mass / (p_j.density + 1e-3f);
 	}
-
-	p_i.force = pressureForce + viscosityForce + externalForce;
+	p_i.force = pressureForce;
 
 	ParticlesOutput[index] = p_i;
 }

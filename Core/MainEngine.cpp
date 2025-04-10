@@ -543,9 +543,9 @@ void MainEngine::UpdateGUI()
 							m_sphSimulator->m_constantBufferData.mass += stepValue;
 					}
 
-					float pressureCoeffMin = 1.0f;
+					float pressureCoeffMin = 0.1f;
 					float pressureCoeffMax = 1000.0f;
-					float pressureCoeffStep = 5.0f;
+					float pressureCoeffStep = 0.1f;
 					flag += DrawTableRow("PressureCoeff", [&]() {
 						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, pressureCoeffMin, pressureCoeffMax);
 						});
@@ -589,22 +589,24 @@ void MainEngine::UpdateGUI()
 							m_sphSimulator->m_constantBufferData.viscosity += stepValue;
 					}
 
-					flag += DrawTableRow("CellSize", [&]() {
-						return ImGui::SliderFloat("##CellSize", &m_sphSimulator->m_cellSize, minValue, maxValue);
+					flag += DrawTableRow("SmoothingRadius", [&]() {
+						return ImGui::SliderFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, minValue, maxValue);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##CellSizeMinusBtn")) {
-						if (m_sphSimulator->m_cellSize - stepValue >= minValue)
-							m_sphSimulator->m_cellSize -= stepValue;
+					if (ImGui::Button(" - ##SmoothingRadiusMinusBtn")) {
+						if (m_sphSimulator->m_smoothingRadius - stepValue >= minValue)
+							m_sphSimulator->m_smoothingRadius -= stepValue;
 					}
 					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##CellSizePlusBtn")) {
-						if (m_sphSimulator->m_cellSize + stepValue <= maxValue)
-							m_sphSimulator->m_cellSize += stepValue;
+					if (ImGui::Button(" + ##SmoothingRadiusPlusBtn")) {
+						if (m_sphSimulator->m_smoothingRadius + stepValue <= maxValue)
+							m_sphSimulator->m_smoothingRadius += stepValue;
 					}
 
 					ImGui::EndTable();
 				}
+
+				ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			}
 			ImGui::EndChild();
 		}
@@ -1229,7 +1231,7 @@ void MainEngine::ScenePass()
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
 		m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-		const float color[] = { 0.0f, 0.2f, 1.0f, 1.0f };
+		const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 		m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 

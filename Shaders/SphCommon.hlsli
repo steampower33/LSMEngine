@@ -1,6 +1,6 @@
 
 #define PI 3.1415926535
-#define COR 0.8
+#define COR 0.3
 
 struct Particle {
     float3 position;
@@ -11,6 +11,8 @@ struct Particle {
     float density;
     float3 force;
     float pressure;
+    float3 predictedPosition;
+    float p1;
 };
 
 struct ParticleHash
@@ -39,7 +41,7 @@ struct CompactCell
 cbuffer SimParams : register(b0) {
     float deltaTime;
     uint numParticles;
-    float cellSize;
+    float smoothingRadius;
     uint cellCnt;
 
     float3 minBounds;
@@ -56,30 +58,28 @@ cbuffer SimParams : register(b0) {
     float viscosity;
 };
 
-float CubicSpline(float q)
+// 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)
+float random(uint seed)
 {
-    if (q < 0.0)
-        return 0.0;
-    float coeff = 3.0 / (2.0 * PI);
-
-    if (q < 1.0)
-        return coeff * (2.0 / 3.0 - q * q + 0.5 * q * q * q);
-    else if (q < 2.0)
-        return coeff * pow(2.0 - q, 3.0) / 6.0;
-    else // q >= 2.0f
-        return 0.0;
+    seed = seed * 747796405u + 2891336453u;
+    uint result = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
+    result = (result >> 22u) ^ result;
+    // 결과를 [0, 1] 범위의 float로 정규화
+    return float(result) / 4294967295.0f; // 2^32 - 1 로 나눔
 }
 
-float CubicSplineGrad(float q)
+float SmoothingKernel(float dst, float radius)
 {
-    if (q < 0.0)
-        return 0.0;
-    float coeff = 3.0 / (2.0 * PI);
+    if (dst >= radius) return 0;
 
-    if (q < 1.0)
-        return coeff * (-2.0 * q + 1.5 * q * q);
-    else if (q < 2.0)
-        return coeff * -0.5 * (2.0 - q) * (2.0 - q);
-    else // q >= 2.0f
-        return 0.0;
+    float volume = PI * pow(radius, 4) / 6;
+    return (radius - dst) * (radius - dst) / volume;
+}
+
+float SmoothingKernelDerivative(float dst, float radius)
+{
+    if (dst >= radius) return 0;
+
+    float scale = 12 / (PI * pow(radius, 4));
+    return (dst - radius) * scale;
 }

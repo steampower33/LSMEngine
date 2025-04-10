@@ -52,7 +52,7 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		else
+		if (!pEngine->m_isPaused)
 		{
 			pEngine->m_pCurrFR = pEngine->m_frameResources[pEngine->m_frameIndex].get();
 			pEngine->UpdateGUI();
@@ -60,7 +60,13 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 			float deltaTime = ImGui::GetIO().DeltaTime;
 			pEngine->Update(deltaTime);
 			pEngine->Render();
+
+			if (pEngine->m_isStart)
+			{
+				pEngine->m_isPaused = true;
+			}
 		}
+		
 	}
 
 	pEngine->Destroy();
@@ -142,13 +148,18 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		{
 			PostQuitMessage(0);
 		}
-		if (wParam == VK_SPACE)
+		if (wParam == VK_SHIFT)
 		{
 			pEngine->m_lightRot = !pEngine->m_lightRot;
 		}
 		if (wParam == 'F')
 		{
 			pEngine->m_camera->m_useFirstPersonView = !pEngine->m_camera->m_useFirstPersonView;
+		}
+		if (wParam == VK_SPACE)
+		{
+			pEngine->m_isPaused = !pEngine->m_isPaused;
+			pEngine->m_isStart = false;
 		}
 		pEngine->m_camera->KeyDown(wParam);
 		break;

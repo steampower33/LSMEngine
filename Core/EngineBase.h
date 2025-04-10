@@ -69,6 +69,9 @@ public:
 	UINT m_cbvSrvSize = 0;
 	UINT m_dsvSize = 0;
 
+	bool m_isPaused = false;
+	bool m_isStart = true;
+
 	float m_width;
 	float m_height;
 

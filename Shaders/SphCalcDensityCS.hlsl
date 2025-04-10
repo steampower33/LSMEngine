@@ -15,27 +15,26 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= maxParticles) return;
 
-	Particle p = ParticlesInput[index];
+	Particle p_i = ParticlesInput[index];
 
-	float h = cellSize;
+	p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
 
-	p.density = 0.0;
+	p_i.density = 0.0;
 	for (int j = 0; j < maxParticles; j++)
 	{
 		if (index == j) continue;
 
 		Particle p_j = ParticlesInput[j];
 
-		float dist = length(p.position - p_j.position);
+		float dist = length(p_i.predictedPosition - p_j.position);
 
-		if (dist >= h)
-			continue;
+		if (dist < 1e-3f) continue;
 
-		float w_kernel = CubicSpline(dist / h);
+		float influence = SmoothingKernel(dist, smoothingRadius);
 
-		p.density += mass * w_kernel;
+		p_i.density += mass * influence;
 	}
-	p.pressure = pressureCoeff * (pow(p.density / density0, 7.0f) - 1.0);
+	p_i.pressure = (p_i.density - density0) * pressureCoeff;
 
-	ParticlesOutput[index] = p;
+	ParticlesOutput[index] = p_i;
 }

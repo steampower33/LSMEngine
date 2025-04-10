@@ -158,8 +158,8 @@ static void CreateBuffer(
 	D3D12_CLEAR_VALUE clearValue = {};
 	clearValue.Format = format; // 텍스처의 포맷
 	clearValue.Color[0] = 0.0f; // Red
-	clearValue.Color[1] = 0.2f; // Green
-	clearValue.Color[2] = 1.0f; // Blue
+	clearValue.Color[1] = 0.0f; // Green
+	clearValue.Color[2] = 0.0f; // Blue
 	clearValue.Color[3] = 1.0f; // Alpha
 
 	ThrowIfFailed(device->CreateCommittedResource(
