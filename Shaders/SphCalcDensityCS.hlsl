@@ -17,6 +17,9 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	p_i.velocityHalfStep = p_i.velocity + p_i.currentAcceleration * (deltaTime / 2.0f);
+	p_i.position += p_i.velocityHalfStep * deltaTime;
+
 	p_i.density = 0.0;
 	for (int j = 0; j < maxParticles; j++)
 	{
@@ -28,8 +31,7 @@ void main(uint tid : SV_GroupThreadID,
 
 		p_i.density += mass * influence;
 	}
-	if (p_i.density == 0.0)
-		p_i.p1 = index;
+
 	p_i.pressure = pressureCoeff * (p_i.density - density0);
 
 	ParticlesOutput[index] = p_i;

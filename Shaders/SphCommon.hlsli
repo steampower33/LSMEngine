@@ -10,8 +10,10 @@ struct Particle {
     float density;
     float3 force;
     float pressure;
-    float3 predictedPosition;
+    float3 velocityHalfStep;
     float p1;
+    float3 currentAcceleration;
+    float p2;
 };
 
 struct ParticleHash

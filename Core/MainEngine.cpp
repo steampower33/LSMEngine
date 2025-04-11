@@ -544,7 +544,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, maxValue);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 100.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
@@ -553,7 +553,7 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= maxValue)
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 100.0f)
 							m_sphSimulator->m_constantBufferData.pressureCoeff += stepValue;
 					}
 

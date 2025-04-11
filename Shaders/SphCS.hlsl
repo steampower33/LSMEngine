@@ -18,8 +18,8 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p = ParticlesInput[index];
 
-	p.velocity += p.force / p.density * deltaTime;
-	p.position += p.velocity * deltaTime;
+	p.currentAcceleration = p.force / p.density;
+	p.velocity = p.velocityHalfStep + p.currentAcceleration * (deltaTime / 2.0f);
 
 	float radius = p.radius;
 	if (p.position.x - radius < minBounds.x && p.velocity.x < 0.0)

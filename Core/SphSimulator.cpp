@@ -116,31 +116,26 @@ void SphSimulator::GenerateParticles()
 	uniform_real_distribution<float> dl(0.0f, 10.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
-	const int n = 1 << 6;
+	float midX = (m_maxBounds[0] + m_minBounds[0]) * 0.5f;
+	float midY = (m_maxBounds[1] + m_minBounds[1]) * 0.5f;
 
-	float middle_x = (m_maxBounds[0] + m_minBounds[0]) * 0.5f;
-	float middle_y = (m_maxBounds[1] + m_minBounds[1]) * 0.5f;
+	float spacingX = m_nX * m_radius;
+	float minX = midX - spacingX;
+	float maxX = midX + spacingX;
 
-	float spacing = n * m_radius;
-	float min_x = middle_x - spacing;
-	float max_x = middle_x + spacing;
-
-	float min_y = middle_y - spacing;
-	float max_y = middle_y + spacing;
+	float spacingY = m_nY * m_radius;
+	float minY = midY - spacingY;
+	float maxY = midY + spacingY;
 
 	for (UINT i = 0; i < m_maxParticles; i++)
 	{
 		//m_particles[i].position.x = dpx(gen);
 		//m_particles[i].position.y = dpy(gen);
 
-		m_particles[i].position.x = min_x +
-			(max_x - min_x - (max_x - min_x) / n) / n * (1 + (i % n));
-		m_particles[i].position.y = min_y +
-			(max_y - min_y - (max_y - min_y) / n) / n * (1 + (i / n));
-		m_particles[i].predictedPosition.x = min_x +
-			(max_x - min_x - (max_x - min_x) / n) / n * (1 + (i % n));
-		m_particles[i].predictedPosition.y = min_y +
-			(max_y - min_y - (max_y - min_y) / n) / n * (1 + (i / n));
+		m_particles[i].position.x = minX +
+			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
+		m_particles[i].position.y = minY +
+			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
 		//m_particles[i].life = dl(gen);
 		m_particles[i].radius = m_radius;
 	}

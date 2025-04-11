@@ -51,8 +51,8 @@ void main(uint tid : SV_GroupThreadID,
 		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * kernelLaplacian;
 	}
 	gravityForce = float3(0.0, -9.8f, 0.0) * mass / p_i.density * gravity;
-	//p_i.force = pressureForce + viscosityForce + gravityForce;
-	p_i.force = pressureForce;
+	p_i.force = pressureForce + viscosityForce + gravityForce;
+	//p_i.force = pressureForce;
 
 	ParticlesOutput[index] = p_i;
 }
