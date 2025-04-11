@@ -24,6 +24,8 @@ void MainEngine::Initialize()
 	m_sphSimulator = make_shared<SphSimulator>();
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.75f;
+
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
 		std::reverse(skybox.indices.begin(), skybox.indices.end());
@@ -565,7 +567,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 100.0f);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 1000.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
@@ -574,12 +576,12 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 100.0f)
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 1000.0f)
 							m_sphSimulator->m_constantBufferData.pressureCoeff += stepValue;
 					}
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, minValue, maxValue);
+						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, minValue, 20.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##Density0MinusBtn")) {
@@ -589,7 +591,7 @@ void MainEngine::UpdateGUI()
 
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##Density0PlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.density0 + stepValue <= maxValue)
+						if (m_sphSimulator->m_constantBufferData.density0 + stepValue <= 20.0f)
 							m_sphSimulator->m_constantBufferData.density0 += stepValue;
 					}
 
@@ -603,7 +605,7 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##ViscosityPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= 1.0)
+						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= 1.0f)
 							m_sphSimulator->m_constantBufferData.viscosity += stepValue;
 					}
 

@@ -51,7 +51,6 @@ GSInput main(uint vertexID : SV_VertexID)
 
     output.viewPos = mul(float4(p.position.xyz, 1.0), view);
 
-    //output.color = p.color * saturate(p.life / fadeLife);
     output.color = p.color;
     output.radius = p.radius;
 
