@@ -75,7 +75,7 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 0.1f;
+		float pressureCoeff = 1.0f;
 
 		float density0 = 1.0f;
 		float viscosity = 0.1f;

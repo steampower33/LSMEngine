@@ -68,18 +68,19 @@ float random(uint seed)
     return float(result) / 4294967295.0f; // 2^32 - 1 로 나눔
 }
 
+// Poly6
 float SmoothingKernel(float dst, float radius)
 {
     if (dst >= radius) return 0;
 
-    float volume = PI * pow(radius, 4) / 6;
-    return (radius - dst) * (radius - dst) / volume;
+    float C = 4.0 / (PI * pow(radius, 8)); // 2차원 Poly6 커널 정규화 상수
+    return C * pow((radius * radius - dst * dst), 3); // 2차원 Poly6 커널 함수
 }
 
-float SmoothingKernelDerivative(float dst, float radius)
+float SmoothingKerenlPressure(float dst, float radius)
 {
     if (dst >= radius) return 0;
 
-    float scale = 12 / (PI * pow(radius, 4));
-    return (dst - radius) * scale;
+    float C = 10.0 / (PI * pow(radius, 5)); // 2차원 Spiky 커널 정규화 상수
+    return C * pow((radius - dst), 3); // 2차원 Spiky 커널 함수
 }

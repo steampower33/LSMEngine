@@ -121,7 +121,7 @@ void SphSimulator::GenerateParticles()
 	float middle_x = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
 	float middle_y = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
 
-	float spacing = n * m_radius * 2.0f;
+	float spacing = n * m_smoothingRadius * 0.2f;
 	float min_x = middle_x - spacing;
 	float max_x = middle_x + spacing;
 

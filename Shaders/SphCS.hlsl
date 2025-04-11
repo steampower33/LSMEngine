@@ -17,62 +17,31 @@ void main(uint tid : SV_GroupThreadID,
 	}
 
 	Particle p = ParticlesInput[index];
-	//if (p.life < 0)
-	//{
-	//	uint baseSeed = index * 17u;
 
-	//	float rndPosX = random(baseSeed + 1u);
-	//	float rndPosY = random(baseSeed + 2u);
-	//	float rndVelX = random(baseSeed + 3u);
-	//	float rndVelY = random(baseSeed + 4u);
-	//	float rndLife = random(baseSeed + 5u);
-
-	//	/*p.position = float3(lerp(minBounds.x, maxBounds.x, rndPosX),
-	//		lerp(minBounds.y, maxBounds.y, rndPosY),
-	//		0.0f);*/
-
-	//	p.position = float3(lerp(3.0f, maxBounds.x, rndPosX),
-	//		lerp(3.0, maxBounds.y, rndPosY),
-	//		0.0f);
-
-	//	float vRange = 1.0f;
-	//	//lerp(-vRange, vRange, rndVelX)
-	//	p.velocity = float3(-1.0f,
-	//		lerp(-vRange, vRange, rndVelY),
-	//		0.0f);
-
-	//	p.life = lerp(0, 20.0, rndLife);
-	//}
-	//else
-	//{
-
-	//}
-
-	p.velocity += p.force / (p.density + 1e-3f) * deltaTime;
-	p.position += p.velocity * deltaTime;
+	p.velocity += (p.force / (p.density + 1e-3f)) * deltaTime;
+	p.position += p.velocity * deltaTime; // x = x + v*dt
 
 	float radius = p.radius;
-	float epsilon = 1e-3f;
 	if (p.position.x - radius < minBounds.x && p.velocity.x < 0.0)
 	{
 		p.velocity.x *= -COR;
-		p.position.x = minBounds.x + radius + epsilon;
+		p.position.x = minBounds.x + radius;
 	}
 	else if (p.position.x + radius > maxBounds.x && p.velocity.x > 0.0)
 	{
 		p.velocity.x *= -COR;
-		p.position.x = maxBounds.x - radius + epsilon;
+		p.position.x = maxBounds.x - radius;
 	}
 
 	if (p.position.y - radius < minBounds.y && p.velocity.y < 0.0)
 	{
 		p.velocity.y *= -COR;
-		p.position.y = minBounds.y + radius + epsilon;
+		p.position.y = minBounds.y + radius;
 	}
 	else if (p.position.y + radius > maxBounds.y && p.velocity.y > 0.0)
 	{
 		p.velocity.y *= -COR;
-		p.position.y = maxBounds.y - radius + epsilon;
+		p.position.y = maxBounds.y - radius;
 	}
 
 	float speed = length(p.velocity);

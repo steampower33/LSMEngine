@@ -29,24 +29,22 @@ void main(uint tid : SV_GroupThreadID,
 
 		Particle p_j = ParticlesInput[j];
 
-		float3 x_ij = p_i.predictedPosition - p_j.position;
+		float3 x_ij = p_j.position - p_i.position;
 		float dist = length(x_ij);
-
-		if (dist < 1e-3f) continue;
 
 		float vRange = 1.0f;
 		uint baseSeed = index * 17u;
 		float rndVelX = random(baseSeed + 3u);
 		float rndVelY = random(baseSeed + 4u);
-		/*float3 dir_ij = dist == 0 ? 
+		float3 dir = dist == 0 ? 
 			float3(lerp(-vRange, vRange, rndVelX), lerp(-vRange, vRange, rndVelY), 0.0f) :
-			x_ij / dist;*/
+			x_ij / dist;
 
-		float3 dir_ij = x_ij / dist;
+		//float3 dir = x_ij / dist;
 
-		float slope = SmoothingKernelDerivative(dist, smoothingRadius);
-		float sharedPressure = (p_i.pressure + p_j.pressure) * 0.5;
-		pressureForce -= p_j.pressure * dir_ij * slope * mass / (p_j.density + 1e-3f);
+		float slope = SmoothingKerenlPressure(dist, smoothingRadius);
+		float sharedPressure = (p_i.pressure + p_j.pressure) / 2;
+		pressureForce -= sharedPressure * dir * slope * mass / (p_j.density + 1e-3f);
 	}
 	p_i.force = pressureForce;
 
