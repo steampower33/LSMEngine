@@ -75,7 +75,7 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 5.0f;
+		float pressureCoeff = 0.1f;
 
 		float density0 = 1.0f;
 		float viscosity = 0.1f;
@@ -83,8 +83,8 @@ public:
 		float collisionDamping;
 	};
 
-	float m_minBounds[3] = { -8.0f, -8.0f, 0.0f };
-	float m_maxBounds[3] = { 8.0f, 8.0f, 0.0f };
+	float m_minBounds[3] = { -12.0f, -8.0f, 0.0f };
+	float m_maxBounds[3] = { 12.0f, 8.0f, 0.0f };
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -94,7 +94,7 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
-	const UINT m_maxParticles = 1024;
+	const UINT m_maxParticles = 4096;
 	const UINT m_groupSizeX = 512;
 	const float m_radius = 1.0f / 16.0;
 	float m_smoothingRadius = 1.0f;

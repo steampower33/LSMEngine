@@ -20,17 +20,17 @@ void main(uint tid : SV_GroupThreadID,
 	p_i.density = 0.0;
 	for (int j = 0; j < maxParticles; j++)
 	{
-		if (index == j) continue;
-
 		Particle p_j = ParticlesInput[j];
 
-		float dist = length(p_i.position - p_j.position);
+		float dist = length(p_j.position - p_i.position);
 
 		float influence = SmoothingKernel(dist, smoothingRadius);
 
 		p_i.density += mass * influence;
 	}
-	p_i.pressure = (p_i.density - density0) * pressureCoeff;
+	if (p_i.density == 0.0)
+		p_i.p1 = index;
+	p_i.pressure = pressureCoeff * (p_i.density - density0);
 
 	ParticlesOutput[index] = p_i;
 }

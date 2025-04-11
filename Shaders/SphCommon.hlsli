@@ -85,3 +85,11 @@ float SmoothingKerenlPressure(float dst, float radius)
     float C = 10.0 / (PI * pow(radius, 5)); // 2차원 Spiky 커널 정규화 상수
     return C * pow((radius - dst), 3); // 2차원 Spiky 커널 함수
 }
+
+float SmoothingKernelLaplacian(float dst, float radius)
+{
+    if (dst >= radius) return 0;
+
+    float C = 40.0 / (7.0 * PI * radius * radius); // 2차원 점성항 커널 정규화 상수
+    return C * (radius - dst); // 2차원 점성항 커널 함수
+}
