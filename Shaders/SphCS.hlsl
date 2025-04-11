@@ -18,29 +18,29 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p = ParticlesInput[index];
 
-	p.velocity += (p.force / (p.density + 1e-3f)) * deltaTime;
+	p.velocity += (p.force / (p.density + 1e-3f)) * (deltaTime / 2.0);
 	p.position += p.velocity * deltaTime; // x = x + v*dt
 
 	float radius = p.radius;
 	if (p.position.x - radius < minBounds.x && p.velocity.x < 0.0)
 	{
-		p.velocity.x *= -COR;
+		p.velocity.x *= -collisionDamping;
 		p.position.x = minBounds.x + radius;
 	}
 	else if (p.position.x + radius > maxBounds.x && p.velocity.x > 0.0)
 	{
-		p.velocity.x *= -COR;
+		p.velocity.x *= -collisionDamping;
 		p.position.x = maxBounds.x - radius;
 	}
 
 	if (p.position.y - radius < minBounds.y && p.velocity.y < 0.0)
 	{
-		p.velocity.y *= -COR;
+		p.velocity.y *= -collisionDamping;
 		p.position.y = minBounds.y + radius;
 	}
 	else if (p.position.y + radius > maxBounds.y && p.velocity.y > 0.0)
 	{
-		p.velocity.y *= -COR;
+		p.velocity.y *= -collisionDamping;
 		p.position.y = maxBounds.y - radius;
 	}
 

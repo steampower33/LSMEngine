@@ -526,9 +526,9 @@ void MainEngine::UpdateGUI()
 						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->m_maxBounds, -3.0f, 3.0f);
 						});
 
-					float minValue = 0.05f;
+					float minValue = 0.1f;
 					float maxValue = 10.0f;
-					float stepValue = 0.05f;
+					float stepValue = 0.1f;
 					flag += DrawTableRow("Mass", [&]() {
 						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, minValue, maxValue);
 						});
@@ -543,21 +543,18 @@ void MainEngine::UpdateGUI()
 							m_sphSimulator->m_constantBufferData.mass += stepValue;
 					}
 
-					float pressureCoeffMin = 0.1f;
-					float pressureCoeffMax = 1000.0f;
-					float pressureCoeffStep = 0.1f;
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, pressureCoeffMin, pressureCoeffMax);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, maxValue);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff - pressureCoeffStep >= pressureCoeffMin)
-							m_sphSimulator->m_constantBufferData.pressureCoeff -= pressureCoeffStep;
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff - stepValue >= minValue)
+							m_sphSimulator->m_constantBufferData.pressureCoeff -= stepValue;
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff + pressureCoeffStep <= pressureCoeffMax)
-							m_sphSimulator->m_constantBufferData.pressureCoeff += pressureCoeffStep;
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= maxValue)
+							m_sphSimulator->m_constantBufferData.pressureCoeff += stepValue;
 					}
 
 					flag += DrawTableRow("Density0", [&]() {
@@ -601,6 +598,34 @@ void MainEngine::UpdateGUI()
 					if (ImGui::Button(" + ##SmoothingRadiusPlusBtn")) {
 						if (m_sphSimulator->m_smoothingRadius + stepValue <= maxValue)
 							m_sphSimulator->m_smoothingRadius += stepValue;
+					}
+
+					flag += DrawTableRow("Gravity", [&]() {
+						return ImGui::SliderFloat("##Gravity", &m_sphSimulator->m_gravity, 0.0f, 1.0f);
+						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##GravityMinusBtn")) {
+						if (m_sphSimulator->m_gravity - 0.1f >= 0.0f)
+							m_sphSimulator->m_gravity -= 0.1f;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##GravityPlusBtn")) {
+						if (m_sphSimulator->m_gravity + 0.1f <= 1.0f)
+							m_sphSimulator->m_gravity += 0.1f;
+					}
+
+					flag += DrawTableRow("CollisionDamping", [&]() {
+						return ImGui::SliderFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, minValue, maxValue);
+						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##CollisionDampingMinusBtn")) {
+						if (m_sphSimulator->m_collisionDamping - stepValue >= minValue)
+							m_sphSimulator->m_collisionDamping -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##CollisionDampingPlusBtn")) {
+						if (m_sphSimulator->m_collisionDamping + stepValue <= maxValue)
+							m_sphSimulator->m_collisionDamping += stepValue;
 					}
 
 					ImGui::EndTable();

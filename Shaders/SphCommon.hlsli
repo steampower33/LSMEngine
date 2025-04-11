@@ -1,6 +1,5 @@
 
 #define PI 3.1415926535
-#define COR 0.3
 
 struct Particle {
     float3 position;
@@ -56,6 +55,8 @@ cbuffer SimParams : register(b0) {
 
     float density0;
     float viscosity;
+    float gravity;
+    float collisionDamping;
 };
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)

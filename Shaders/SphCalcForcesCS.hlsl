@@ -46,7 +46,7 @@ void main(uint tid : SV_GroupThreadID,
 		float sharedPressure = (p_i.pressure + p_j.pressure) / 2;
 		pressureForce -= sharedPressure * dir * slope * mass / (p_j.density + 1e-3f);
 	}
-	p_i.force = pressureForce;
+	p_i.force = pressureForce + externalForce * gravity;
 
 	ParticlesOutput[index] = p_i;
 }

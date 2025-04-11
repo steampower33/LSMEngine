@@ -121,7 +121,7 @@ void SphSimulator::GenerateParticles()
 	float middle_x = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
 	float middle_y = (m_maxBounds[0] + m_minBounds[1]) * 0.5f;
 
-	float spacing = n * m_smoothingRadius * 0.2f;
+	float spacing = n * m_radius * 2.0f;
 	float min_x = middle_x - spacing;
 	float max_x = middle_x + spacing;
 
@@ -151,6 +151,8 @@ void SphSimulator::Update(float dt)
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
+	m_constantBufferData.gravity = m_gravity;
+	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.maxParticles = m_maxParticles;
 	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
 	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);

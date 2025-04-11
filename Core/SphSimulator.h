@@ -75,10 +75,12 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 1.0f;
+		float pressureCoeff = 5.0f;
 
 		float density0 = 1.0f;
 		float viscosity = 0.1f;
+		float gravity;
+		float collisionDamping;
 	};
 
 	float m_minBounds[3] = { -8.0f, -8.0f, 0.0f };
@@ -96,6 +98,8 @@ public:
 	const UINT m_groupSizeX = 512;
 	const float m_radius = 1.0f / 16.0;
 	float m_smoothingRadius = 1.0f;
+	float m_gravity = 0.0f;
+	float m_collisionDamping = 0.95f;
 	float m_cellSize = m_radius * 4.0f;
 	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
 	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];
@@ -103,7 +107,6 @@ public:
 	UINT m_cellCnt = static_cast<UINT>(m_gridDimX / m_cellSize) * static_cast<UINT>(m_gridDimY / m_cellSize);
 
 private:
-
 	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
 	const UINT m_scanResultDataSize = sizeof(ScanResult);
