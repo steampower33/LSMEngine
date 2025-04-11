@@ -19,13 +19,14 @@ void main(uint tid : SV_GroupThreadID,
 
 	p_i.velocityHalfStep = p_i.velocity + p_i.currentAcceleration * (deltaTime / 2.0f);
 	p_i.position += p_i.velocityHalfStep * deltaTime;
+	p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
 
 	p_i.density = 0.0;
 	for (int j = 0; j < maxParticles; j++)
 	{
 		Particle p_j = ParticlesInput[j];
 
-		float dist = length(p_j.position - p_i.position);
+		float dist = length(p_j.predictedPosition - p_i.predictedPosition);
 
 		float influence = SmoothingKernel(dist, smoothingRadius);
 

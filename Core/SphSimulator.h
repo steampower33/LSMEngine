@@ -41,6 +41,8 @@ public:
 		float p1;
 		XMFLOAT3 currentAcceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float p2;
+		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p3;
 	};
 
 	struct ParticleHash

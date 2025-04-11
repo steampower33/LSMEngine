@@ -29,7 +29,7 @@ void main(uint tid : SV_GroupThreadID,
 
 		Particle p_j = ParticlesInput[j];
 
-		float3 x_ij = p_j.position - p_i.position;
+		float3 x_ij = p_j.predictedPosition - p_i.predictedPosition;
 		float dist = length(x_ij);
 
 		float vRange = 1.0f;

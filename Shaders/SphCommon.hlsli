@@ -14,6 +14,8 @@ struct Particle {
     float p1;
     float3 currentAcceleration;
     float p2;
+    float3 predictedPosition;
+    float p3;
 };
 
 struct ParticleHash

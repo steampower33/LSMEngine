@@ -136,6 +136,10 @@ void SphSimulator::GenerateParticles()
 			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
 		m_particles[i].position.y = minY +
 			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
+		m_particles[i].predictedPosition.x = minX +
+			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
+		m_particles[i].predictedPosition.y = minY +
+			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
 		//m_particles[i].life = dl(gen);
 		m_particles[i].radius = m_radius;
 	}
