@@ -21,27 +21,26 @@ void main(uint tid : SV_GroupThreadID,
 	p.currentAcceleration = p.force / p.density;
 	p.velocity = p.velocityHalfStep + p.currentAcceleration * (deltaTime / 2.0f);
 
-	float radius = p.radius;
-	if (p.position.x - radius < minBounds.x && p.velocity.x < 0.0)
+	if (p.position.x - smoothingRadius <= minBounds.x && p.velocity.x < 0.0)
 	{
 		p.velocity.x *= -collisionDamping;
-		p.position.x = minBounds.x + radius;
+		p.position.x = minBounds.x + smoothingRadius;
 	}
-	else if (p.position.x + radius > maxBounds.x && p.velocity.x > 0.0)
+	else if (p.position.x + smoothingRadius >= maxBounds.x && p.velocity.x > 0.0)
 	{
 		p.velocity.x *= -collisionDamping;
-		p.position.x = maxBounds.x - radius;
+		p.position.x = maxBounds.x - smoothingRadius;
 	}
 
-	if (p.position.y - radius < minBounds.y && p.velocity.y < 0.0)
+	if (p.position.y - smoothingRadius <= minBounds.y && p.velocity.y < 0.0)
 	{
 		p.velocity.y *= -collisionDamping;
-		p.position.y = minBounds.y + radius;
+		p.position.y = minBounds.y + smoothingRadius;
 	}
-	else if (p.position.y + radius > maxBounds.y && p.velocity.y > 0.0)
+	else if (p.position.y + smoothingRadius >= maxBounds.y && p.velocity.y > 0.0)
 	{
 		p.velocity.y *= -collisionDamping;
-		p.position.y = maxBounds.y - radius;
+		p.position.y = maxBounds.y - smoothingRadius;
 	}
 
 	float speed = length(p.velocity);

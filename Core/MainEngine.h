@@ -86,5 +86,6 @@ private:
 	void ResolvePass();
 	void PostEffectsPass();
 	void PostProcessPass();
+	void ImGUIPass();
 
 };

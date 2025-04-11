@@ -516,19 +516,40 @@ void MainEngine::UpdateGUI()
 
 				if (ImGui::BeginTable("SphTable", 2, flags))
 				{
-					UINT flag = 0;
-
-					flag += DrawTableRow("Min Bounds", [&]() {
-						return ImGui::SliderFloat3("##MinBounds", m_sphSimulator->m_minBounds, -3.0f, 3.0f);
-						});
-
-					flag += DrawTableRow("Max Bounds", [&]() {
-						return ImGui::SliderFloat3("##MaxBounds", m_sphSimulator->m_maxBounds, -3.0f, 3.0f);
-						});
-
 					float minValue = 0.1f;
 					float maxValue = 10.0f;
 					float stepValue = 0.1f;
+
+					UINT flag = 0;
+
+					flag += DrawTableRow("Width", [&]() {
+						return ImGui::SliderFloat("##Widths", &m_sphSimulator->m_maxBoundsX, 0.0f, 10.0f);
+						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##WidthMinusBtn")) {
+						if (m_sphSimulator->m_maxBoundsX - stepValue >= minValue)
+							m_sphSimulator->m_maxBoundsX -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##WidthPlusBtn")) {
+						if (m_sphSimulator->m_maxBoundsX + stepValue <= maxValue)
+							m_sphSimulator->m_maxBoundsX += stepValue;
+					}
+
+					flag += DrawTableRow("Height", [&]() {
+						return ImGui::SliderFloat("##Height", &m_sphSimulator->m_maxBoundsY, 0.0f, 10.0f);
+						});
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" - ##HeightMinusBtn")) {
+						if (m_sphSimulator->m_maxBoundsY - stepValue >= minValue)
+							m_sphSimulator->m_maxBoundsY -= stepValue;
+					}
+					ImGui::SameLine(0.0f, 0.0f);
+					if (ImGui::Button(" + ##HeightPlusBtn")) {
+						if (m_sphSimulator->m_maxBoundsY + stepValue <= maxValue)
+							m_sphSimulator->m_maxBoundsY += stepValue;
+					}
+
 					flag += DrawTableRow("Mass", [&]() {
 						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, minValue, maxValue);
 						});
@@ -573,7 +594,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, minValue, maxValue);
+						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, minValue, 1.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##ViscosityMinusBtn")) {
@@ -582,7 +603,7 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##ViscosityPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= maxValue)
+						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= 1.0)
 							m_sphSimulator->m_constantBufferData.viscosity += stepValue;
 					}
 
@@ -601,11 +622,11 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::SliderFloat("##Gravity", &m_sphSimulator->m_gravity, 0.0f, 1.0f);
+						return ImGui::SliderFloat("##Gravity", &m_sphSimulator->m_gravity, -1.0f, 1.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##GravityMinusBtn")) {
-						if (m_sphSimulator->m_gravity - 0.1f >= 0.0f)
+						if (m_sphSimulator->m_gravity - 0.1f >= -1.0f)
 							m_sphSimulator->m_gravity -= 0.1f;
 					}
 					ImGui::SameLine(0.0f, 0.0f);
@@ -615,7 +636,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("CollisionDamping", [&]() {
-						return ImGui::SliderFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, minValue, maxValue);
+						return ImGui::SliderFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, minValue, 1.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##CollisionDampingMinusBtn")) {
@@ -624,7 +645,7 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##CollisionDampingPlusBtn")) {
-						if (m_sphSimulator->m_collisionDamping + stepValue <= maxValue)
+						if (m_sphSimulator->m_collisionDamping + stepValue <= 1.0f)
 							m_sphSimulator->m_collisionDamping += stepValue;
 					}
 
@@ -799,7 +820,8 @@ void MainEngine::Update(float dt)
 
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 
-	m_sphSimulator->Update(dt);
+	if (!m_isPaused)
+		m_sphSimulator->Update(dt);
 
 	// Update BoundsBox
 	{
@@ -821,7 +843,8 @@ void MainEngine::Render()
 	ThrowIfFailed(m_pCurrFR->m_cmdAlloc->Reset());
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Reset(m_pCurrFR->m_cmdAlloc.Get(), nullptr));
 
-	SphCalcPass();
+	if (!m_isPaused)
+		SphCalcPass();
 
 	InitPreFrame();
 	CreateShapes();
@@ -830,6 +853,7 @@ void MainEngine::Render()
 	ResolvePass();
 	PostEffectsPass();
 	PostProcessPass();
+	ImGUIPass();
 
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Close());
 
@@ -1462,6 +1486,10 @@ void MainEngine::PostProcessPass()
 
 	m_pCurrFR->m_cmdList->RSSetViewports(1, &m_viewport);
 	m_pCurrFR->m_cmdList->RSSetScissorRects(1, &m_scissorRect);
+}
+
+void MainEngine::ImGUIPass()
+{
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());

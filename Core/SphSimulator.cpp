@@ -150,8 +150,8 @@ void SphSimulator::Update(float dt)
 	// 일단은 CBV 전체를 업데이트
 	m_constantBufferData.deltaTime = 0.01f;
 
-	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
+	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, m_minBounds[2]);
+	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, m_maxBounds[2]);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.gravity = m_gravity;

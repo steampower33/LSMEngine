@@ -101,8 +101,10 @@ public:
 	const UINT m_nX = 64;
 	const UINT m_nY = 16;
 	const UINT m_maxParticles = m_nX * m_nY;
-	float m_minBounds[3] = { -12.0f, -8.0f, 0.0f };
-	float m_maxBounds[3] = { 12.0f, 8.0f, 0.0f };
+	float m_maxBoundsX = 6.0f;
+	float m_maxBoundsY = 4.0f;
+	float m_minBounds[3] = { -m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, 0.0f };
+	float m_maxBounds[3] = { m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, 0.0f };
 	float m_smoothingRadius = m_dp * 1.5f;
 	float m_gravity = 1.0f;
 	float m_collisionDamping = 0.95f;
