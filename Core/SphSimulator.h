@@ -33,7 +33,7 @@ public:
 		float radius = 0.0f;
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
-		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMFLOAT3 color = XMFLOAT3(0.0f, 1.0f, 0.0f);
 		float density = 0.0f;
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
@@ -79,7 +79,7 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 25.0f;
+		float pressureCoeff = 10.0f;
 
 		float density0 = 5.0f;
 		float viscosity = 0.1f;
@@ -103,16 +103,15 @@ public:
 	const UINT m_maxParticles = m_nX * m_nY;
 	float m_maxBoundsX = 6.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_minBounds[3] = { -m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, 0.0f };
-	float m_maxBounds[3] = { m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, 0.0f };
+	float m_maxBoundsZ = 0.0f;
 	float m_smoothingRadius = m_dp * 1.5f;
 	float m_gravity = 1.0f;
 	float m_collisionDamping = 0.95f;
 	float m_cellSize = m_radius * 4.0f;
-	float m_gridDimX = m_maxBounds[0] - m_minBounds[0];
-	float m_gridDimY = m_maxBounds[1] - m_minBounds[1];
-	float m_gridDimZ = m_maxBounds[2] - m_minBounds[2];
-	UINT m_cellCnt = static_cast<UINT>(m_gridDimX / m_cellSize) * static_cast<UINT>(m_gridDimY / m_cellSize);
+	float m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_cellSize);
+	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_cellSize);
+	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_cellSize);
+	UINT m_cellCnt = m_gridDimX * m_gridDimY;
 
 private:
 	const UINT m_particleDataSize = sizeof(Particle);

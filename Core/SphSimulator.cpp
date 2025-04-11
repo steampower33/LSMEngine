@@ -62,12 +62,12 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 
 	// ConstantBuffer 설정
 	m_constantBufferData.numParticles = m_maxParticles;
-	m_constantBufferData.minBounds = XMFLOAT3(m_minBounds[0], m_minBounds[1], m_minBounds[2]);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBounds[0], m_maxBounds[1], m_maxBounds[2]);
+	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, 0.0f);
+	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, 0.0f);
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
-	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);
-	m_constantBufferData.gridDimZ = static_cast<UINT>((m_maxBounds[2] - m_minBounds[2]) / m_cellSize);
+	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_cellSize);
 
 	CreateConstUploadBuffer(device, m_constantBuffer, m_constantBufferData, m_constantBufferDataBegin);
 
@@ -111,13 +111,13 @@ void SphSimulator::GenerateParticles()
 
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> dpx(m_minBounds[0], m_maxBounds[0]);
-	uniform_real_distribution<float> dpy(m_minBounds[1], 2.0f);
+	uniform_real_distribution<float> dpx(-m_maxBoundsX, m_maxBoundsX);
+	uniform_real_distribution<float> dpy(-m_maxBoundsY, 2.0f);
 	uniform_real_distribution<float> dl(0.0f, 10.0f);
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
-	float midX = (m_maxBounds[0] + m_minBounds[0]) * 0.5f;
-	float midY = (m_maxBounds[1] + m_minBounds[1]) * 0.5f;
+	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
+	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 
 	float spacingX = m_nX * m_radius;
 	float minX = midX - spacingX;
@@ -150,16 +150,16 @@ void SphSimulator::Update(float dt)
 	// 일단은 CBV 전체를 업데이트
 	m_constantBufferData.deltaTime = 0.01f;
 
-	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, m_minBounds[2]);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, m_maxBounds[2]);
+	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX * 2.0f, -m_maxBoundsY * 2.0f, 0.0f);
+	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX * 2.0f, m_maxBoundsY * 2.0f, 0.0f);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.gravity = m_gravity;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.maxParticles = m_maxParticles;
-	m_constantBufferData.gridDimX = static_cast<UINT>((m_maxBounds[0] - m_minBounds[0]) / m_cellSize);
-	m_constantBufferData.gridDimY = static_cast<UINT>((m_maxBounds[1] - m_minBounds[1]) / m_cellSize);
-	m_constantBufferData.gridDimZ = static_cast<UINT>((m_maxBounds[2] - m_minBounds[2]) / m_cellSize);
+	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_cellSize);
 	
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
