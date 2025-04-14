@@ -79,10 +79,10 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 1000.0f;
+		float pressureCoeff = 1.0f;
 
-		float density0 = 5.0f;
-		float viscosity = 0.3f;
+		float density0 = 1.0f;
+		float viscosity = 0.2f;
 		float gravity;
 		float collisionDamping;
 	};
@@ -98,13 +98,13 @@ public:
 	const UINT m_groupSizeX = 512;
 	const float m_dp = 0.2f;
 	const float m_radius = m_dp / 2.0f;
-	const UINT m_nX = 64;
-	const UINT m_nY = 64;
+	const UINT m_nX = 32;
+	const UINT m_nY = 32;
 	const UINT m_maxParticles = m_nX * m_nY;
-	float m_maxBoundsX = 20.0f;
-	float m_maxBoundsY = 10.0f;
+	float m_maxBoundsX = 15.0f;
+	float m_maxBoundsY = 5.0f;
 	float m_maxBoundsZ = 0.0f;
-	float m_smoothingRadius = m_dp * 1.5f;
+	float m_smoothingRadius = 0.5f;
 	float m_gravity = 1.0f;
 	float m_collisionDamping = 0.95f;
 	float m_cellSize = m_radius * 4.0f;

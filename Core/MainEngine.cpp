@@ -24,7 +24,7 @@ void MainEngine::Initialize()
 	m_sphSimulator = make_shared<SphSimulator>();
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.75f;
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
@@ -567,7 +567,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 1000.0f);
+						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 10.0f);
 						});
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
@@ -576,7 +576,7 @@ void MainEngine::UpdateGUI()
 					}
 					ImGui::SameLine(0.0f, 0.0f);
 					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 1000.0f)
+						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 10.05f)
 							m_sphSimulator->m_constantBufferData.pressureCoeff += stepValue;
 					}
 

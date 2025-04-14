@@ -18,34 +18,37 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p = ParticlesInput[index];
 
-	p.currentAcceleration = p.force / p.density;
-	p.velocity = p.velocityHalfStep + p.currentAcceleration * (deltaTime / 2.0f);
+	/*p.currentAcceleration = p.force / p.density;
+	p.velocity = p.velocityHalfStep + p.currentAcceleration * (deltaTime / 2.0f);*/
 
-	if (p.position.x - smoothingRadius <= minBounds.x && p.velocity.x < 0.0)
+	p.velocity += p.force / p.density * deltaTime;
+	p.position += p.velocity * deltaTime;
+
+	if (p.position.x - p.radius <= minBounds.x && p.velocity.x < 0.0)
 	{
 		p.velocity.x *= -collisionDamping;
-		p.position.x = minBounds.x + smoothingRadius;
+		p.position.x = minBounds.x + p.radius;
 	}
-	else if (p.position.x + smoothingRadius >= maxBounds.x && p.velocity.x > 0.0)
+	else if (p.position.x + p.radius  >= maxBounds.x && p.velocity.x > 0.0)
 	{
 		p.velocity.x *= -collisionDamping;
-		p.position.x = maxBounds.x - smoothingRadius;
+		p.position.x = maxBounds.x - p.radius ;
 	}
 
-	if (p.position.y - smoothingRadius <= minBounds.y && p.velocity.y < 0.0)
+	if (p.position.y - p.radius  <= minBounds.y && p.velocity.y < 0.0)
 	{
 		p.velocity.y *= -collisionDamping;
-		p.position.y = minBounds.y + smoothingRadius;
+		p.position.y = minBounds.y + p.radius ;
 	}
-	else if (p.position.y + smoothingRadius >= maxBounds.y && p.velocity.y > 0.0)
+	else if (p.position.y + p.radius  >= maxBounds.y && p.velocity.y > 0.0)
 	{
 		p.velocity.y *= -collisionDamping;
-		p.position.y = maxBounds.y - smoothingRadius;
+		p.position.y = maxBounds.y - p.radius ;
 	}
 
-	float speed = length(p.velocity);
-	float speedT = saturate(speed / 1.0);
-	p.color = float3(speedT, 1.0 - speedT, 0.0);
+	//float speed = length(p.velocity);
+	//float speedT = saturate(speed / 1.0);
+	//p.color = float3(speedT, 1.0 - speedT, 0.0);
 
 	p.life -= deltaTime;
 

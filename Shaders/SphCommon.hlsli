@@ -73,27 +73,34 @@ float random(uint seed)
     return float(result) / 4294967295.0f; // 2^32 - 1 로 나눔
 }
 
-// Poly6
-float SmoothingKernel(float dst, float radius)
+// 2차원 Poly6 커널 함수
+float Poly6(float r, float h)
 {
-    if (dst >= radius) return 0;
+    if (r >= h) return 0;
 
-    float C = 4.0 / (PI * pow(radius, 8)); // 2차원 Poly6 커널 정규화 상수
-    return C * pow((radius * radius - dst * dst), 3); // 2차원 Poly6 커널 함수
+    float C = 4.0 / (PI * pow(h, 8));
+    return C * pow((h * h - r * r), 3);
 }
 
-float SmoothingKerenlPressure(float dst, float radius)
+// 2차원 Spiky Gradient 커널 함수
+float SpikyGradient(float r, float h)
 {
-    if (dst >= radius) return 0;
+    if (r >= h) return 0;
 
-    float C = 10.0 / (PI * pow(radius, 5)); // 2차원 Spiky 커널 정규화 상수
-    return C * pow((radius - dst), 3); // 2차원 Spiky 커널 함수
+    float h_pow5 = pow(h, 5);
+
+    if (h_pow5 < 1e-9f) return 0.0f;
+
+    float C_grad = 30.0f / (PI * h_pow5);
+
+    return C_grad * pow(h - r, 2);
 }
 
-float SmoothingKernelLaplacian(float dst, float radius)
+// 2차원 Viscosity Laplacian 커널 함수
+float ViscosityLaplacian(float r, float h)
 {
-    if (dst >= radius) return 0;
+    if (r >= h) return 0;
 
-    float C = 40.0 / (7.0 * PI * radius * radius); // 2차원 점성항 커널 정규화 상수
-    return C * (radius - dst); // 2차원 점성항 커널 함수
+    float C = 40.0 / (PI * pow(h, 5.0));
+    return C * (h - r);
 }

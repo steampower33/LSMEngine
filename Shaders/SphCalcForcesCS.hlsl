@@ -29,7 +29,7 @@ void main(uint tid : SV_GroupThreadID,
 
 		Particle p_j = ParticlesInput[j];
 
-		float3 x_ij = p_j.predictedPosition - p_i.predictedPosition;
+		float3 x_ij = p_j.position - p_i.position;
 		float dist = length(x_ij);
 
 		float vRange = 1.0f;
@@ -42,16 +42,14 @@ void main(uint tid : SV_GroupThreadID,
 
 		//float3 dir = x_ij / dist;
 
-		float slope = SmoothingKerenlPressure(dist, smoothingRadius);
 		pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) * 
-			SmoothingKerenlPressure(dist, smoothingRadius);
+			SpikyGradient(dist, smoothingRadius);
 
-		float kernelLaplacian = SmoothingKernelLaplacian(dist, smoothingRadius);
-
-		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * kernelLaplacian;
+		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian(dist, smoothingRadius);
 	}
 	gravityForce = float3(0.0, -9.8f, 0.0) * mass / p_i.density * gravity;
 	p_i.force = pressureForce + viscosityForce + gravityForce;
+	//p_i.force = pressureForce + gravityForce;
 	//p_i.force = pressureForce;
 
 	ParticlesOutput[index] = p_i;

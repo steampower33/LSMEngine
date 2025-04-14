@@ -117,7 +117,7 @@ void SphSimulator::GenerateParticles()
 	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
 
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
-	float midY = (-m_maxBoundsY) * 0.5f;
+	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 
 	float spacingX = m_nX * m_radius;
 	float minX = midX - spacingX;
@@ -129,7 +129,7 @@ void SphSimulator::GenerateParticles()
 
 	for (UINT i = 0; i < m_maxParticles; i++)
 	{
-		//// 중간 위치에서
+		// 중간 위치에서
 		//m_particles[i].position.x = minX +
 		//	(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
 		//m_particles[i].position.y = minY +
@@ -145,7 +145,6 @@ void SphSimulator::GenerateParticles()
 		m_particles[i].predictedPosition.x = m_particles[i].position.x;
 		m_particles[i].predictedPosition.y = m_particles[i].position.y;
 
-
 		/*m_particles[i].position.x = dpx(gen);
 		m_particles[i].position.y = dpy(gen);*/
 		m_particles[i].life = dl(gen);
@@ -156,7 +155,7 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 0.01f;
+	m_constantBufferData.deltaTime = 1 / 100.0f;
 
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, 0.0f);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, 0.0f);
