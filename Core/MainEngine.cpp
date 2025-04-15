@@ -518,46 +518,46 @@ void MainEngine::UpdateGUI()
 
 				if (ImGui::BeginTable("SphTable", 2, flags))
 				{
-					float minValue = 0.1f;
-					float maxValue = 10.0f;
-					float stepValue = 0.1f;
+					float minValue = 0.0f;
+					float maxValue = 100.0f;
+					float dragValue = 0.001f;
 
 					UINT flag = 0;
 
 					flag += DrawTableRow("Width", [&]() {
-						return ImGui::InputFloat("##Width", &m_sphSimulator->m_maxBoundsX, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Width", &m_sphSimulator->m_maxBoundsX, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Height", [&]() {
-						return ImGui::InputFloat("##Height", &m_sphSimulator->m_maxBoundsY, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Height", &m_sphSimulator->m_maxBoundsY, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::InputFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::InputFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::InputFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::InputFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("SmoothingRadius", [&]() {
-						return ImGui::InputFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::InputFloat("##Gravity", &m_sphSimulator->m_gravity, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_gravity, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("CollisionDamping", [&]() {
-						return ImGui::InputFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, 0.1f, 0.1f, "%.2f");
+						return ImGui::DragFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					ImGui::EndTable();

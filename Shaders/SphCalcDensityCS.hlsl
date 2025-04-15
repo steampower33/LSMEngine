@@ -28,7 +28,7 @@ void main(uint tid : SV_GroupThreadID,
 
 		float dist = length(p_j.position - p_i.position);
 
-		float influence = Poly6(dist, smoothingRadius);
+		float influence = Poly6_2D(dist, smoothingRadius);
 
 		p_i.density += mass * influence;
 	}

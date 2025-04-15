@@ -74,7 +74,7 @@ float random(uint seed)
 }
 
 // 2차원 Poly6 커널 함수
-float Poly6(float r, float h)
+float Poly6_2D(float r, float h)
 {
     if (r >= h) return 0;
 
@@ -83,7 +83,7 @@ float Poly6(float r, float h)
 }
 
 // 2차원 Spiky Gradient 커널 함수
-float SpikyGradient(float r, float h)
+float SpikyGradient_2D(float r, float h)
 {
     if (r >= h) return 0;
 
@@ -97,7 +97,7 @@ float SpikyGradient(float r, float h)
 }
 
 // 2차원 Viscosity Laplacian 커널 함수
-float ViscosityLaplacian(float r, float h)
+float ViscosityLaplacian_2D(float r, float h)
 {
     if (r >= h) return 0;
 

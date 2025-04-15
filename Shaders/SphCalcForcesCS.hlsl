@@ -37,9 +37,9 @@ void main(uint tid : SV_GroupThreadID,
 		float3 dir = x_ij / dist;
 
 		pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) * 
-			SpikyGradient(dist, smoothingRadius);
+			SpikyGradient_2D(dist, smoothingRadius);
 
-		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian(dist, smoothingRadius);
+		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian_2D(dist, smoothingRadius);
 	}
 	gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
 	p_i.force = pressureForce + viscosityForce + gravityForce;
