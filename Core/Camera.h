@@ -64,7 +64,7 @@ private:
 	float m_yaw = 0.0f;
 	float m_pitch = 0.0f;
 
-	float m_moveSpeed = 3.0f;
+	float m_moveSpeed = 10.0f;
 	float m_mouseSensitivity = 3.0f;
 
 	KeysPressed m_keysPressed;

@@ -24,7 +24,7 @@ void MainEngine::Initialize()
 	m_sphSimulator = make_shared<SphSimulator>();
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.80f;
 
 	{
 		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
@@ -525,131 +525,40 @@ void MainEngine::UpdateGUI()
 					UINT flag = 0;
 
 					flag += DrawTableRow("Width", [&]() {
-						return ImGui::SliderFloat("##Widths", &m_sphSimulator->m_maxBoundsX, 0.0f, 10.0f);
+						return ImGui::InputFloat("##Width", &m_sphSimulator->m_maxBoundsX, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##WidthMinusBtn")) {
-						if (m_sphSimulator->m_maxBoundsX - stepValue >= minValue)
-							m_sphSimulator->m_maxBoundsX -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##WidthPlusBtn")) {
-						if (m_sphSimulator->m_maxBoundsX + stepValue <= maxValue)
-							m_sphSimulator->m_maxBoundsX += stepValue;
-					}
 
 					flag += DrawTableRow("Height", [&]() {
-						return ImGui::SliderFloat("##Height", &m_sphSimulator->m_maxBoundsY, 0.0f, 10.0f);
+						return ImGui::InputFloat("##Height", &m_sphSimulator->m_maxBoundsY, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##HeightMinusBtn")) {
-						if (m_sphSimulator->m_maxBoundsY - stepValue >= minValue)
-							m_sphSimulator->m_maxBoundsY -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##HeightPlusBtn")) {
-						if (m_sphSimulator->m_maxBoundsY + stepValue <= maxValue)
-							m_sphSimulator->m_maxBoundsY += stepValue;
-					}
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::SliderFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, minValue, maxValue);
+						return ImGui::InputFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##MassMinusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.mass - stepValue >= minValue)
-							m_sphSimulator->m_constantBufferData.mass -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##MassPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.mass + stepValue <= maxValue)
-							m_sphSimulator->m_constantBufferData.mass += stepValue;
-					}
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::SliderFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, minValue, 10.0f);
+						return ImGui::InputFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##PressureCoeffMinusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff - stepValue >= minValue)
-							m_sphSimulator->m_constantBufferData.pressureCoeff -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##PressureCoeffPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.pressureCoeff + stepValue <= 10.05f)
-							m_sphSimulator->m_constantBufferData.pressureCoeff += stepValue;
-					}
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::SliderFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, minValue, 20.0f);
+						return ImGui::InputFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##Density0MinusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.density0 - stepValue >= minValue)
-							m_sphSimulator->m_constantBufferData.density0 -= stepValue;
-					}
-
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##Density0PlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.density0 + stepValue <= 20.0f)
-							m_sphSimulator->m_constantBufferData.density0 += stepValue;
-					}
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::SliderFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, minValue, 1.0f);
+						return ImGui::InputFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##ViscosityMinusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.viscosity - stepValue >= minValue)
-							m_sphSimulator->m_constantBufferData.viscosity -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##ViscosityPlusBtn")) {
-						if (m_sphSimulator->m_constantBufferData.viscosity + stepValue <= 1.0f)
-							m_sphSimulator->m_constantBufferData.viscosity += stepValue;
-					}
 
 					flag += DrawTableRow("SmoothingRadius", [&]() {
-						return ImGui::SliderFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, minValue, maxValue);
+						return ImGui::InputFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##SmoothingRadiusMinusBtn")) {
-						if (m_sphSimulator->m_smoothingRadius - stepValue >= minValue)
-							m_sphSimulator->m_smoothingRadius -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##SmoothingRadiusPlusBtn")) {
-						if (m_sphSimulator->m_smoothingRadius + stepValue <= maxValue)
-							m_sphSimulator->m_smoothingRadius += stepValue;
-					}
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::SliderFloat("##Gravity", &m_sphSimulator->m_gravity, -1.0f, 1.0f);
+						return ImGui::InputFloat("##Gravity", &m_sphSimulator->m_gravity, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##GravityMinusBtn")) {
-						if (m_sphSimulator->m_gravity - 0.1f >= -1.0f)
-							m_sphSimulator->m_gravity -= 0.1f;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##GravityPlusBtn")) {
-						if (m_sphSimulator->m_gravity + 0.1f <= 1.0f)
-							m_sphSimulator->m_gravity += 0.1f;
-					}
 
 					flag += DrawTableRow("CollisionDamping", [&]() {
-						return ImGui::SliderFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, minValue, 1.0f);
+						return ImGui::InputFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, 0.1f, 0.1f, "%.2f");
 						});
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" - ##CollisionDampingMinusBtn")) {
-						if (m_sphSimulator->m_collisionDamping - stepValue >= minValue)
-							m_sphSimulator->m_collisionDamping -= stepValue;
-					}
-					ImGui::SameLine(0.0f, 0.0f);
-					if (ImGui::Button(" + ##CollisionDampingPlusBtn")) {
-						if (m_sphSimulator->m_collisionDamping + stepValue <= 1.0f)
-							m_sphSimulator->m_collisionDamping += stepValue;
-					}
 
 					ImGui::EndTable();
 				}
@@ -1129,7 +1038,7 @@ UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement
 	ImGui::TableSetColumnIndex(0);
 	ImGui::Text("%s", label);
 	ImGui::TableSetColumnIndex(1);
-	return uiElement(); // UI 요소 실행 후 반환
+	return uiElement();
 }
 
 void MainEngine::SphCalcPass()

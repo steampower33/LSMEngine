@@ -32,22 +32,16 @@ void main(uint tid : SV_GroupThreadID,
 		float3 x_ij = p_j.position - p_i.position;
 		float dist = length(x_ij);
 
-		float vRange = 1.0f;
-		uint baseSeed = index * 17u;
-		float rndVelX = random(baseSeed + 3u);
-		float rndVelY = random(baseSeed + 4u);
-		float3 dir = dist == 0 ?
-			float3(lerp(-vRange, vRange, rndVelX), lerp(-vRange, vRange, rndVelY), 0.0f) :
-			x_ij / dist;
+		if (dist < 1e-9f) continue;
 
-		//float3 dir = x_ij / dist;
+		float3 dir = x_ij / dist;
 
 		pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) * 
 			SpikyGradient(dist, smoothingRadius);
 
 		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian(dist, smoothingRadius);
 	}
-	gravityForce = float3(0.0, -9.8f, 0.0) * mass / p_i.density * gravity;
+	gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
 	p_i.force = pressureForce + viscosityForce + gravityForce;
 	//p_i.force = pressureForce + gravityForce;
 	//p_i.force = pressureForce;
