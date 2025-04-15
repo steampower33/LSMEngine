@@ -20,7 +20,8 @@ void main(uint tid : SV_GroupThreadID,
 
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
 	float3 viscosityForce = float3(0.0, 0.0, 0.0);
-	float3 gravityForce = float3(0.0, 0.0, 0.0);
+	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
+	float3 externalForce = float3(0.0, 0.0, 0.0);
 
 	for (int j = 0; j < maxParticles; j++)
 	{
@@ -41,10 +42,19 @@ void main(uint tid : SV_GroupThreadID,
 
 		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian_2D(dist, smoothingRadius);
 	}
-	gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
-	p_i.force = pressureForce + viscosityForce + gravityForce;
-	//p_i.force = pressureForce + gravityForce;
-	//p_i.force = pressureForce;
+	if (forceKey == 1)
+	{
+		externalForce = float3(-4.0, 0.0, 0.0) * mass;
+	}
+	if (forceKey == 2)
+	{
+		externalForce = float3(4.0, 0.0, 0.0) * mass;
+	}
+
+	p_i.force = pressureForce 
+		+ viscosityForce 
+		+ gravityForce * gravity 
+		+ externalForce;
 
 	ParticlesOutput[index] = p_i;
 }

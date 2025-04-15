@@ -732,7 +732,7 @@ void MainEngine::Update(float dt)
 	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
 
 	if (!m_isPaused)
-		m_sphSimulator->Update(dt);
+		m_sphSimulator->Update(dt, m_forceKey);
 
 	// Update BoundsBox
 	{

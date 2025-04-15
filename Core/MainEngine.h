@@ -71,6 +71,7 @@ private:
 	// Synchronization
 	static MainEngine* s_app;
 
+
 private:
 	void UpdateMouseControl();
 	void UpdateLight(float dt);

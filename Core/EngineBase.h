@@ -90,6 +90,7 @@ public:
 	bool m_selected = false;
 	bool m_dragStartFlag = false;
 	bool m_lightRot = false;
+	UINT m_forceKey = 0;
 
 	ImVec2 m_sceneControllerPos;
 	ImVec2 m_sceneControllerSize;

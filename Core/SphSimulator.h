@@ -85,26 +85,28 @@ public:
 		float viscosity = 0.5f;
 		float gravity;
 		float collisionDamping;
+
+		UINT forceKey;
 	};
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
-	void Update(float dt);
+	void Update(float dt, UINT forceKey);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	SimParams m_constantBufferData;
 	const UINT m_groupSizeX = 512;
-	const float m_dp = 0.2f;
-	const float m_radius = m_dp / 2.0f;
 	const UINT m_nX = 64;
 	const UINT m_nY = 64;
 	const UINT m_maxParticles = m_nX * m_nY;
-	float m_maxBoundsX = 40.0f;
+	const float m_radius = 0.1f;
+	const float m_dp = m_radius * 2.0f;
+	float m_smoothingRadius = 0.5f;
+	float m_maxBoundsX = 30.0f;
 	float m_maxBoundsY = 10.0f;
 	float m_maxBoundsZ = 0.0f;
-	float m_smoothingRadius = 0.5f;
 	float m_gravity = 1.0f;
 	float m_collisionDamping = 0.95f;
 	float m_cellSize = m_radius * 4.0f;
