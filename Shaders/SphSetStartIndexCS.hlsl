@@ -1,6 +1,7 @@
 #include "SphCommon.hlsli"
 
-RWStructuredBuffer<ParticleHash> SortedHashes : register(u0);
+StructuredBuffer<ParticleHash> SortedHashes : register(t0);
+RWStructuredBuffer<CellStart> CellStarts : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -10,10 +11,8 @@ void main(uint tid : SV_GroupThreadID,
     uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
     if (globalIndex == 0)
-        SortedHashes[globalIndex].flag = 1;
-    else if (globalIndex >= maxParticles)
-        return;
-    
+        CellStarts[SortedHashes[globalIndex].cellKey].startIndex = globalIndex;
+
     if (SortedHashes[globalIndex - 1].cellKey != SortedHashes[globalIndex].cellKey)
-        SortedHashes[globalIndex].flag = 1;
+        CellStarts[SortedHashes[globalIndex].cellKey].startIndex = globalIndex;
 }

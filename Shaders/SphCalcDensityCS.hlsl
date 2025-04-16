@@ -1,9 +1,9 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-//StructuredBuffer<ParticleHash> SortedHashes : register(t1);
-//StructuredBuffer<CompactCell> CompactCells : register(t2);
-//StructuredBuffer<int> CellMap : register(t3);
+StructuredBuffer<ParticleHash> SortedHashes : register(t1);
+StructuredBuffer<CompactCell> CompactCells : register(t2);
+StructuredBuffer<int> CellMap : register(t3);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 
@@ -21,18 +21,42 @@ void main(uint tid : SV_GroupThreadID,
 	//p_i.position += p_i.velocityHalfStep * deltaTime;
 	//p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
 
+	uint3 cellID = (p_i.position - minBounds) / smoothingRadius;
+
 	p_i.density = 0.0;
-	for (int j = 0; j < maxParticles; j++)
+	for (int offsetY = -1; offsetY <= 1; offsetY++)
 	{
-		Particle p_j = ParticlesInput[j];
+		for (int offsetX = -1; offsetX <= 1; offsetX++)
+		{
+			uint3 offsetCellId = cellID + uint3(offsetX, offsetY, 0);
 
-		float dist = length(p_j.position - p_i.position);
+			if ((offsetCellId.x >= 0 && offsetCellId.x < gridDimX) &&
+				(offsetCellId.y >= 0 && offsetCellId.y < gridDimY))
+			{
+				uint cellKey = GetCellKeyFromCellID(offsetCellId);
 
-		float influence = Poly6_2D(dist, smoothingRadius);
+				int groupID = CellMap[cellKey];
 
-		p_i.density += mass * influence;
+				if (groupID < 0) continue;
+
+				CompactCell cell = CompactCells[groupID];
+
+				for (int j = cell.startIndex; j < cell.endIndex; j++)
+				{
+					Particle p_j = ParticlesInput[SortedHashes[j].particleID];
+
+					float dist = length(p_j.position - p_i.position);
+
+					float influence = Poly6_2D(dist, smoothingRadius);
+
+					p_i.density += mass * influence;
+				}
+			}
+		}
 	}
 
+	if (p_i.density < 1e-9f)
+		p_i.density = 1e-9f;
 	p_i.pressure = pressureCoeff * (p_i.density - density0);
 
 	ParticlesOutput[index] = p_i;

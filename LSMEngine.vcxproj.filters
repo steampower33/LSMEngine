@@ -247,6 +247,9 @@
     <FxCompile Include="Shaders\BlurYCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SphCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\SphVS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -292,7 +295,10 @@
     <FxCompile Include="Shaders\SphClearCellMapCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphCS.hlsl">
+    <FxCompile Include="Shaders\SphSetStartIndexCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\SphBitonicSortLocalCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

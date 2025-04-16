@@ -57,7 +57,10 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 
 		float deltaTime = ImGui::GetIO().DeltaTime;
 		pEngine->Update(deltaTime);
-		pEngine->Render();	
+		pEngine->Render();
+
+		pEngine->m_isPaused = true;
+
 	}
 
 	pEngine->Destroy();

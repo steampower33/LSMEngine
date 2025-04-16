@@ -21,12 +21,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	if (SortedParticleHashes[globalIndex].flag == 1)
 	{
-		CompactCells[groupId].hashValue = SortedParticleHashes[globalIndex].hashValue;
+		CompactCells[groupId].cellKey = SortedParticleHashes[globalIndex].cellKey;
 		CompactCells[groupId].startIndex = globalIndex;
 		CompactCells[groupId].endIndex = 0;
 	}
 
 	CompactCells[groupId].endIndex = (groupId == maxGroupCnt - 1) ? maxParticles - 1 : CompactCells[groupId + 1].startIndex;
 
-	CellMap[CompactCells[groupId].hashValue] = groupId;
+	CellMap[CompactCells[groupId].cellKey] = groupId;
 }

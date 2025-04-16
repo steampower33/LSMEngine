@@ -58,7 +58,9 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
 	extern ComPtr<IDxcBlob> sphCalcHashCS;
+	extern ComPtr<IDxcBlob> sphBitonicSortLocalCS;
 	extern ComPtr<IDxcBlob> sphBitonicSortCS;
+	extern ComPtr<IDxcBlob> sphSetStartIndexCS;
 	extern ComPtr<IDxcBlob> sphFlagGenerationCS;
 	extern ComPtr<IDxcBlob> sphLocalScanCS;
 	extern ComPtr<IDxcBlob> sphLocalScanBlockCS;
@@ -120,7 +122,9 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphBitonicSortLocalCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphSetStartIndexCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphLocalScanBlockCSPSO;

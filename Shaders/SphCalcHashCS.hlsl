@@ -14,20 +14,10 @@ void main(uint tid : SV_GroupThreadID,
 
     Particle p = Particles[index];
 
-    // 파티클 위치 p.position 을 그리드 최소 바운더리 위치를 기준으로 상대 위치로 변환
-    float3 relativePos = p.position - minBounds;
-
-    // 상대 위치를 셀 크기로 나누어, 각 축별로 몇 번째 셀에 해당하는지 실수 값으로 계산
-    float3 normalizedPos = relativePos / 1;
-
-    // floor 연산으로 소수점을 버려 정수 인덱스를 얻음 (이때 음수 인덱스 가능성 있음)
-    int3 cellID = int3(floor(normalizedPos));
-
-    uint hashValue = uint(cellID.x) +
-        uint(cellID.y) * gridDimX +
-        uint(cellID.z) * gridDimX * gridDimY;
+    // 상대적 위치로 변환 -> 커널 반경으로 나눠줌 -> cellID
+    uint cellKey = GetCellKeyFromCellID((p.position - minBounds) / smoothingRadius);
 
     ParticleHashes[index].particleID = index;
-    ParticleHashes[index].hashValue = hashValue;
+    ParticleHashes[index].cellKey = cellKey;
     ParticleHashes[index].flag = 0;
 }

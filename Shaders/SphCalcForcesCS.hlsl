@@ -1,9 +1,9 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-//StructuredBuffer<ParticleHash> SortedHashes : register(t1);
-//StructuredBuffer<CompactCell> CompactCells : register(t2);
-//StructuredBuffer<int> CellMap : register(t3);
+StructuredBuffer<ParticleHash> SortedHashes : register(t1);
+StructuredBuffer<CompactCell> CompactCells : register(t2);
+StructuredBuffer<int> CellMap : register(t3);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 
@@ -23,25 +23,47 @@ void main(uint tid : SV_GroupThreadID,
 	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
 	float3 externalForce = float3(0.0, 0.0, 0.0);
 
-	for (int j = 0; j < maxParticles; j++)
+	uint3 cellID = (p_i.position - minBounds) / smoothingRadius;
+
+	for (int offsetY = -1; offsetY <= 1; offsetY++)
 	{
-		// 자기자신 제외
-		if (index == j) continue;
+		for (int offsetX = -1; offsetX <= 1; offsetX++)
+		{
+			uint3 offsetCellId = cellID + uint3(offsetX, offsetY, 0);
 
-		Particle p_j = ParticlesInput[j];
+			if ((offsetCellId.x >= 0 && offsetCellId.x < gridDimX) &&
+				(offsetCellId.y >= 0 && offsetCellId.y < gridDimY))
+			{
+				uint cellKey = GetCellKeyFromCellID(offsetCellId);
 
-		float3 x_ij = p_j.position - p_i.position;
-		float dist = length(x_ij);
+				int groupID = CellMap[cellKey];
 
-		if (dist < 1e-9f) continue;
+				CompactCell cell = CompactCells[groupID];
 
-		float3 dir = x_ij / dist;
+				for (int j = cell.startIndex; j < cell.endIndex; j++)
+				{
+					 //자기자신 제외
+					if (index == j) continue;
 
-		pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) * 
-			SpikyGradient_2D(dist, smoothingRadius);
+					Particle p_j = ParticlesInput[SortedHashes[j].particleID];
 
-		viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian_2D(dist, smoothingRadius);
+					float3 x_ij = p_j.position - p_i.position;
+					float dist = length(x_ij);
+
+					if (dist < 1e-9f) continue;
+
+					float3 dir = x_ij / dist;
+
+					pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
+						SpikyGradient_2D(dist, smoothingRadius);
+
+					viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * 
+						ViscosityLaplacian_2D(dist, smoothingRadius);
+				}
+			}
+		}
 	}
+
 	if (forceKey == 1)
 	{
 		externalForce = float3(-4.0, 0.0, 0.0) * mass;
@@ -51,9 +73,9 @@ void main(uint tid : SV_GroupThreadID,
 		externalForce = float3(4.0, 0.0, 0.0) * mass;
 	}
 
-	p_i.force = pressureForce 
-		+ viscosityForce 
-		+ gravityForce * gravity 
+	p_i.force = pressureForce
+		+ viscosityForce
+		+ gravityForce * gravity
 		+ externalForce;
 
 	ParticlesOutput[index] = p_i;

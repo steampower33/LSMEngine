@@ -20,9 +20,14 @@ struct Particle {
 
 struct ParticleHash
 {
-    uint particleID; // 원래 파티클 인덱스
-    uint hashValue;  // 계산된 해시 값
-    uint flag;       // 그룹 Flag  
+    uint particleID;
+    uint cellKey;
+    uint flag;
+};
+
+struct CellStart
+{
+    uint startIndex;
 };
 
 struct ScanResult
@@ -32,7 +37,7 @@ struct ScanResult
 
 struct CompactCell
 {
-    uint hashValue;
+    uint cellKey;
     uint startIndex;
     uint endIndex;
 };
@@ -65,6 +70,16 @@ cbuffer SimParams : register(b0) {
     uint forceKey;
 };
 
+uint GetCellKeyFromCellID(int3 cellID)
+{
+    // CellID로 Hash 값 계산
+    /*uint hash = cellID.x * 15823 + cellID.y * 9737333;
+    uint cellKey = hash % maxParticles;*/
+
+    uint cellKey = cellID.x + cellID.y * gridDimX;
+    return cellKey;
+}
+
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)
 float random(uint seed)
 {
@@ -78,7 +93,7 @@ float random(uint seed)
 // 2차원 Poly6 커널 함수
 float Poly6_2D(float r, float h)
 {
-    if (r >= h) return 0;
+    if (r >= h) return 0.0;
 
     float C = 4.0 / (PI * pow(h, 8));
     return C * pow((h * h - r * r), 3);
@@ -87,11 +102,9 @@ float Poly6_2D(float r, float h)
 // 2차원 Spiky Gradient 커널 함수
 float SpikyGradient_2D(float r, float h)
 {
-    if (r >= h) return 0;
+    if (r >= h) return 0.0;
 
     float h_pow5 = pow(h, 5);
-
-    if (h_pow5 < 1e-9f) return 0.0f;
 
     float C_grad = 30.0f / (PI * h_pow5);
 
@@ -101,7 +114,7 @@ float SpikyGradient_2D(float r, float h)
 // 2차원 Viscosity Laplacian 커널 함수
 float ViscosityLaplacian_2D(float r, float h)
 {
-    if (r >= h) return 0;
+    if (r >= h) return 0.0;
 
     float C = 40.0 / (PI * pow(h, 5.0));
     return C * (h - r);

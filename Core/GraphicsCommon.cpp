@@ -40,6 +40,8 @@ namespace Graphics
 
 	ComPtr<IDxcBlob> sphCalcHashCS;
 	ComPtr<IDxcBlob> sphBitonicSortCS;
+	ComPtr<IDxcBlob> sphBitonicSortLocalCS;
+	ComPtr<IDxcBlob> sphSetStartIndexCS;
 	ComPtr<IDxcBlob> sphFlagGenerationCS;
 	ComPtr<IDxcBlob> sphLocalScanCS;
 	ComPtr<IDxcBlob> sphLocalScanBlockCS;
@@ -98,6 +100,8 @@ namespace Graphics
 
 	ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
 	ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
+	ComPtr<ID3D12PipelineState> sphBitonicSortLocalCSPSO;
+	ComPtr<ID3D12PipelineState> sphSetStartIndexCSPSO;
 	ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
 	ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
 	ComPtr<ID3D12PipelineState> sphLocalScanBlockCSPSO;
@@ -385,6 +389,8 @@ void Graphics::InitShaders(ComPtr<ID3D12Device>& device)
 	// Sph
 	CreateShader(device, L"SphCalcHashCS.hlsl", L"cs_6_0", sphCalcHashCS);
 	CreateShader(device, L"SphBitonicSortCS.hlsl", L"cs_6_0", sphBitonicSortCS);
+	CreateShader(device, L"SphBitonicSortLocalCS.hlsl", L"cs_6_0", sphBitonicSortLocalCS);
+	CreateShader(device, L"SphSetStartIndexCS.hlsl", L"cs_6_0", sphSetStartIndexCS);
 	CreateShader(device, L"SphFlagGenerationCS.hlsl", L"cs_6_0", sphFlagGenerationCS);
 	CreateShader(device, L"SphLocalScanCS.hlsl", L"cs_6_0", sphLocalScanCS);
 	CreateShader(device, L"SphLocalScanBlockCS.hlsl", L"cs_6_0", sphLocalScanBlockCS);
@@ -703,11 +709,23 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCalcHashCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcHashCSPSODesc, IID_PPV_ARGS(&sphCalcHashCSPSO)));
 
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphBitonicSortLocalCSPSODesc = {};
+	sphBitonicSortLocalCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphBitonicSortLocalCSPSODesc.CS = { sphBitonicSortLocalCS->GetBufferPointer(), sphBitonicSortLocalCS->GetBufferSize() };
+	sphBitonicSortLocalCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphBitonicSortLocalCSPSODesc, IID_PPV_ARGS(&sphBitonicSortLocalCSPSO)));
+
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphBitonicSortCSPSODesc = {};
 	sphBitonicSortCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphBitonicSortCSPSODesc.CS = { sphBitonicSortCS->GetBufferPointer(), sphBitonicSortCS->GetBufferSize() };
 	sphBitonicSortCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphBitonicSortCSPSODesc, IID_PPV_ARGS(&sphBitonicSortCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSetStartIndexCSPSODesc = {};
+	sphSetStartIndexCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphSetStartIndexCSPSODesc.CS = { sphSetStartIndexCS->GetBufferPointer(), sphSetStartIndexCS->GetBufferSize() };
+	sphSetStartIndexCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphSetStartIndexCSPSODesc, IID_PPV_ARGS(&sphSetStartIndexCSPSO)));
 	
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphFlagGenerationCSPSODesc = {};
 	sphFlagGenerationCSPSODesc.pRootSignature = sphComputeRootSignature.Get();

@@ -41,7 +41,7 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	// Hash 초기 상태 -> SRV
 	SetBarrier(commandList, m_structuredBuffer[2],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
+	
 	// LocalScan 초기 상태 -> SRV
 	SetBarrier(commandList, m_structuredBuffer[3],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -65,9 +65,9 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, 0.0f);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, 0.0f);
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_cellSize);
-	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_cellSize);
-	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
 
 	CreateConstUploadBuffer(device, m_constantBuffer, m_constantBufferData, m_constantBufferDataBegin);
 
@@ -164,9 +164,9 @@ void SphSimulator::Update(float dt, UINT forceKey)
 	m_constantBufferData.gravity = m_gravity;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.maxParticles = m_maxParticles;
-	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_cellSize);
-	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_cellSize);
-	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_cellSize);
+	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
 	m_constantBufferData.forceKey = forceKey;
 
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
@@ -184,9 +184,9 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 	commandList->SetComputeRootDescriptorTable(8, m_constantBufferCbvGpuHandle); // CBV
 
-	//CalcHashes(commandList); // 해시 연산
-	//BitonicSort(commandList); // 해시 값 기준 정렬
-	//CalcHashRange(commandList); // 해시 배열로부터 셀 범위를 기록
+	CalcHashes(commandList); // 해시 연산
+	BitonicSort(commandList); // 해시 값 기준 정렬
+	CalcHashRange(commandList); // 해시 배열로부터 셀 범위를 기록
 	CalcDensityForces(commandList);
 	CalcSPH(commandList);
 }
@@ -206,25 +206,26 @@ void SphSimulator::CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList)
 	commandList->Dispatch(dispatchX, 1, 1);
 }
 
-// 만약 상수 버퍼를 사용하고싶다면,
-// Multiframe-Inflite 방식일때는 프레임 개수만큼 만들어서 사용해야함.
-// 지금은 루트 상수를 사용해서 처리
 void SphSimulator::BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	commandList->SetPipelineState(Graphics::sphBitonicSortCSPSO.Get());
+	commandList->SetPipelineState(Graphics::sphBitonicSortLocalCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);
 
 	commandList->SetComputeRootDescriptorTable(4, m_particleBufferUavGpuHandle[m_hashIdx]); // UAV 0
 
 	UINT dispatchX = (m_maxParticles + m_groupSizeX - 1) / m_groupSizeX;
+	commandList->Dispatch(dispatchX, 1, 1);
 
-	for (uint32_t k = 2; k <= m_maxParticles; k *= 2)
+	commandList->SetPipelineState(Graphics::sphBitonicSortCSPSO.Get());
+
+	for (uint32_t k = m_groupSizeX * 2; k <= m_maxParticles; k *= 2)
 	{
 		for (uint32_t j = k / 2; j > 0; j /= 2)
 		{
 			commandList->SetComputeRoot32BitConstant(9, k, 0);
 			commandList->SetComputeRoot32BitConstant(9, j, 1);
+
 			SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);
 
 			commandList->Dispatch(dispatchX, 1, 1);
@@ -350,19 +351,19 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 	SetBarrier(commandList, m_structuredBuffer[m_particleB], // ParticleB : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	//SetUAVBarrier(commandList, m_structuredBuffer[m_compactCellIdx]); // CompactCell : UAV -> SRV
-	//SetBarrier(commandList, m_structuredBuffer[m_compactCellIdx], 
-	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	//SetUAVBarrier(commandList, m_structuredBuffer[m_cellMapIdx]);     // CellMap : UAV -> SRV
-	//SetBarrier(commandList, m_structuredBuffer[m_cellMapIdx],
-	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SetUAVBarrier(commandList, m_structuredBuffer[m_compactCellIdx]); // CompactCell : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_compactCellIdx], 
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellMapIdx]);     // CellMap : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellMapIdx],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	commandList->SetComputeRootDescriptorTable(0, m_particleBufferSrvGpuHandle[m_particleA]); // SRV 0
-	//commandList->SetComputeRootDescriptorTable(1, m_particleBufferSrvGpuHandle[m_hashIdx]); // SRV 1
-	//commandList->SetComputeRootDescriptorTable(2, m_particleBufferSrvGpuHandle[m_compactCellIdx]); // SRV 2
-	//commandList->SetComputeRootDescriptorTable(3, m_particleBufferSrvGpuHandle[m_cellMapIdx]); // SRV 3
+	commandList->SetComputeRootDescriptorTable(1, m_particleBufferSrvGpuHandle[m_hashIdx]); // SRV 1
+	commandList->SetComputeRootDescriptorTable(2, m_particleBufferSrvGpuHandle[m_compactCellIdx]); // SRV 2
+	commandList->SetComputeRootDescriptorTable(3, m_particleBufferSrvGpuHandle[m_cellMapIdx]); // SRV 3
 	commandList->SetComputeRootDescriptorTable(4, m_particleBufferUavGpuHandle[m_particleB]); // UAV 0
 
 	UINT dispatchX = (m_maxParticles + m_groupSizeX - 1) / m_groupSizeX;
