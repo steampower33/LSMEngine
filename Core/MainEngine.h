@@ -79,6 +79,7 @@ private:
 
 private:
 	void SphCalcPass();
+	void SphRenderPass();
 
 	void InitPreFrame();
 	void CreateShapes();

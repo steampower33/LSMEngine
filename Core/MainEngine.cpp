@@ -27,57 +27,6 @@ void MainEngine::Initialize()
 	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.80f;
 
 	{
-		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
-		std::reverse(skybox.indices.begin(), skybox.indices.end());
-
-		skybox.cubeEnvFilename = "./Assets/IBL/IBLEnvHDR.dds";
-		skybox.cubeDiffuseFilename = "./Assets/IBL/IBLDiffuseHDR.dds";
-		skybox.cubeSpecularFilename = "./Assets/IBL/IBLSpecularHDR.dds";
-		skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
-
-		m_skybox = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-	}
-
-	{
-		MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 20, 20);
-		m_cursorSphere = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-		m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
-		m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
-	}
-
-	{
-		MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
-
-		XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-		m_mirror = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, posMirror);
-		m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_mirror->m_meshConstsBufferData.metallicFactor = 0.5f;
-		m_mirror->m_meshConstsBufferData.roughnessFactor = 0.3f;
-		m_mirror->m_key = "mirror";
-		//m_models.insert({ m_mirror->m_key, m_mirror });
-
-		float degrees = 90.0f;
-		float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
-		XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
-		XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
-
-		XMVECTOR translation = XMVectorAdd(XMLoadFloat4(&posMirror), { 0.0f, -1.0f, 0.0f, 0.0f });
-		m_mirror->UpdateQuaternionAndTranslation(quaternion, translation);
-
-		XMVECTOR planeNormal{ 0.0f, 1.0f, 0.0f, 0.0f };
-
-		XMVECTOR plane = XMPlaneFromPointNormal(translation, planeNormal);
-		XMStoreFloat4(&m_mirrorPlane, plane);
-	}
-
-	{
 		MeshData meshData = GeometryGenerator::MakeBoundsBox();
 
 		XMFLOAT4 pos = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -86,6 +35,57 @@ void MainEngine::Initialize()
 			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, pos);
 		m_boundsBox->m_key = "m_boundsBox";
 	}
+
+	//{
+	//	MeshData skybox = GeometryGenerator::MakeBox(50.0f);
+	//	std::reverse(skybox.indices.begin(), skybox.indices.end());
+
+	//	skybox.cubeEnvFilename = "./Assets/IBL/IBLEnvHDR.dds";
+	//	skybox.cubeDiffuseFilename = "./Assets/IBL/IBLDiffuseHDR.dds";
+	//	skybox.cubeSpecularFilename = "./Assets/IBL/IBLSpecularHDR.dds";
+	//	skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
+
+	//	m_skybox = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	//}
+
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 20, 20);
+	//	m_cursorSphere = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	//	m_cursorSphere->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 1.0);
+	//	m_cursorSphere->m_meshConstsBufferData.useAlbedoMap = false;
+	//}
+
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeSquare(10.0f);
+
+	//	XMFLOAT4 posMirror = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	//	m_mirror = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, posMirror);
+	//	m_mirror->m_meshConstsBufferData.albedoFactor = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	//	m_mirror->m_meshConstsBufferData.emissionFactor = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	//	m_mirror->m_meshConstsBufferData.metallicFactor = 0.5f;
+	//	m_mirror->m_meshConstsBufferData.roughnessFactor = 0.3f;
+	//	m_mirror->m_key = "mirror";
+	//	//m_models.insert({ m_mirror->m_key, m_mirror });
+
+	//	float degrees = 90.0f;
+	//	float radians = XMConvertToRadians(degrees); // DirectXMath 함수 사용
+	//	XMVECTOR AxisX{ 1.0f, 0.0f, 0.0f, 0.0f };
+	//	XMVECTOR quaternion = XMQuaternionRotationAxis(AxisX, radians);
+
+	//	XMVECTOR translation = XMVectorAdd(XMLoadFloat4(&posMirror), { 0.0f, -1.0f, 0.0f, 0.0f });
+	//	m_mirror->UpdateQuaternionAndTranslation(quaternion, translation);
+
+	//	XMVECTOR planeNormal{ 0.0f, 1.0f, 0.0f, 0.0f };
+
+	//	XMVECTOR plane = XMPlaneFromPointNormal(translation, planeNormal);
+	//	XMStoreFloat4(&m_mirrorPlane, plane);
+	//}
 
 	//{
 	//	float radius = 0.5f;
@@ -123,48 +123,48 @@ void MainEngine::Initialize()
 	//	m_shapesInfo.sphereNum++;
 	//}
 
-	{
-		m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
-		m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
-		m_globalConstsData.light[0].direction = XMFLOAT3{ 0.0f, -1.0f, 0.0f };
-		m_globalConstsData.light[0].spotPower = 10.0f;
-		m_globalConstsData.light[0].radius = 0.02f;
-		m_globalConstsData.light[0].type =
-			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
+	//{
+	//	m_globalConstsData.light[0].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
+	//	m_globalConstsData.light[0].position = XMFLOAT3{ 0.0f, 2.0f, 0.0f };
+	//	m_globalConstsData.light[0].direction = XMFLOAT3{ 0.0f, -1.0f, 0.0f };
+	//	m_globalConstsData.light[0].spotPower = 10.0f;
+	//	m_globalConstsData.light[0].radius = 0.02f;
+	//	m_globalConstsData.light[0].type =
+	//		LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
-		m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
-		m_globalConstsData.light[1].radius = 0.02f;
-		m_globalConstsData.light[1].spotPower = 10.0f;
-		m_globalConstsData.light[1].fallOffEnd = 20.0f;
-		m_globalConstsData.light[1].type =
-			LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
+	//	m_globalConstsData.light[1].radiance = XMFLOAT3{ 5.0f, 5.0f, 5.0f };
+	//	m_globalConstsData.light[1].radius = 0.02f;
+	//	m_globalConstsData.light[1].spotPower = 10.0f;
+	//	m_globalConstsData.light[1].fallOffEnd = 20.0f;
+	//	m_globalConstsData.light[1].type =
+	//		LIGHT_SPOT | LIGHT_SHADOW; // Point with shadow;
 
-		for (UINT i = 0; i < MAX_LIGHTS; i++)
-		{
-			MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 20, 20);
-			XMFLOAT4 spherePos{ m_globalConstsData.light[i].position.x, m_globalConstsData.light[i].position.y, m_globalConstsData.light[i].position.z, 0.0f };
-			m_lightSphere[i] = make_shared<Model>(
-				m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-				vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, spherePos);
-			m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
-			float radius = m_globalConstsData.light[i].radius;
-			m_lightSphere[i]->m_scale = XMFLOAT3(radius, radius, radius);
-			m_lightSphere[i]->m_meshConstsBufferData.useAlbedoMap = false;
-		}
-	}
+	//	for (UINT i = 0; i < MAX_LIGHTS; i++)
+	//	{
+	//		MeshData meshData = GeometryGenerator::MakeSphere(1.0f, 20, 20);
+	//		XMFLOAT4 spherePos{ m_globalConstsData.light[i].position.x, m_globalConstsData.light[i].position.y, m_globalConstsData.light[i].position.z, 0.0f };
+	//		m_lightSphere[i] = make_shared<Model>(
+	//			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, spherePos);
+	//		m_lightSphere[i]->m_meshConstsBufferData.albedoFactor = XMFLOAT3(1.0f, 1.0f, 0.0);
+	//		float radius = m_globalConstsData.light[i].radius;
+	//		m_lightSphere[i]->m_scale = XMFLOAT3(radius, radius, radius);
+	//		m_lightSphere[i]->m_meshConstsBufferData.useAlbedoMap = false;
+	//	}
+	//}
 
-	// 후처리용 화면 사각형
-	{
-		MeshData meshData = GeometryGenerator::MakeSquare();
-		m_screenSquare = make_shared<Model>(
-			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-			vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-	}
+	//// 후처리용 화면 사각형
+	//{
+	//	MeshData meshData = GeometryGenerator::MakeSquare();
+	//	m_screenSquare = make_shared<Model>(
+	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+	//		vector{ meshData }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	//}
 
-	// 후처리
-	for (int i = 0; i < FrameCount; i++)
-		m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
-			m_device, m_pCurrFR->m_cmdList, m_sceneSize.x, m_sceneSize.y, m_frameResources[i]->m_globalConstsData.fogSRVIndex, m_frameResources[i]->m_globalConstsData.resolvedSRVIndex);
+	//// 후처리
+	//for (int i = 0; i < FrameCount; i++)
+	//	m_frameResources[i]->m_postProcess = make_shared<PostProcess>(
+	//		m_device, m_pCurrFR->m_cmdList, m_sceneSize.x, m_sceneSize.y, m_frameResources[i]->m_globalConstsData.fogSRVIndex, m_frameResources[i]->m_globalConstsData.resolvedSRVIndex);
 
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Close());
 
@@ -214,23 +214,23 @@ void MainEngine::UpdateGUI()
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f); // 자식 패널의 테두리 크기
 
-		// 왼쪽 패널
-		{
-			ImGui::BeginChild("LeftPane", ImVec2(leftPaneWidth, 0), true);
+		//// 왼쪽 패널
+		//{
+		//	ImGui::BeginChild("LeftPane", ImVec2(leftPaneWidth, 0), true);
 
-			// 버튼 추가
-			if (ImGui::Button("General", buttonSize)) { buttonIdx = GENERAL; }
-			if (ImGui::Button("Objects", buttonSize)) { buttonIdx = OBJECTS; }
-			if (ImGui::Button("Shapes", buttonSize)) { buttonIdx = SHAPES; }
-			if (ImGui::Button("Lights", buttonSize)) { buttonIdx = LIGHT; }
-			if (ImGui::Button("Env", buttonSize)) { buttonIdx = ENV; }
-			if (ImGui::Button("Fog", buttonSize)) { buttonIdx = FOG; }
-			if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = POST_PROCESS; }
-			if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = MIRROR; }
-			if (ImGui::Button("SPH", buttonSize)) { buttonIdx = SPH; }
+		//	// 버튼 추가
+		//	if (ImGui::Button("General", buttonSize)) { buttonIdx = GENERAL; }
+		//	if (ImGui::Button("Objects", buttonSize)) { buttonIdx = OBJECTS; }
+		//	if (ImGui::Button("Shapes", buttonSize)) { buttonIdx = SHAPES; }
+		//	if (ImGui::Button("Lights", buttonSize)) { buttonIdx = LIGHT; }
+		//	if (ImGui::Button("Env", buttonSize)) { buttonIdx = ENV; }
+		//	if (ImGui::Button("Fog", buttonSize)) { buttonIdx = FOG; }
+		//	if (ImGui::Button("  Post\nProcess", buttonSize)) { buttonIdx = POST_PROCESS; }
+		//	if (ImGui::Button("Mirror", buttonSize)) { buttonIdx = MIRROR; }
+		//	if (ImGui::Button("SPH", buttonSize)) { buttonIdx = SPH; }
 
-			ImGui::EndChild();
-		}
+		//	ImGui::EndChild();
+		//}
 
 		// 오른쪽 콘텐츠 영역
 		{
@@ -686,50 +686,7 @@ void MainEngine::Update(float dt)
 {
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
-	UpdateMouseControl();
-	UpdateLight(dt);
-
-	if (m_guiState.isMeshChanged)
-	{
-		m_guiState.isMeshChanged = false;
-		m_models[m_guiState.changedMeshKey]->UpdateState();
-	}
-
-	if (m_guiState.isPostEffectsEnabled && m_guiState.isPostEffectsChanged)
-	{
-		m_guiState.isPostEffectsChanged = false;
-
-		for (UINT i = 0; i < FrameCount; i++)
-		{
-			m_frameResources[i]->m_globalConstsData.depthScale = m_globalConstsData.depthScale;
-			m_frameResources[i]->m_globalConstsData.fogStrength = m_globalConstsData.fogStrength;
-			m_frameResources[i]->m_globalConstsData.fogMode = m_globalConstsData.fogMode;
-		}
-	}
-
-	if (m_guiState.isPostProcessEnabled)
-	{
-
-		for (UINT i = 0; i < FrameCount; i++)
-			m_frameResources[i]->m_postProcess->m_copyFilter->m_postEffectsEnabled = m_guiState.isPostEffectsEnabled;
-
-		if (m_guiState.isPostProcessChanged)
-		{
-			m_guiState.isPostProcessChanged = false;
-			for (UINT i = 0; i < FrameCount; i++)
-				m_frameResources[i]->m_postProcess->Update(m_combineConsts);
-		}
-	}
-
-	//m_globalConstsData.isEnvEnabled = m_skybox->isVisible ? 1 : 0;
-
-	if (m_guiState.isMirrorChanged)
-	{
-		m_guiState.isMirrorChanged = false;
-		m_mirror->OnlyCallConstsMemcpy();
-	}
-
-	m_pCurrFR->Update(m_camera, m_mirrorPlane, m_globalConstsData, m_shadowGlobalConstsData, m_cubemapIndexConstsData);
+	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
 
 	if (!m_isPaused)
 		m_sphSimulator->Update(dt, m_forceKey);
@@ -747,6 +704,48 @@ void MainEngine::Update(float dt)
 		m_boundsBox->Update();
 	}
 
+	//UpdateMouseControl();
+	//UpdateLight(dt);
+
+	//if (m_guiState.isMeshChanged)
+	//{
+	//	m_guiState.isMeshChanged = false;
+	//	m_models[m_guiState.changedMeshKey]->UpdateState();
+	//}
+
+	//if (m_guiState.isPostEffectsEnabled && m_guiState.isPostEffectsChanged)
+	//{
+	//	m_guiState.isPostEffectsChanged = false;
+
+	//	for (UINT i = 0; i < FrameCount; i++)
+	//	{
+	//		m_frameResources[i]->m_globalConstsData.depthScale = m_globalConstsData.depthScale;
+	//		m_frameResources[i]->m_globalConstsData.fogStrength = m_globalConstsData.fogStrength;
+	//		m_frameResources[i]->m_globalConstsData.fogMode = m_globalConstsData.fogMode;
+	//	}
+	//}
+
+	//if (m_guiState.isPostProcessEnabled)
+	//{
+
+	//	for (UINT i = 0; i < FrameCount; i++)
+	//		m_frameResources[i]->m_postProcess->m_copyFilter->m_postEffectsEnabled = m_guiState.isPostEffectsEnabled;
+
+	//	if (m_guiState.isPostProcessChanged)
+	//	{
+	//		m_guiState.isPostProcessChanged = false;
+	//		for (UINT i = 0; i < FrameCount; i++)
+	//			m_frameResources[i]->m_postProcess->Update(m_combineConsts);
+	//	}
+	//}
+
+	//m_globalConstsData.isEnvEnabled = m_skybox->isVisible ? 1 : 0;
+
+	//if (m_guiState.isMirrorChanged)
+	//{
+	//	m_guiState.isMirrorChanged = false;
+	//	m_mirror->OnlyCallConstsMemcpy();
+	//}
 }
 
 void MainEngine::Render()
@@ -757,14 +756,17 @@ void MainEngine::Render()
 	if (!m_isPaused)
 		SphCalcPass();
 
-	InitPreFrame();
-	CreateShapes();
-	DepthOnlyPass();
-	ScenePass();
-	ResolvePass();
-	PostEffectsPass();
-	PostProcessPass();
+	SphRenderPass();
 	ImGUIPass();
+
+	//InitPreFrame();
+	//CreateShapes();
+	//DepthOnlyPass();
+	//ScenePass();
+	//ResolvePass();
+	//PostEffectsPass();
+	//PostProcessPass();
+	//ImGUIPass();
 
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Close());
 
@@ -779,6 +781,63 @@ void MainEngine::Render()
 		MoveToNextFrame();
 	else
 		WaitForPreviousFrame();
+}
+
+void MainEngine::SphCalcPass()
+{
+	m_sphSimulator->Compute(m_pCurrFR->m_cmdList);
+}
+
+void MainEngine::SphRenderPass()
+{
+	SetBarrier(m_pCurrFR->m_cmdList, m_renderTargets[m_frameIndex],
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	m_pCurrFR->m_cmdList->RSSetViewports(1, &m_sceneViewport);
+	m_pCurrFR->m_cmdList->RSSetScissorRects(1, &m_sceneScissorRect);
+
+	// Sph Render
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
+	m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+	const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
+	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
+	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::sphPSO.Get());
+	m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+
+	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
+	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());
+	m_boundsBox->RenderBoundsBox(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+
+	// Resolve
+	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+
+	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+
+	m_pCurrFR->m_cmdList->ResolveSubresource(
+		m_pCurrFR->m_sceneBuffer.Get(),   // Resolve 대상 (단일 샘플 텍스처)
+		0,                      // 대상 서브리소스 인덱스
+		m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
+		0,                      // 소스 서브리소스 인덱스
+		m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
+	);
+
+	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
+		D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void MainEngine::UpdateLight(float dt)
@@ -1041,11 +1100,6 @@ UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement
 	return uiElement();
 }
 
-void MainEngine::SphCalcPass()
-{
-	m_sphSimulator->Compute(m_pCurrFR->m_cmdList);
-}
-
 void MainEngine::InitPreFrame()
 {
 	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
@@ -1260,19 +1314,6 @@ void MainEngine::ScenePass()
 			m_pCurrFR->m_cmdList->OMSetStencilRef(1); // 참조 값 1로 설정
 			m_mirror->Render(m_device, m_pCurrFR->m_cmdList);
 		}
-
-		// Sph
-		m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
-		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::sphPSO.Get());
-		m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
-
-		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
-		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());
-		m_boundsBox->RenderBoundsBox(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
-
-		// 임시 방편
-		// basicRootSignature 및 해당 디스크립터 힙 다시 설정
-		InitPreFrame();
 	}
 
 	// shadowDepthOnlyBuffer State Change D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE To D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -1401,7 +1442,6 @@ void MainEngine::PostProcessPass()
 
 void MainEngine::ImGUIPass()
 {
-
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_rtvSize * m_frameIndex);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 	m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);

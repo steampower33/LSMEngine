@@ -30,7 +30,9 @@ public:
 		GlobalConstants& m_globalConstsBufferData,
 		GlobalConstants (&shadowGlobalConsts)[MAX_LIGHTS],
 		CubemapIndexConstants& cubemapIndexConsts);
-
+	void UpdateGlobalConsts(
+		shared_ptr<Camera>& camera,
+		GlobalConstants& globalConsts);
 	ComPtr<ID3D12CommandAllocator> m_cmdAlloc;
 	ComPtr<ID3D12GraphicsCommandList> m_cmdList;
 

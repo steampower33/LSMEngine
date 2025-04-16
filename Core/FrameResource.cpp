@@ -46,6 +46,35 @@ FrameResource::~FrameResource()
 
 }
 
+
+void FrameResource::UpdateGlobalConsts(
+	shared_ptr<Camera>& camera,
+	GlobalConstants& globalConsts)
+{
+	XMMATRIX view = camera->GetViewMatrix();
+	XMMATRIX viewTrans = XMMatrixTranspose(view);
+	XMStoreFloat4x4(&m_globalConstsData.view, viewTrans);
+
+	XMMATRIX proj = camera->GetProjectionMatrix();
+	XMStoreFloat4x4(&m_globalConstsData.proj, XMMatrixTranspose(proj));
+
+	XMMATRIX viewProjTrans = XMMatrixMultiplyTranspose(view, proj);
+	XMStoreFloat4x4(&m_globalConstsData.viewProj, viewProjTrans);
+
+	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
+	XMStoreFloat4x4(&m_globalConstsData.invProj, XMMatrixTranspose(invProj));
+
+	m_globalConstsData.eyeWorld = camera->GetEyePos();
+	m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
+	m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
+	m_globalConstsData.envLodBias = globalConsts.envLodBias;
+	m_globalConstsData.light[0] = globalConsts.light[0];
+	m_globalConstsData.light[1] = globalConsts.light[1];
+	m_globalConstsData.isEnvEnabled = globalConsts.isEnvEnabled;
+
+	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
+}
+
 void FrameResource::Update(
 	shared_ptr<Camera>& camera,
 	XMFLOAT4& mirrorPlane,

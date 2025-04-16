@@ -29,6 +29,16 @@ cbuffer GlobalConstants : register(b0)
 	float4x4 d05;
 }
 
+
+float3 LinearToneMapping(float3 color)
+{
+	float3 invGamma = float3(1, 1, 1) / 2.2;
+
+	color = clamp(1.0 * color, 0., 1.);
+	color = pow(color, invGamma);
+	return color;
+}
+
 struct PSInput
 {
 	float4 clipPos : SV_POSITION;
@@ -47,5 +57,6 @@ float4 main(PSInput input) : SV_TARGET
 
 	float q = dist / radius;
 	float scale = 1.0 - q;
-	return float4(input.color.rgb * scale, 1.0);
+	return float4(LinearToneMapping(input.color.rgb * scale), 1.0);
+	//return float4(input.color.rgb * scale, 1.0);
 }
