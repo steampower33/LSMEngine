@@ -72,12 +72,16 @@ cbuffer SimParams : register(b0) {
 
 uint GetCellKeyFromCellID(int3 cellID)
 {
-    // CellID로 Hash 값 계산
-    /*uint hash = cellID.x * 15823 + cellID.y * 9737333;
-    uint cellKey = hash % maxParticles;*/
+    // 큰 소수를 사용하여 좌표를 섞어줌
+    uint p1 = 73856093;
+    uint p2 = 19349663;
 
-    uint cellKey = cellID.x + cellID.y * gridDimX;
-    return cellKey;
+    int k = cellID.x;
+    int l = cellID.y;
+
+    uint hashValue = (uint)(k * p1) ^ (uint)(l * p2);
+
+    return hashValue % cellCnt;
 }
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)

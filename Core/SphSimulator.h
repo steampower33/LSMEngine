@@ -98,21 +98,21 @@ public:
 
 	SimParams m_constantBufferData;
 	const UINT m_groupSizeX = 512;
-	const UINT m_nX = 64;
-	const UINT m_nY = 64;
+	const UINT m_nX = 32;
+	const UINT m_nY = 16;
 	const UINT m_maxParticles = m_nX * m_nY;
 	const float m_radius = 0.1f;
 	const float m_dp = m_radius * 2.0f;
 	float m_smoothingRadius = 0.4f;
-	float m_maxBoundsX = 20.0f;
-	float m_maxBoundsY = 20.0f;
+	float m_maxBoundsX = 10.0f;
+	float m_maxBoundsY = 10.0f;
 	float m_maxBoundsZ = 0.0f;
 	float m_gravity = 0.0f;
 	float m_collisionDamping = 0.95f;
 	float m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
 	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
 	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
-	UINT m_cellCnt = m_gridDimX * m_gridDimY;
+	UINT m_cellCnt = m_maxParticles * 2;
 
 private:
 	const UINT m_particleDataSize = sizeof(Particle);

@@ -23,46 +23,69 @@ void main(uint tid : SV_GroupThreadID,
 	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravity;
 	float3 externalForce = float3(0.0, 0.0, 0.0);
 
-	uint3 cellID = (p_i.position - minBounds) / smoothingRadius;
+	uint3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
 
-	for (int offsetY = -1; offsetY <= 1; offsetY++)
+	for (int i = -1; i <= 1; ++i)
 	{
-		for (int offsetX = -1; offsetX <= 1; offsetX++)
+		for (int j = -1; j <= 1; ++j)
 		{
-			uint3 offsetCellId = cellID + uint3(offsetX, offsetY, 0);
+			uint3 neighborIndex = cellID + uint3(i, j, 0);
+			uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
-			if ((offsetCellId.x >= 0 && offsetCellId.x < gridDimX) &&
-				(offsetCellId.y >= 0 && offsetCellId.y < gridDimY))
+			uint neighborIterator = CompactCells[flatNeighborIndex].startIndex;
+			if (neighborIterator == 2147483647) continue;
+
+			for (int k = neighborIterator; k < numParticles; ++k)
 			{
-				uint cellKey = GetCellKeyFromCellID(offsetCellId);
+				uint particleIndexB = SortedHashes[k].particleID;
+				uint hashB = GetCellKeyFromCellID(floor(ParticlesInput[particleIndexB].position - minBounds) / smoothingRadius);
 
-				int groupID = CellMap[cellKey];
+				//if (hashB != flatNeighborIndex)
+				//{
+				//	break;  // it means we stepped out of the neighbour cell list!
+				//}
 
-				CompactCell cell = CompactCells[groupID];
+				if (SortedHashes[k].cellKey != SortedHashes[k - 1].cellKey)
+					break;
+				
+				//자기자신 제외
+				if (index == particleIndexB) continue;
+				
+				Particle p_j = ParticlesInput[particleIndexB];
 
-				for (int j = cell.startIndex; j < cell.endIndex; j++)
-				{
-					 //자기자신 제외
-					if (index == j) continue;
+				float3 x_ij = p_j.position - p_i.position;
+				float dist = length(x_ij);
 
-					Particle p_j = ParticlesInput[SortedHashes[j].particleID];
+				if (dist < 1e-9f) continue;
 
-					float3 x_ij = p_j.position - p_i.position;
-					float dist = length(x_ij);
+				float3 dir = x_ij / dist;
 
-					if (dist < 1e-9f) continue;
+				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
+					SpikyGradient_2D(dist, smoothingRadius);
 
-					float3 dir = x_ij / dist;
-
-					pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
-						SpikyGradient_2D(dist, smoothingRadius);
-
-					viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * 
-						ViscosityLaplacian_2D(dist, smoothingRadius);
-				}
+				viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
+					ViscosityLaplacian_2D(dist, smoothingRadius);
 			}
 		}
 	}
+	//for (int j = 0; j < maxParticles; j++)
+	//{
+	//	if (index == j) continue;
+
+	//	Particle p_j = ParticlesInput[j];
+
+	//	float3 x_ij = p_j.position - p_i.position;
+	//	float dist = length(x_ij);
+
+	//	if (dist < 1e-9f) continue;
+
+	//	float3 dir = x_ij / dist;
+
+	//	pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
+	//		SpikyGradient_2D(dist, smoothingRadius);
+
+	//	viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density * ViscosityLaplacian_2D(dist, smoothingRadius);
+	//}
 
 	if (forceKey == 1)
 	{

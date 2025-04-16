@@ -2,7 +2,7 @@
 
 StructuredBuffer<ParticleHash> SortedHashes : register(t0);
 RWStructuredBuffer<ScanResult> LocalScan : register(u0);
-RWStructuredBuffer<ScanResult> PartialSum : register(u1);
+//RWStructuredBuffer<ScanResult> PartialSum : register(u1);
 
 groupshared uint shMem[GROUP_SIZE_X];
 
@@ -63,7 +63,7 @@ void main(uint tid       : SV_GroupThreadID,
     }
     GroupMemoryBarrierWithGroupSync();
     
-    if (globalIndex % GROUP_SIZE_X == GROUP_SIZE_X - 1)
-        PartialSum[globalIndex / GROUP_SIZE_X].groupID = shMem[tid];
+    //if (globalIndex % GROUP_SIZE_X == GROUP_SIZE_X - 1)
+    //    PartialSum[globalIndex / GROUP_SIZE_X].groupID = shMem[tid];
 }
 

@@ -3,11 +3,6 @@
 
 RWStructuredBuffer<ParticleHash> DataBuffer : register(u0);
 
-cbuffer SortParams : register(b0)
-{
-    uint numElements;
-};
-
 groupshared ParticleHash sharedData[GROUP_SIZE_X];
 
 void SharedMemoryCompareAndSwap(uint index1, uint index2, bool sortAscending)
@@ -40,7 +35,7 @@ void main(uint3 gtid : SV_DispatchThreadID,
     uint globalIndex = gtid.x; // 현재 스레드가 처리할 글로벌 인덱스
     uint localIndex = dtid.x;  // 현재 스레드의 그룹 내 로컬 인덱스
 
-    if (globalIndex < numElements)
+    if (globalIndex < numParticles)
     {
         sharedData[localIndex] = DataBuffer[globalIndex];
     }
@@ -77,7 +72,7 @@ void main(uint3 gtid : SV_DispatchThreadID,
         }
     }
 
-    if (globalIndex < numElements)
+    if (globalIndex < numParticles)
     {
         DataBuffer[globalIndex] = sharedData[localIndex];
     }

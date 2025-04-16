@@ -59,7 +59,7 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 		pEngine->Update(deltaTime);
 		pEngine->Render();
 
-		pEngine->m_isPaused = true;
+		//pEngine->m_isPaused = true;
 
 	}
 
