@@ -1,7 +1,6 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-//StructuredBuffer<ParticleHash> ParticlesHashes : register(t1);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 

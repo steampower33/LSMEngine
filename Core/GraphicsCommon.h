@@ -60,12 +60,8 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphCalcHashCS;
 	extern ComPtr<IDxcBlob> sphBitonicSortLocalCS;
 	extern ComPtr<IDxcBlob> sphBitonicSortCS;
-	extern ComPtr<IDxcBlob> sphSetStartIndexCS;
 	extern ComPtr<IDxcBlob> sphFlagGenerationCS;
-	extern ComPtr<IDxcBlob> sphLocalScanCS;
-	extern ComPtr<IDxcBlob> sphLocalScanBlockCS;
-	extern ComPtr<IDxcBlob> sphFinalAdditionCS;
-	extern ComPtr<IDxcBlob> sphClearCellMapCS;
+	extern ComPtr<IDxcBlob> sphClearCellCS;
 	extern ComPtr<IDxcBlob> sphScatterCompactCellCS;
 	extern ComPtr<IDxcBlob> sphCalcDensityCS;
 	extern ComPtr<IDxcBlob> sphCalcForcesCS;
@@ -124,12 +120,8 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphBitonicSortLocalCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphSetStartIndexCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphLocalScanCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphLocalScanBlockCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphFinalAdditionCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphClearCellMapCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphClearCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphScatterCompactCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
@@ -150,10 +142,12 @@ namespace Graphics
 	void InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitSphComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitShaders(ComPtr<ID3D12Device>& device);
+	void InitSphShaders(ComPtr<ID3D12Device>& device);
 	void InitRasterizerStates();
 	void InitBlendStates();
 	void InitDepthStencilStates();
 	void InitPipelineStates(ComPtr<ID3D12Device>& device);
+	void InitSphPipelineStates(ComPtr<ID3D12Device>& device);
 
 	void CreateShader(
 		ComPtr<ID3D12Device>& device,

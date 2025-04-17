@@ -274,16 +274,7 @@
     <FxCompile Include="Shaders\SphFlagGenerationCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphLocalScanCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\SphScatterCompactCellCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\SphLocalScanBlockCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\SphFinalAdditionCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\SphCalcDensityCS.hlsl">
@@ -292,13 +283,7 @@
     <FxCompile Include="Shaders\SphCalcForcesCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphClearCellMapCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\SphSetStartIndexCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\SphBitonicSortLocalCS.hlsl">
+    <FxCompile Include="Shaders\SphClearCellCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

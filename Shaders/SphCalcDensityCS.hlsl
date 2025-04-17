@@ -3,7 +3,6 @@
 StructuredBuffer<Particle> ParticlesInput : register(t0);
 StructuredBuffer<ParticleHash> SortedHashes : register(t1);
 StructuredBuffer<CompactCell> CompactCells : register(t2);
-StructuredBuffer<int> CellMap : register(t3);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
 

@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 8
+#define STRUCTURED_CNT 4
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -117,12 +117,8 @@ public:
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
-	const UINT m_scanResultDataSize = sizeof(ScanResult);
-	const UINT m_scanResultDataCnt = static_cast<UINT>((m_maxParticles - 1 + m_groupSizeX) / m_groupSizeX);
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
 	const UINT m_compactCellDataCnt = m_cellCnt;
-	const UINT m_cellMapDataSize = sizeof(int);
-	const UINT m_cellMapDataCnt = m_cellCnt;
 
 	vector<Particle> m_particles;
 
@@ -139,7 +135,6 @@ private:
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
 	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
-	ComPtr<ID3D12Resource> m_scanResultsUploadBuffer;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[STRUCTURED_CNT];
 
@@ -152,11 +147,7 @@ private:
 	UINT m_particleA = 1;
 	UINT m_particleB = 0;
 	UINT m_hashIdx = 2;
-	UINT m_scanIdx = 3;
-	UINT m_blockIdx = 4;
-	UINT m_blockSumIdx = 5;
-	UINT m_compactCellIdx = 6;
-	UINT m_cellMapIdx = 7;
+	UINT m_compactCellIdx = 3;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
@@ -166,11 +157,11 @@ private:
 
 	void CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void SetStartIndex(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void CalcHashRange(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
+
+	// Unuse
+	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
 };
