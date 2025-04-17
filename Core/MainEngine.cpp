@@ -24,7 +24,7 @@ void MainEngine::Initialize()
 	m_sphSimulator = make_shared<SphSimulator>();
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.80f;
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.75f;
 
 	{
 		MeshData meshData = GeometryGenerator::MakeBoundsBox();
@@ -553,7 +553,7 @@ void MainEngine::UpdateGUI()
 						});
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_gravity, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_gravityCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("CollisionDamping", [&]() {

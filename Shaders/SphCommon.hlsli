@@ -21,7 +21,7 @@ struct Particle {
 struct ParticleHash
 {
     uint particleID;
-    uint cellKey;
+    int cellIndex;
     uint flag;
 };
 
@@ -37,7 +37,7 @@ struct ScanResult
 
 struct CompactCell
 {
-    uint cellKey;
+    int cellIndex;
     uint startIndex;
     uint endIndex;
 };
@@ -64,7 +64,7 @@ cbuffer SimParams : register(b0) {
 
     float density0;
     float viscosity;
-    float gravity;
+    float m_gravityCoeff;
     float collisionDamping;
 
     uint forceKey;

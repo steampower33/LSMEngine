@@ -11,8 +11,8 @@ void main(uint tid : SV_GroupThreadID,
     uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
     if (globalIndex == 0)
-        CellStarts[SortedHashes[globalIndex].cellKey].startIndex = globalIndex;
+        CellStarts[SortedHashes[globalIndex].cellIndex].startIndex = globalIndex;
 
-    if (SortedHashes[globalIndex - 1].cellKey != SortedHashes[globalIndex].cellKey)
-        CellStarts[SortedHashes[globalIndex].cellKey].startIndex = globalIndex;
+    if (SortedHashes[globalIndex - 1].cellIndex != SortedHashes[globalIndex].cellIndex)
+        CellStarts[SortedHashes[globalIndex].cellIndex].startIndex = globalIndex;
 }

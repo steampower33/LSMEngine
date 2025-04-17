@@ -101,12 +101,21 @@ void SphSimulator::GenerateParticles()
 
 	vector<XMFLOAT3> rainbow = {
 		{1.0f, 0.0f, 0.0f},  // Red
+		{1.0f, 0.0f, 0.0f},  // Red
+		{1.0f, 0.65f, 0.0f}, // Orange
 		{1.0f, 0.65f, 0.0f}, // Orange
 		{1.0f, 1.0f, 0.0f},  // Yellow
+		{1.0f, 1.0f, 0.0f},  // Yellow
+		{0.0f, 1.0f, 0.0f},  // Green
 		{0.0f, 1.0f, 0.0f},  // Green
 		{0.0f, 0.0f, 1.0f},  // Blue
+		{0.0f, 0.0f, 1.0f},  // Blue
 		{0.3f, 0.0f, 0.5f},  // Indigo
-		{0.5f, 0.0f, 1.0f}   // Violet/Purple
+		{0.3f, 0.0f, 0.5f},  // Indigo
+		{0.5f, 0.0f, 1.0f},  // Violet/Purple
+		{0.5f, 0.0f, 1.0f},  // Violet/Purple
+		{1.0f, 1.0f, 1.0f},  // White
+		{1.0f, 1.0f, 1.0f},  // White
 	};
 
 	random_device rd;
@@ -134,10 +143,6 @@ void SphSimulator::GenerateParticles()
 			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
 		m_particles[i].position.y = minY +
 			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
-		m_particles[i].predictedPosition.x = minX +
-			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
-		m_particles[i].predictedPosition.y = minY +
-			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
 
 		// 좌측
 		//m_particles[i].position.x = -m_maxBoundsX * 0.9f + m_dp * (i % m_nX);
@@ -147,6 +152,7 @@ void SphSimulator::GenerateParticles()
 
 		/*m_particles[i].position.x = dpx(gen);
 		m_particles[i].position.y = dpy(gen);*/
+		//m_particles[i].color = rainbow[i % 16];
 		m_particles[i].life = dl(gen);
 		m_particles[i].radius = m_radius;
 	}
@@ -155,13 +161,13 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt, UINT forceKey)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 1 / 10000.0f;
+	m_constantBufferData.deltaTime = 1 / 100.0f;
 
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, 0.0f);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, 0.0f);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gravity = m_gravity;
+	m_constantBufferData.gravity = m_gravityCoeff;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.maxParticles = m_maxParticles;
 	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
@@ -208,30 +214,23 @@ void SphSimulator::CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList)
 
 void SphSimulator::BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	commandList->SetPipelineState(Graphics::sphBitonicSortLocalCSPSO.Get());
+	commandList->SetPipelineState(Graphics::sphBitonicSortCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);
 
 	commandList->SetComputeRootDescriptorTable(4, m_particleBufferUavGpuHandle[m_hashIdx]); // UAV 0
 
 	UINT dispatchX = (m_maxParticles + m_groupSizeX - 1) / m_groupSizeX;
-	commandList->Dispatch(dispatchX, 1, 1);
 
-	if (m_maxParticles > m_groupSizeX)
+	for (uint32_t k = 2; k <= m_maxParticles; k *= 2)
 	{
-		commandList->SetPipelineState(Graphics::sphBitonicSortCSPSO.Get());
-
-		for (uint32_t k = m_groupSizeX * 2; k <= m_maxParticles; k *= 2)
+		for (uint32_t j = k / 2; j > 0; j /= 2)
 		{
-			for (uint32_t j = k / 2; j > 0; j /= 2)
-			{
-				commandList->SetComputeRoot32BitConstant(9, k, 0);
-				commandList->SetComputeRoot32BitConstant(9, j, 1);
+			commandList->SetComputeRoot32BitConstant(9, k, 0);
+			commandList->SetComputeRoot32BitConstant(9, j, 1);
+			SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);
 
-				SetUAVBarrier(commandList, m_structuredBuffer[m_hashIdx]);
-
-				commandList->Dispatch(dispatchX, 1, 1);
-			}
+			commandList->Dispatch(dispatchX, 1, 1);
 		}
 	}
 }
@@ -334,7 +333,7 @@ void SphSimulator::ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandL
 	SetBarrier(commandList, m_structuredBuffer[m_scanIdx],	      // Same
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	
+
 	SetUAVBarrier(commandList, m_structuredBuffer[m_compactCellIdx]); // CompactCell : UAV -> UAV
 	SetUAVBarrier(commandList, m_structuredBuffer[m_cellMapIdx]); // CellMap : UAV -> UAV
 

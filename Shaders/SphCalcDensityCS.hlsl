@@ -21,32 +21,24 @@ void main(uint tid : SV_GroupThreadID,
 	//p_i.position += p_i.velocityHalfStep * deltaTime;
 	//p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
 
-	uint3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
+	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
 
 	p_i.density = 0.0;
 	for (int i = -1; i <= 1; ++i)
 	{
 		for (int j = -1; j <= 1; ++j)
 		{
-			uint3 neighborIndex = cellID + uint3(i, j, 0);
+			int3 neighborIndex = cellID + int3(i, j, 0);
+
 			uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
 			uint neighborIterator = CompactCells[flatNeighborIndex].startIndex;
 
-			if (neighborIterator == 2147483647) continue;
+			if (neighborIterator == 0xFFFFFFFF) continue;
 
 			for (int k = neighborIterator; k < numParticles; ++k)
 			{
 				uint particleIndexB = SortedHashes[k].particleID;
-				uint hashB = GetCellKeyFromCellID(floor(ParticlesInput[particleIndexB].position - minBounds) / smoothingRadius);
-
-				//if (hashB != flatNeighborIndex)
-				//{
-				//	break;  // it means we stepped out of the neighbour cell list!
-				//}
-
-				if (SortedHashes[k].cellKey != SortedHashes[k - 1].cellKey)
-					break;
 
 				// Here you can load particleB and do the SPH evaluation logic
 				Particle p_j = ParticlesInput[particleIndexB];
@@ -56,6 +48,9 @@ void main(uint tid : SV_GroupThreadID,
 				float influence = Poly6_2D(dist, smoothingRadius);
 
 				p_i.density += mass * influence;
+			
+				if (k != numParticles - 1 && SortedHashes[k + 1].cellIndex != SortedHashes[k].cellIndex)
+					break;
 			}
 
 		}

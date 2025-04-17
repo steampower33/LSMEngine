@@ -9,5 +9,5 @@ void main(uint tid : SV_GroupThreadID,
 {
 	uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 	
-	CompactCells[globalIndex].startIndex = 2147483647;
+	CompactCells[globalIndex].startIndex = 0xFFFFFFFF;
 }

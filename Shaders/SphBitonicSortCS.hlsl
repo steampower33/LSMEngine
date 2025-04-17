@@ -9,26 +9,20 @@ cbuffer BitonicParams : register(b1)
 RWStructuredBuffer<ParticleHash> hashes : register(u0);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
-void main(uint3 gtid : SV_DispatchThreadID)
+void main(uint tid : SV_GroupThreadID,
+    uint3 gtid : SV_DispatchThreadID,
+    uint groupIdx : SV_GroupID)
 {
-    uint i = gtid.x;
+    uint i = groupIdx.x * GROUP_SIZE_X + tid;
 
-    uint l = i ^ j; // 파트너 인덱스
-
+    uint l = i ^ j;
     if (l > i)
     {
         ParticleHash iHash = hashes[i];
         ParticleHash lHash = hashes[l];
 
-        bool sortAscending = ((i & k) == 0);
-
-        bool shouldSwap = (iHash.cellKey > lHash.cellKey);
-        if (!sortAscending)
-        {
-            shouldSwap = !shouldSwap;
-        }
-
-        if (shouldSwap)
+        if (((i & k) == 0 && iHash.cellIndex > lHash.cellIndex) ||
+            ((i & k) != 0 && iHash.cellIndex < lHash.cellIndex))
         {
             hashes[i] = lHash;
             hashes[l] = iHash;

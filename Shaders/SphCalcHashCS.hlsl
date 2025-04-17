@@ -15,9 +15,9 @@ void main(uint tid : SV_GroupThreadID,
     Particle p = Particles[index];
 
     // 상대적 위치로 변환 -> 커널 반경으로 나눠줌 -> cellID
-    uint cellKey = GetCellKeyFromCellID(floor(p.position - minBounds) / smoothingRadius);
+    uint cellIndex = GetCellKeyFromCellID(floor((p.position - minBounds) / smoothingRadius));
 
     ParticleHashes[index].particleID = index;
-    ParticleHashes[index].cellKey = cellKey;
+    ParticleHashes[index].cellIndex = cellIndex;
     ParticleHashes[index].flag = 0;
 }
