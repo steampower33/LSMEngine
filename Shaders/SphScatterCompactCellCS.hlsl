@@ -24,7 +24,13 @@ void main(uint tid : SV_GroupThreadID,
 		CompactCells[SortedParticleHashes[globalIndex].cellIndex].startIndex = globalIndex;
 	}
 
-	//CompactCells[groupId].endIndex = (groupId == maxGroupCnt - 1) ? maxParticles - 1 : CompactCells[groupId + 1].startIndex;
+	if (globalIndex != numParticles - 1 &&
+		SortedParticleHashes[globalIndex].cellIndex != SortedParticleHashes[globalIndex + 1].cellIndex)
+		CompactCells[SortedParticleHashes[globalIndex].cellIndex].endIndex = globalIndex + 1;
+
+	if (globalIndex == numParticles - 1)
+		CompactCells[SortedParticleHashes[globalIndex].cellIndex].endIndex = numParticles;
+
 
 	//CellMap[CompactCells[groupId].cellKey] = groupId;
 }

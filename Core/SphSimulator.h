@@ -113,7 +113,7 @@ public:
 	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
 	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
 	UINT m_cellCnt = m_maxParticles;
-
+	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);

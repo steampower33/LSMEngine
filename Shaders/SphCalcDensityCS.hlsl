@@ -32,11 +32,12 @@ void main(uint tid : SV_GroupThreadID,
 
 			uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
-			uint neighborIterator = CompactCells[flatNeighborIndex].startIndex;
+			uint startIndex = CompactCells[flatNeighborIndex].startIndex;
+			uint endIndex = CompactCells[flatNeighborIndex].endIndex;
 
-			if (neighborIterator == 0xFFFFFFFF) continue;
+			if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
 
-			for (int k = neighborIterator; k < numParticles; ++k)
+			for (int k = startIndex; k < endIndex; ++k)
 			{
 				uint particleIndexB = SortedHashes[k].particleID;
 
@@ -49,8 +50,8 @@ void main(uint tid : SV_GroupThreadID,
 
 				p_i.density += mass * influence;
 			
-				if (k != numParticles - 1 && SortedHashes[k + 1].cellIndex != SortedHashes[k].cellIndex)
-					break;
+				//if (k != numParticles - 1 && SortedHashes[k + 1].cellIndex != SortedHashes[k].cellIndex)
+				//	break;
 			}
 
 		}

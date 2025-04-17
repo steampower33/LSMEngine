@@ -1,7 +1,9 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<ParticleHash> SortedHashes : register(t0);
-RWStructuredBuffer<CellStart> CellStarts : register(u0);
+StructuredBuffer<ParticleHash> SortedParticleHashes : register(t0);
+StructuredBuffer<ScanResult> ScanResults : register(t1);
+RWStructuredBuffer<CompactCell> CompactCells : register(u0);
+RWStructuredBuffer<int> CellMap : register(u1);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -10,9 +12,4 @@ void main(uint tid : SV_GroupThreadID,
 {
     uint globalIndex = groupIdx.x * GROUP_SIZE_X + tid;
 
-    if (globalIndex == 0)
-        CellStarts[SortedHashes[globalIndex].cellIndex].startIndex = globalIndex;
-
-    if (SortedHashes[globalIndex - 1].cellIndex != SortedHashes[globalIndex].cellIndex)
-        CellStarts[SortedHashes[globalIndex].cellIndex].startIndex = globalIndex;
 }
