@@ -16,58 +16,35 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	//p_i.velocityHalfStep = p_i.velocity + p_i.currentAcceleration * (deltaTime / 2.0f);
-	//p_i.position += p_i.velocityHalfStep * deltaTime;
-	//p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
-
 	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
 
 	p_i.density = 0.0;
-	for (int i = -1; i <= 1; ++i)
+	for (int i = 0; i < 27; ++i)
 	{
-		for (int j = -1; j <= 1; ++j)
+		int3 neighborIndex = cellID + offsets3D[i];
+
+		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
+
+		uint startIndex = CompactCells[flatNeighborIndex].startIndex;
+		uint endIndex = CompactCells[flatNeighborIndex].endIndex;
+
+		if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+
+		for (int n = startIndex; n < endIndex; ++n)
 		{
-			int3 neighborIndex = cellID + int3(i, j, 0);
+			uint particleIndexB = SortedHashes[n].particleID;
 
-			uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
+			// Here you can load particleB and do the SPH evaluation logic
+			Particle p_j = ParticlesInput[particleIndexB];
 
-			uint startIndex = CompactCells[flatNeighborIndex].startIndex;
-			uint endIndex = CompactCells[flatNeighborIndex].endIndex;
+			float dist = length(p_j.position - p_i.position);
 
-			if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+			float influence = Poly6_3D(dist, smoothingRadius);
 
-			for (int k = startIndex; k < endIndex; ++k)
-			{
-				uint particleIndexB = SortedHashes[k].particleID;
-
-				// Here you can load particleB and do the SPH evaluation logic
-				Particle p_j = ParticlesInput[particleIndexB];
-
-				float dist = length(p_j.position - p_i.position);
-
-				float influence = Poly6_2D(dist, smoothingRadius);
-
-				p_i.density += mass * influence;
-			
-				//if (k != numParticles - 1 && SortedHashes[k + 1].cellIndex != SortedHashes[k].cellIndex)
-				//	break;
-			}
-
+			p_i.density += mass * influence;
 		}
+
 	}
-
-	p_i.density += 1e-9f;
-
-	//for (int j = 0; j < maxParticles; j++)
-	//{
-	//	Particle p_j = ParticlesInput[j];
-
-	//	float dist = length(p_j.position - p_i.position);
-
-	//	float influence = Poly6_2D(dist, smoothingRadius);
-
-	//	p_i.density += mass * influence;
-	//}
 
 	p_i.pressure = pressureCoeff * (p_i.density - density0);
 

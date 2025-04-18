@@ -50,6 +50,11 @@ public:
 
 	XMFLOAT3 m_pos{ 0.0f, 0.0f, -16.0f };
 
+	// roll, pitch, yaw
+	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
+	float m_yaw = 0.0f;
+	float m_pitch = 0.0f;
+
 private:
 	XMFLOAT3 m_lookDir{ 0.0f, 0.0f, 1.0f };
 	XMFLOAT3 m_upDir{ 0.0f, 1.0f, 0.0f };
@@ -59,13 +64,8 @@ private:
 	float m_cursorNdcX = 0.0f;
 	float m_cursorNdcY = 0.0f;
 
-	// roll, pitch, yaw
-	// https://en.wikipedia.org/wiki/Aircraft_principal_axes
-	float m_yaw = 0.0f;
-	float m_pitch = 0.0f;
-
 	float m_moveSpeed = 10.0f;
-	float m_mouseSensitivity = 3.0f;
+	float m_mouseSensitivity = 5.0f;
 
 	KeysPressed m_keysPressed;
 

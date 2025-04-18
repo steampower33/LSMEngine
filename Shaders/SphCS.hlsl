@@ -23,33 +23,54 @@ void main(uint tid : SV_GroupThreadID,
 	p.velocity += p.force / p.density * deltaTime;
 	p.position += p.velocity * deltaTime;
 
-	if (p.position.x - p.radius <= minBounds.x && p.velocity.x < 0.0)
+	if (p.position.x - p.radius <= minBounds.x)
 	{
 		p.velocity.x *= -collisionDamping;
 		p.position.x = minBounds.x + p.radius;
 	}
-	else if (p.position.x + p.radius  >= maxBounds.x && p.velocity.x > 0.0)
+	else if (p.position.x + p.radius  >= maxBounds.x)
 	{
 		p.velocity.x *= -collisionDamping;
 		p.position.x = maxBounds.x - p.radius ;
 	}
 
-	if (p.position.y - p.radius  <= minBounds.y && p.velocity.y < 0.0)
+	if (p.position.y - p.radius <= minBounds.y)
 	{
 		p.velocity.y *= -collisionDamping;
 		p.position.y = minBounds.y + p.radius ;
 	}
-	else if (p.position.y + p.radius  >= maxBounds.y && p.velocity.y > 0.0)
+	else if (p.position.y + p.radius  >= maxBounds.y)
 	{
 		p.velocity.y *= -collisionDamping;
-		p.position.y = maxBounds.y - p.radius ;
+		p.position.y = maxBounds.y - p.radius;
 	}
 
-	//float speed = length(p.velocity);
-	//float speedT = saturate(speed / 1.0);
-	//p.color = float3(speedT, 1.0 - speedT, 0.0);
+	if (p.position.z - p.radius <= minBounds.z)
+	{
+		p.velocity.z *= -collisionDamping;
+		p.position.z = minBounds.z + p.radius;
+	}
+	else if (p.position.z + p.radius >= maxBounds.z)
+	{
+		p.velocity.z *= -collisionDamping;
+		p.position.z = maxBounds.z - p.radius;
+	}
 
-	p.life -= deltaTime;
+	// 속도 계산
+	float maxSpeed = 5.0;
+	float speed = length(p.velocity);
+	float speedT = saturate(speed / maxSpeed);
+
+	// 속도에 따라 색상 계산 (하늘색, 파란색, 하얀색)
+	float3 color = lerp(float3(0.0, 1.0, 1.0), float3(0.0, 0.0, 1.0), speedT); // 하늘색 -> 파란색
+
+	// 빠르게 흐르는 부분은 흰색을 포함시킴
+	if (speedT > 0.8) {
+		color = lerp(color, float3(1.0, 1.0, 1.0), 0.2); // 하얀색 섞기
+	}
+	//p.life -= deltaTime;
+
+	p.color = color;
 
 	// 쓰기
 	ParticlesOutput[index] = p;

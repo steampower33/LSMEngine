@@ -24,7 +24,11 @@ void MainEngine::Initialize()
 	m_sphSimulator = make_shared<SphSimulator>();
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 0.75f;
+	m_camera->m_pos.y = m_sphSimulator->m_maxBoundsY * 0.5f;
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
+
+	m_camera->m_pitch = 0.5f;
+	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
 
 	{
 		MeshData meshData = GeometryGenerator::MakeBoundsBox();
@@ -530,6 +534,10 @@ void MainEngine::UpdateGUI()
 
 					flag += DrawTableRow("Height", [&]() {
 						return ImGui::DragFloat("##Height", &m_sphSimulator->m_maxBoundsY, dragValue, minValue, maxValue, "%.2f");
+						});
+
+					flag += DrawTableRow("Depth", [&]() {
+						return ImGui::DragFloat("##Depth", &m_sphSimulator->m_maxBoundsZ, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Mass", [&]() {

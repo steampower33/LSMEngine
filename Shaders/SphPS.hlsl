@@ -56,7 +56,8 @@ float4 main(PSInput input) : SV_TARGET
 		discard;
 
 	float q = dist / radius;
+
 	float scale = 1.0 - q;
-	return float4(LinearToneMapping(input.color.rgb * scale), 1.0);
-	//return float4(input.color.rgb * scale, 1.0);
+	//return float4(LinearToneMapping(input.color.rgb * scale), 1.0);
+	return float4(input.color.rgb * scale, 1.0);
 }

@@ -33,16 +33,10 @@ public:
 		float radius = 0.0f;
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
-		XMFLOAT3 color = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		float density = 0.0f;
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
-		XMFLOAT3 velocityHalfStep = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p1;
-		XMFLOAT3 currentAcceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p2;
-		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p3;
 	};
 
 	struct ParticleHash
@@ -50,11 +44,6 @@ public:
 		UINT particleID = 0; // 원래 파티클 인덱스
 		int cellIndex = 0;  // 계산된 해시 값
 		UINT flag = 0; // 그룹 시작 플래그
-	};
-
-	struct ScanResult
-	{
-		UINT groupID = 0;
 	};
 
 	struct CompactCell
@@ -79,10 +68,10 @@ public:
 		int gridDimZ;
 		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 100.0f;
+		float pressureCoeff = 10.0f;
 
-		float density0 = 15.0f;
-		float viscosity = 0.5f;
+		float density0 = 2.5f;
+		float viscosity = 0.7f;
 		float gravity;
 		float collisionDamping;
 
@@ -98,21 +87,22 @@ public:
 
 	SimParams m_constantBufferData;
 	const UINT m_groupSizeX = 512;
-	const UINT m_nX = 256;
-	const UINT m_nY = 256;
-	const UINT m_maxParticles = m_nX * m_nY;
-	const float m_radius = 0.1f;
-	const float m_dp = m_radius * 2.0f;
+	const UINT m_nX = 64;
+	const UINT m_nY = 64;
+	const UINT m_nZ = 8;
+	const UINT m_maxParticles = m_nX * m_nY * m_nZ;
+	const float m_radius = 0.2f;
+	const float m_dp = 0.2f;
 	float m_smoothingRadius = 0.4f;
-	float m_maxBoundsX = 70.0f;
-	float m_maxBoundsY = 30.0f;
-	float m_maxBoundsZ = 0.0f;
+	float m_maxBoundsX = 20.0f;
+	float m_maxBoundsY = 15.0f;
+	float m_maxBoundsZ = 5.0f;
 	float m_gravityCoeff = 1.0f;
 	float m_collisionDamping = 0.95f;
 	float m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
 	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
 	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
-	UINT m_cellCnt = m_maxParticles;
+	UINT m_cellCnt = m_maxParticles * 2;
 	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);

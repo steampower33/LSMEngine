@@ -43,10 +43,15 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	// ConstantBuffer 설정
-	m_constantBufferData.numParticles = m_maxParticles;
-	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, 0.0f);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, 0.0f);
+	m_constantBufferData.deltaTime = 1 / 100.0f;
+
+	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
+	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
+	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
+	m_constantBufferData.gravity = m_gravityCoeff;
+	m_constantBufferData.collisionDamping = m_collisionDamping;
+	m_constantBufferData.maxParticles = m_maxParticles;
 	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
 	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
 	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
@@ -109,6 +114,7 @@ void SphSimulator::GenerateParticles()
 
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
+	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
 	float spacingX = m_nX * m_radius;
 	float minX = midX - spacingX;
@@ -118,25 +124,26 @@ void SphSimulator::GenerateParticles()
 	float minY = midY - spacingY;
 	float maxY = midY + spacingY;
 
-	for (UINT i = 0; i < m_maxParticles; i++)
+	float spacingZ = m_nZ * m_radius;
+	float minZ = midZ - spacingZ;
+	float maxZ = midZ + spacingZ;
+
+	for (UINT i = 0; i < m_nZ; i++)
 	{
-		// 중간 위치에서
-		m_particles[i].position.x = minX +
-			(maxX - minX - (maxX - minX) / m_nX) / m_nX * (1 + (i % m_nX));
-		m_particles[i].position.y = minY +
-			(maxY - minY - (maxY - minY) / m_nY) / m_nY * (1 + (i / m_nX));
+		for (UINT j = 0; j < m_nY; j++)
+		{
+			for (UINT k = 0; k < m_nX; k++)
+			{
+				UINT index = k + m_nY * j + m_nX * m_nY * i;
 
-		// 좌측
-		//m_particles[i].position.x = -m_maxBoundsX * 0.9f + m_dp * (i % m_nX);
-		//m_particles[i].position.y = -m_maxBoundsY * 0.9f + m_dp * (i / m_nX);
-		//m_particles[i].predictedPosition.x = m_particles[i].position.x;
-		//m_particles[i].predictedPosition.y = m_particles[i].position.y;
+				m_particles[index].position.x = minX + m_radius * 2.0f * k;
+				m_particles[index].position.y = minY + m_radius * 2.0f * j;
+				m_particles[index].position.z = minZ + m_radius * 2.0f * i;
 
-		/*m_particles[i].position.x = dpx(gen);
-		m_particles[i].position.y = dpy(gen);*/
-		//m_particles[i].color = rainbow[i % 16];
-		m_particles[i].life = dl(gen);
-		m_particles[i].radius = m_radius;
+				m_particles[index].life = dl(gen);
+				m_particles[index].radius = m_radius;
+			}
+		}
 	}
 }
 
@@ -145,8 +152,8 @@ void SphSimulator::Update(float dt, UINT forceKey)
 	// 일단은 CBV 전체를 업데이트
 	m_constantBufferData.deltaTime = 1 / 100.0f;
 
-	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, 0.0f);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, 0.0f);
+	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
+	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.gravity = m_gravityCoeff;
@@ -234,7 +241,7 @@ void SphSimulator::FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList)
 void SphSimulator::ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
 
-	// CellMap
+	// ClearCell
 	commandList->SetPipelineState(Graphics::sphClearCellCSPSO.Get());
 
 	SetBarrier(commandList, m_structuredBuffer[m_compactCellIdx], // CompactCell : SRV -> UAV

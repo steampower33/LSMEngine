@@ -24,54 +24,48 @@ void main(uint tid : SV_GroupThreadID,
 
 	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
 
-	for (int i = -1; i <= 1; ++i)
+	for (int i = 0; i < 27; ++i)
 	{
-		for (int j = -1; j <= 1; ++j)
+		int3 neighborIndex = cellID + offsets3D[i];
+
+		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
+
+		uint startIndex = CompactCells[flatNeighborIndex].startIndex;
+		uint endIndex = CompactCells[flatNeighborIndex].endIndex;
+
+		if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+
+		for (int n = startIndex; n < endIndex; ++n)
 		{
-			int3 neighborIndex = cellID + int3(i, j, 0);
+			uint particleIndexB = SortedHashes[n].particleID;
 
-			uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
+			//자기자신 제외
+			if (index == particleIndexB) continue;
 
-			uint startIndex = CompactCells[flatNeighborIndex].startIndex;
-			uint endIndex = CompactCells[flatNeighborIndex].endIndex;
-			
-			if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+			Particle p_j = ParticlesInput[particleIndexB];
 
-			for (int k = startIndex; k < endIndex; ++k)
-			{
-				uint particleIndexB = SortedHashes[k].particleID;
-				
-				//자기자신 제외
-				if (index == particleIndexB) continue;
-				
-				Particle p_j = ParticlesInput[particleIndexB];
+			float3 x_ij = p_j.position - p_i.position;
+			float dist = length(x_ij);
 
-				float3 x_ij = p_j.position - p_i.position;
-				float dist = length(x_ij);
+			if (dist < 1e-9f) continue;
 
-				if (dist < 1e-9f) continue;
+			float3 dir = x_ij / dist;
 
-				float3 dir = x_ij / dist;
+			pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
+				SpikyGradient_3D(dist, smoothingRadius);
 
-				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
-					SpikyGradient_2D(dist, smoothingRadius);
-
-				viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
-					ViscosityLaplacian_2D(dist, smoothingRadius);
-
-				//if (SortedHashes[k + 1].cellIndex != SortedHashes[k].cellIndex)
-				//	break;
-			}
+			viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
+				ViscosityLaplacian_3D(dist, smoothingRadius);
 		}
 	}
 
 	if (forceKey == 1)
 	{
-		externalForce = float3(-4.0, 0.0, 0.0) * mass;
+		externalForce = float3(-4.0, 4.0, 0.0) * mass;
 	}
 	if (forceKey == 2)
 	{
-		externalForce = float3(4.0, 0.0, 0.0) * mass;
+		externalForce = float3(4.0, 4.0, 0.0) * mass;
 	}
 
 	p_i.force = pressureForce

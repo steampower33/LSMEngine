@@ -786,7 +786,7 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphPSODesc.pRootSignature = sphRenderRootSignature.Get();
 	sphPSODesc.InputLayout = { sphIE, _countof(sphIE) };
 	sphPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	sphPSODesc.BlendState = accumulateBS;
+	sphPSODesc.BlendState = disabledBlend;
 	sphPSODesc.VS = { sphVS->GetBufferPointer(), sphVS->GetBufferSize() };
 	sphPSODesc.GS = { sphGS->GetBufferPointer(), sphGS->GetBufferSize() };
 	sphPSODesc.PS = { sphPS->GetBufferPointer(), sphPS->GetBufferSize() };
