@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 4
+#define STRUCTURED_CNT 8
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -66,15 +66,13 @@ public:
 		int gridDimY;
 
 		int gridDimZ;
-		UINT maxParticles;
 		float mass = 1.0f;
-		float pressureCoeff = 50.0f;
+		float pressureCoeff = 0.1f;
+		float density0 = 1.0f;
 
-		float density0 = 10.0f;
 		float viscosity = 0.7f;
 		float gravity;
 		float collisionDamping;
-
 		UINT forceKey;
 	};
 
@@ -87,22 +85,22 @@ public:
 
 	SimParams m_constantBufferData;
 	const UINT m_groupSizeX = 512;
-	const UINT m_nX = 64;
-	const UINT m_nY = 64;
+	const UINT m_nX = 8;
+	const UINT m_nY = 8;
 	const UINT m_nZ = 8;
-	const UINT m_maxParticles = m_nX * m_nY * m_nZ;
+	const UINT m_numParticles = m_nX * m_nY * m_nZ;
 	const float m_radius = 0.2f;
 	const float m_dp = 0.2f;
-	float m_smoothingRadius = 0.7f;
-	float m_maxBoundsX = 20.0f;
-	float m_maxBoundsY = 15.0f;
+	float m_smoothingRadius = 1.0f;
+	float m_maxBoundsX = 5.0f;
+	float m_maxBoundsY = 5.0f;
 	float m_maxBoundsZ = 5.0f;
 	float m_gravityCoeff = 1.0f;
 	float m_collisionDamping = 0.95f;
 	float m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
 	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
 	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
-	UINT m_cellCnt = m_maxParticles * 2;
+	UINT m_cellCnt = m_gridDimX * m_gridDimY * m_gridDimZ;
 	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
@@ -111,10 +109,10 @@ private:
 	const UINT m_compactCellDataCnt = m_cellCnt;
 
 	vector<Particle> m_particles;
+	vector<XMFLOAT3> m_particlePositions;
 
-	// Ping-Pong       | SimParams | Hash    |
-	// SRV UAV SRV UAV | CBV       | SRV UAV |
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
+	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
 	UINT m_cbvSrvUavSize = 0;
 
 	// Ping Pong 형식으로 버퍼 구성(Particle Structured)
@@ -124,9 +122,10 @@ private:
 	// SRV | UAV | UAV
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
+	ComPtr<ID3D12Resource> m_particlePositionsUploadBuffer;
 	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferSrvGpuHandle[STRUCTURED_CNT];
-	CD3DX12_GPU_DESCRIPTOR_HANDLE m_particleBufferUavGpuHandle[STRUCTURED_CNT];
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
+	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferUavGpuHandle[STRUCTURED_CNT];
 
 	ComPtr<ID3D12Resource> m_constantBuffer;
 	UINT8* m_constantBufferDataBegin = nullptr;
@@ -134,8 +133,15 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_constantBufferCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferCbvGpuHandle;
 
-	UINT m_particleA = 1;
-	UINT m_particleB = 0;
+	UINT m_particleAIndex = 1;
+	UINT m_particleBIndex = 0;
+	UINT m_particlePositionIndex = 2;
+	UINT m_cellCountIndex = 3;
+	UINT m_cellOffsetIndex = 4;
+	UINT m_cellStartIndex = 5;
+	UINT m_cellStartPartialSumIndex = 6;
+	UINT m_cellScatterIndex = 7;
+
 	UINT m_hashIdx = 2;
 	UINT m_compactCellIdx = 3;
 

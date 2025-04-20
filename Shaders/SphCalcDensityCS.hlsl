@@ -1,10 +1,11 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-StructuredBuffer<ParticleHash> SortedHashes : register(t1);
-StructuredBuffer<CompactCell> CompactCells : register(t2);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+RWStructuredBuffer<uint> CellStart : register(u1);
+RWStructuredBuffer<uint> CellCount : register(u2);
+RWStructuredBuffer<uint> SortedIdx : register(u3);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -12,27 +13,30 @@ void main(uint tid : SV_GroupThreadID,
 	uint groupIdx : SV_GroupID)
 {
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
-	if (index >= maxParticles) return;
+	if (index >= numParticles) return;
 
 	Particle p_i = ParticlesInput[index];
 
-	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
+	float3 fx = (p_i.position - minBounds) / smoothingRadius;
+	fx = max(fx, 0.0);
+	int3 cellID = int3(floor(fx));
+	cellID = clamp(cellID, int3(0, 0, 0), int3(gridDimX, gridDimY, gridDimZ) - int3(1, 1, 1));
 
-	p_i.density = 0.0;
+	float density = 0.0;
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
 
 		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
-		uint startIndex = CompactCells[flatNeighborIndex].startIndex;
-		uint endIndex = CompactCells[flatNeighborIndex].endIndex;
+		uint startIndex = CellStart[flatNeighborIndex];
+		uint endIndex = startIndex + CellCount[flatNeighborIndex];
 
-		if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+		if (startIndex == endIndex) continue;
 
 		for (int n = startIndex; n < endIndex; ++n)
 		{
-			uint particleIndexB = SortedHashes[n].particleID;
+			uint particleIndexB = SortedIdx[n];
 
 			// Here you can load particleB and do the SPH evaluation logic
 			Particle p_j = ParticlesInput[particleIndexB];
@@ -41,12 +45,14 @@ void main(uint tid : SV_GroupThreadID,
 
 			float influence = Poly6_3D(dist, smoothingRadius);
 
-			p_i.density += mass * influence;
+			density += mass * influence;
 		}
 
 	}
 
-	p_i.pressure = pressureCoeff * (p_i.density - density0);
+	float pressure = pressureCoeff * (p_i.density - density0);
 
+	p_i.density = density;
+	p_i.pressure = pressure;
 	ParticlesOutput[index] = p_i;
 }

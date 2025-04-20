@@ -40,7 +40,12 @@ namespace Graphics
 
 	ComPtr<IDxcBlob> sphCalcHashCS;
 	ComPtr<IDxcBlob> sphBitonicSortCS;
-	ComPtr<IDxcBlob> sphBitonicSortLocalCS;
+	ComPtr<IDxcBlob> sphClearCountCellCS;
+	ComPtr<IDxcBlob> sphCountCellCS;
+	ComPtr<IDxcBlob> sphCellLocalScanCS;
+	ComPtr<IDxcBlob> sphCellLocalScanBlockCS;
+	ComPtr<IDxcBlob> sphCellFinalAdditionCS;
+	ComPtr<IDxcBlob> sphCellScatterCS;
 	ComPtr<IDxcBlob> sphFlagGenerationCS;
 	ComPtr<IDxcBlob> sphClearCellCS;
 	ComPtr<IDxcBlob> sphScatterCompactCellCS;
@@ -96,7 +101,12 @@ namespace Graphics
 
 	ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
 	ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
-	ComPtr<ID3D12PipelineState> sphBitonicSortLocalCSPSO;
+	ComPtr<ID3D12PipelineState> sphClearCountCellCSPSO;
+	ComPtr<ID3D12PipelineState> sphCountCellCSPSO;
+	ComPtr<ID3D12PipelineState> sphCellLocalScanCSPSO;
+	ComPtr<ID3D12PipelineState> sphCellLocalScanBlockCSPSO;
+	ComPtr<ID3D12PipelineState> sphCellFinalAdditionCSPSO;
+	ComPtr<ID3D12PipelineState> sphCellScatterCSPSO;
 	ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
 	ComPtr<ID3D12PipelineState> sphClearCellCSPSO;
 	ComPtr<ID3D12PipelineState> sphScatterCompactCellCSPSO;
@@ -388,6 +398,12 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	// Sph
 	CreateShader(device, L"SphCalcHashCS.hlsl", L"cs_6_0", sphCalcHashCS);
 	CreateShader(device, L"SphBitonicSortCS.hlsl", L"cs_6_0", sphBitonicSortCS);
+	CreateShader(device, L"SphClearCountCellCS.hlsl", L"cs_6_0", sphClearCountCellCS);
+	CreateShader(device, L"SphCellCountCS.hlsl", L"cs_6_0", sphCountCellCS);
+	CreateShader(device, L"SphCellLocalScanCS.hlsl", L"cs_6_0", sphCellLocalScanCS);
+	CreateShader(device, L"SphCellLocalScanBlockCS.hlsl", L"cs_6_0", sphCellLocalScanBlockCS);
+	CreateShader(device, L"SphCellFinalAdditionCS.hlsl", L"cs_6_0", sphCellFinalAdditionCS);
+	CreateShader(device, L"SphCellScatterCS.hlsl", L"cs_6_0", sphCellScatterCS);
 	CreateShader(device, L"SphFlagGenerationCS.hlsl", L"cs_6_0", sphFlagGenerationCS);
 	CreateShader(device, L"SphClearCellCS.hlsl", L"cs_6_0", sphClearCellCS);
 	CreateShader(device, L"SphScatterCompactCellCS.hlsl", L"cs_6_0", sphScatterCompactCellCS);
@@ -745,6 +761,42 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphBitonicSortCSPSODesc.CS = { sphBitonicSortCS->GetBufferPointer(), sphBitonicSortCS->GetBufferSize() };
 	sphBitonicSortCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphBitonicSortCSPSODesc, IID_PPV_ARGS(&sphBitonicSortCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphClearCountCellCSPSODesc = {};
+	sphClearCountCellCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphClearCountCellCSPSODesc.CS = { sphClearCountCellCS->GetBufferPointer(), sphClearCountCellCS->GetBufferSize() };
+	sphClearCountCellCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphClearCountCellCSPSODesc, IID_PPV_ARGS(&sphClearCountCellCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCountCellCSPSODesc = {};
+	sphCountCellCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCountCellCSPSODesc.CS = { sphCountCellCS->GetBufferPointer(), sphCountCellCS->GetBufferSize() };
+	sphCountCellCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCountCellCSPSODesc, IID_PPV_ARGS(&sphCountCellCSPSO)));
+	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCellLocalScanCSPSODesc = {};
+	sphCellLocalScanCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCellLocalScanCSPSODesc.CS = { sphCellLocalScanCS->GetBufferPointer(), sphCellLocalScanCS->GetBufferSize() };
+	sphCellLocalScanCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCellLocalScanCSPSODesc, IID_PPV_ARGS(&sphCellLocalScanCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCellLocalScanBlockCSPSODesc = {};
+	sphCellLocalScanBlockCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCellLocalScanBlockCSPSODesc.CS = { sphCellLocalScanBlockCS->GetBufferPointer(), sphCellLocalScanBlockCS->GetBufferSize() };
+	sphCellLocalScanBlockCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCellLocalScanBlockCSPSODesc, IID_PPV_ARGS(&sphCellLocalScanBlockCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCellFinalAdditionCSPSODesc = {};
+	sphCellFinalAdditionCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCellFinalAdditionCSPSODesc.CS = { sphCellFinalAdditionCS->GetBufferPointer(), sphCellFinalAdditionCS->GetBufferSize() };
+	sphCellFinalAdditionCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCellFinalAdditionCSPSODesc, IID_PPV_ARGS(&sphCellFinalAdditionCSPSO)));
+	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCellScatterCSPSODesc = {};
+	sphCellScatterCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCellScatterCSPSODesc.CS = { sphCellScatterCS->GetBufferPointer(), sphCellScatterCS->GetBufferSize() };
+	sphCellScatterCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCellScatterCSPSODesc, IID_PPV_ARGS(&sphCellScatterCSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphFlagGenerationCSPSODesc = {};
 	sphFlagGenerationCSPSODesc.pRootSignature = sphComputeRootSignature.Get();

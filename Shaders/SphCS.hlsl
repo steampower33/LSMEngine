@@ -3,6 +3,7 @@
 StructuredBuffer<Particle> ParticlesInput : register(t0);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+//RWStructuredBuffer<float3> ParticlePosition : register(u1);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -71,6 +72,8 @@ void main(uint tid : SV_GroupThreadID,
 	//p.life -= deltaTime;
 
 	p.color = color;
+
+	//ParticlePosition[index] = p.position;
 
 	// ¾²±â
 	ParticlesOutput[index] = p;

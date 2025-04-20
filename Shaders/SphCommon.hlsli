@@ -42,32 +42,34 @@ cbuffer SimParams : register(b0) {
     int gridDimY;
 
     int gridDimZ;
-    uint maxParticles;
     float mass;
     float pressureCoeff;
-
     float density0;
+
     float viscosity;
     float m_gravityCoeff;
     float collisionDamping;
-
     uint forceKey;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)
 {
-    // 큰 소수를 사용하여 좌표를 섞어줌
-    const uint p1 = 73856093;
-    const uint p2 = 19349663;
-    const uint p3 = 83492791;
+    //// 큰 소수를 사용하여 좌표를 섞어줌
+    //const uint p1 = 73856093;
+    //const uint p2 = 19349663;
+    //const uint p3 = 83492791;
 
-    int k = cellID.x;
-    int l = cellID.y;
-    int m = cellID.z;
+    //int k = cellID.x;
+    //int l = cellID.y;
+    //int m = cellID.z;
 
-    uint hashValue = (uint)(k * p1) ^ (uint)(l * p2) ^ (uint)(m * p3);
+    //uint hashValue = (uint)(k * p1) ^ (uint)(l * p2) ^ (uint)(m * p3);
 
-    return hashValue % cellCnt;
+    uint cellIndex = cellID.x
+        + cellID.y * gridDimX
+        + cellID.z * gridDimX * gridDimY;
+
+    return cellIndex;
 }
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)

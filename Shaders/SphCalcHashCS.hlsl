@@ -10,7 +10,7 @@ void main(uint tid : SV_GroupThreadID,
 {
     uint index = groupIdx.x * GROUP_SIZE_X + tid;
 
-    if (index >= maxParticles) return; // 경계 체크
+    if (index >= numParticles) return; // 경계 체크
 
     Particle p = Particles[index];
 

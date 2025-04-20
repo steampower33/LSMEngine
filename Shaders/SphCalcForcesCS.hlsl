@@ -1,10 +1,11 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-StructuredBuffer<ParticleHash> SortedHashes : register(t1);
-StructuredBuffer<CompactCell> CompactCells : register(t2);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+RWStructuredBuffer<uint> CellStart : register(u1);
+RWStructuredBuffer<uint> CellCount : register(u2);
+RWStructuredBuffer<uint> SortedIdx : register(u3);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -13,7 +14,7 @@ void main(uint tid : SV_GroupThreadID,
 {
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 
-	if (index >= maxParticles) return;
+	if (index >= numParticles) return;
 
 	Particle p_i = ParticlesInput[index];
 
@@ -22,7 +23,10 @@ void main(uint tid : SV_GroupThreadID,
 	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * m_gravityCoeff;
 	float3 externalForce = float3(0.0, 0.0, 0.0);
 
-	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
+	float3 fx = (p_i.position - minBounds) / smoothingRadius;
+	fx = max(fx, 0.0);
+	int3 cellID = int3(floor(fx));
+	cellID = clamp(cellID, int3(0, 0, 0), int3(gridDimX, gridDimY, gridDimZ) - int3(1, 1, 1));
 
 	for (int i = 0; i < 27; ++i)
 	{
@@ -30,14 +34,14 @@ void main(uint tid : SV_GroupThreadID,
 
 		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
-		uint startIndex = CompactCells[flatNeighborIndex].startIndex;
-		uint endIndex = CompactCells[flatNeighborIndex].endIndex;
+		uint startIndex = CellStart[flatNeighborIndex];
+		uint endIndex = startIndex + CellCount[flatNeighborIndex];
 
-		if (startIndex == 0xFFFFFFFF || endIndex == 0xFFFFFFFF) continue;
+		if (startIndex == endIndex) continue;
 
 		for (int n = startIndex; n < endIndex; ++n)
 		{
-			uint particleIndexB = SortedHashes[n].particleID;
+			uint particleIndexB = SortedIdx[n];
 
 			//자기자신 제외
 			if (index == particleIndexB) continue;
