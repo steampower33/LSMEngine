@@ -67,11 +67,11 @@ public:
 
 		int gridDimZ;
 		float mass = 1.0f;
-		float pressureCoeff = 0.1f;
+		float pressureCoeff = 1.0f;
 		float density0 = 1.0f;
 
-		float viscosity = 0.7f;
-		float gravity;
+		float viscosity = 0.1f;
+		float gravityCoeff;
 		float collisionDamping;
 		UINT forceKey;
 	};
@@ -85,21 +85,21 @@ public:
 
 	SimParams m_constantBufferData;
 	const UINT m_groupSizeX = 512;
-	const UINT m_nX = 8;
-	const UINT m_nY = 8;
-	const UINT m_nZ = 8;
+	const UINT m_nX = 32;
+	const UINT m_nY = 32;
+	const UINT m_nZ = 32;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
 	const float m_radius = 0.2f;
 	const float m_dp = 0.2f;
 	float m_smoothingRadius = 1.0f;
-	float m_maxBoundsX = 5.0f;
-	float m_maxBoundsY = 5.0f;
-	float m_maxBoundsZ = 5.0f;
+	float m_maxBoundsX = 10.0f;
+	float m_maxBoundsY = 10.0f;
+	float m_maxBoundsZ = 10.0f;
 	float m_gravityCoeff = 1.0f;
 	float m_collisionDamping = 0.95f;
-	float m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
-	float m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
-	float m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
+	UINT m_gridDimX = static_cast<UINT>(ceilf(m_maxBoundsX * 2.0f / m_smoothingRadius));
+	UINT m_gridDimY = static_cast<UINT>(ceilf(m_maxBoundsY * 2.0f / m_smoothingRadius));
+	UINT m_gridDimZ = static_cast<UINT>(ceilf(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	UINT m_cellCnt = m_gridDimX * m_gridDimY * m_gridDimZ;
 	
 private:

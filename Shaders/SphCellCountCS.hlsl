@@ -1,8 +1,8 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
-RWStructuredBuffer<uint>  CellCount : register(u1);
-RWStructuredBuffer<uint2> CellOffset : register(u2);
+RWStructuredBuffer<uint>  CellCount : register(u0);
+RWStructuredBuffer<uint2> CellOffset : register(u1);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -15,12 +15,7 @@ void main(uint tid : SV_GroupThreadID,
     float3 position = ParticlesInput[i].position;
 
     // 상대적 위치로 변환 -> 커널 반경으로 나눠줌 -> 해시 계산 -> cellIndex
-    float3 fx = (position - minBounds) / smoothingRadius;
-    fx = max(fx, 0.0);
-    int3 cellID = int3(floor(fx));
-    cellID = clamp(cellID, int3(0, 0, 0), int3(gridDimX, gridDimY, gridDimZ) - int3(1, 1, 1));
-
-    uint cellIndex = GetCellKeyFromCellID(cellID);
+    uint cellIndex = GetCellKeyFromCellID(floor((position - minBounds) / smoothingRadius));
 
     uint localOff;
     InterlockedAdd(CellCount[cellIndex], 1, localOff);

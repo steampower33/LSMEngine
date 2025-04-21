@@ -1,8 +1,8 @@
 #include "SphCommon.hlsli"
 
-RWStructuredBuffer<uint> CellCount : register(u0);
-RWStructuredBuffer<uint> LocalScan : register(u1);
-RWStructuredBuffer<uint> PartialSum : register(u2);
+StructuredBuffer<uint> CellCount : register(t0);
+RWStructuredBuffer<uint> LocalScan : register(u0);
+RWStructuredBuffer<uint> PartialSum : register(u1);
 
 groupshared uint shMem[GROUP_SIZE_X];
 
@@ -13,9 +13,12 @@ void main(uint tid       : SV_GroupThreadID,
 {
     uint i = groupIdx.x * GROUP_SIZE_X + tid;
 
-    if (i >= cellCnt) return;
+    uint localValue = 0;
+    if (i < cellCnt) {
+        localValue = CellCount[i];
+    }
 
-    shMem[tid] = CellCount[i];
+    shMem[tid] = localValue;
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -49,10 +52,15 @@ void main(uint tid       : SV_GroupThreadID,
         GroupMemoryBarrierWithGroupSync();
     }
 
-    LocalScan[i] = shMem[tid];
+    if (i < cellCnt) {
+        LocalScan[i] = shMem[tid];
+    }
 
     GroupMemoryBarrierWithGroupSync();
 
-    if (i % GROUP_SIZE_X == GROUP_SIZE_X - 1)
-        PartialSum[i / GROUP_SIZE_X] = shMem[tid];
+    if (tid == GROUP_SIZE_X - 1)
+        PartialSum[groupIdx] = shMem[tid];
+
+    if (i < cellCnt && i == cellCnt - 1)
+        PartialSum[groupIdx] = shMem[tid];
 }

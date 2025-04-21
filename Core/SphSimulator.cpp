@@ -72,18 +72,18 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	//	D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	// ConstantBuffer 설정
-	m_constantBufferData.deltaTime = 1 / 10000.0f;
+	m_constantBufferData.deltaTime = 1 / 100.0f;
 
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gravity = m_gravityCoeff;
+	m_constantBufferData.gravityCoeff = m_gravityCoeff;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.numParticles = m_numParticles;
-	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
-	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
-	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimX = m_gridDimX;
+	m_constantBufferData.gridDimY = m_gridDimY;
+	m_constantBufferData.gridDimZ = m_gridDimZ;
 
 	CreateConstUploadBuffer(device, m_constantBuffer, m_constantBufferData, m_constantBufferDataBegin);
 
@@ -189,12 +189,12 @@ void SphSimulator::Update(float dt, UINT forceKey)
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gravity = m_gravityCoeff;
+	m_constantBufferData.gravityCoeff = m_gravityCoeff;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.numParticles = m_numParticles;
-	m_constantBufferData.gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);
-	m_constantBufferData.gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius);
-	m_constantBufferData.gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius);
+	m_constantBufferData.gridDimX = static_cast<UINT>(ceilf(m_maxBoundsX * 2.0f / m_smoothingRadius));
+	m_constantBufferData.gridDimY = static_cast<UINT>(ceilf(m_maxBoundsY * 2.0f / m_smoothingRadius));
+	m_constantBufferData.gridDimZ = static_cast<UINT>(ceilf(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	m_constantBufferData.forceKey = forceKey;
 
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
@@ -212,7 +212,7 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 	commandList->SetComputeRootDescriptorTable(8, m_constantBufferCbvGpuHandle); // CBV
 
-	// Clear Count Cell
+	// Clear CellCount
 	commandList->SetPipelineState(Graphics::sphClearCountCellCSPSO.Get());
 
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0
@@ -220,13 +220,14 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	UINT clearDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(clearDispatchX, 1, 1);
 	
-	// Count Cell
+	// CellCount
 	commandList->SetPipelineState(Graphics::sphCountCellCSPSO.Get());
 
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]);
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 1
-	commandList->SetComputeRootDescriptorTable(6, m_structuredBufferUavGpuHandle[m_cellOffsetIndex]); // UAV 2
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0
+	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellOffsetIndex]); // UAV 1
 
 	UINT countDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 
@@ -235,10 +236,14 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	// Scan
 	commandList->SetPipelineState(Graphics::sphCellLocalScanCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0 
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 1
-	commandList->SetComputeRootDescriptorTable(6, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 2
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellCountIndex]); // SRV 0 
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 0
+	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 1
 
 	UINT scanDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 
@@ -248,6 +253,7 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	commandList->SetPipelineState(Graphics::sphCellLocalScanBlockCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // CellStartPartialSum : UAV -> UAV
+
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 0
 
 	UINT scanBlockDispatchX = ((m_cellCnt + m_groupSizeX - 1) / m_groupSizeX + m_groupSizeX - 1) / m_groupSizeX;
@@ -257,10 +263,14 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	// FinalAddition
 	commandList->SetPipelineState(Graphics::sphCellFinalAdditionCSPSO.Get());
 
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // CellStartPartialSum : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> UAV
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // CellStartPartialSum : UAV -> UAV
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellStartPartialSumIndex]); // SRV 0
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 0
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 1
 
 	UINT finalAddtionDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 
@@ -269,11 +279,18 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	// CellScatter
 	commandList->SetPipelineState(Graphics::sphCellScatterCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> UAV
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex]); // CellOffset : UAV -> UAV
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 0
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellOffsetIndex]); // UAV 1
-	commandList->SetComputeRootDescriptorTable(6, m_structuredBufferUavGpuHandle[m_cellScatterIndex]); // UAV 2
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex]); // CellOffset : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellStartIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(1, m_structuredBufferSrvGpuHandle[m_cellOffsetIndex]); // SRV 1
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellScatterIndex]); // UAV 0
 
 	UINT cellScatterDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 
@@ -377,15 +394,16 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // CellStart : UAV -> UAV
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellScatterIndex]); // CellScatter : UAV -> UAV
+	SetUAVBarrier(commandList, m_structuredBuffer[m_cellScatterIndex]); // CellScatter : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],    
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(1, m_structuredBufferSrvGpuHandle[m_cellStartIndex]); // SRV 1
+	commandList->SetComputeRootDescriptorTable(2, m_structuredBufferSrvGpuHandle[m_cellCountIndex]); // SRV 2
+	commandList->SetComputeRootDescriptorTable(3, m_structuredBufferSrvGpuHandle[m_cellScatterIndex]); // SRV 3
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 1
-	commandList->SetComputeRootDescriptorTable(6, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 2
-	commandList->SetComputeRootDescriptorTable(7, m_structuredBufferUavGpuHandle[m_cellScatterIndex]); // UAV 3
 
 	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
@@ -406,6 +424,23 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 
 	// 디스크립터  설정은 Density와 동일
 	commandList->Dispatch(dispatchX, 1, 1);
+
+	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],    // CellCount : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],    // CellOffset : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],    // CellStart : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],    // CellStartPartialSum : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],    // ScatterIndex : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 }
 
 void SphSimulator::CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList)
@@ -424,12 +459,11 @@ void SphSimulator::CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList)
 
 	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
-	//commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_particlePositionIndex]); // UAV 1
 
 	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
 
-	//SetUAVBarrier(commandList, m_structuredBuffer[m_particlePositionIndex]);
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]);
 }
 
 void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,

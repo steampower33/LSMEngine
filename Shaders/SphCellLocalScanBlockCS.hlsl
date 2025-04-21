@@ -11,9 +11,12 @@ void main(uint tid       : SV_GroupThreadID,
 {
     uint i = groupIdx.x * GROUP_SIZE_X + tid;
 
-    if (i >= (cellCnt + GROUP_SIZE_X - 1) / GROUP_SIZE_X) return;
+    uint localValue = 0;
+    if (i < cellCnt) {
+        localValue = PartialSum[i];
+    }
 
-    shMem[tid] = PartialSum[i];
+    shMem[tid] = localValue;
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -47,7 +50,9 @@ void main(uint tid       : SV_GroupThreadID,
         GroupMemoryBarrierWithGroupSync();
     }
 
-    PartialSum[i] = shMem[tid];
+    if (i < cellCnt) {
+        PartialSum[i] = shMem[tid];
+    }
 
     GroupMemoryBarrierWithGroupSync();
 }

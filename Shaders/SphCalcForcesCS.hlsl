@@ -1,11 +1,11 @@
 #include "SphCommon.hlsli"
 
 StructuredBuffer<Particle> ParticlesInput : register(t0);
+StructuredBuffer<uint> CellStart : register(t1);
+StructuredBuffer<uint> CellCount : register(t2);
+StructuredBuffer<uint> SortedIdx : register(t3);
 
 RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
-RWStructuredBuffer<uint> CellStart : register(u1);
-RWStructuredBuffer<uint> CellCount : register(u2);
-RWStructuredBuffer<uint> SortedIdx : register(u3);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -20,17 +20,19 @@ void main(uint tid : SV_GroupThreadID,
 
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
 	float3 viscosityForce = float3(0.0, 0.0, 0.0);
-	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * m_gravityCoeff;
+	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravityCoeff;
 	float3 externalForce = float3(0.0, 0.0, 0.0);
 
-	float3 fx = (p_i.position - minBounds) / smoothingRadius;
-	fx = max(fx, 0.0);
-	int3 cellID = int3(floor(fx));
-	cellID = clamp(cellID, int3(0, 0, 0), int3(gridDimX, gridDimY, gridDimZ) - int3(1, 1, 1));
+	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
 
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
+		
+		if ((neighborIndex.x < 0 || neighborIndex.x >= gridDimX) ||
+			(neighborIndex.y < 0 || neighborIndex.y >= gridDimY) ||
+			(neighborIndex.z < 0 || neighborIndex.z >= gridDimZ))
+			continue;
 
 		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
