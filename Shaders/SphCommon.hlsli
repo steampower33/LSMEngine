@@ -69,7 +69,7 @@ uint GetCellKeyFromCellID(int3 cellID)
 
     uint hashValue = cellID.x + cellID.y * gridDimX + cellID.z * gridDimX * gridDimY;
 
-    return hashValue;
+    return hashValue % cellCnt;
 }
 
 // 간단한 정수 해시 함수 (결과를 [0, 1] 범위의 float로 변환)

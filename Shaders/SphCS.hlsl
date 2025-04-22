@@ -21,7 +21,7 @@ void main(uint tid : SV_GroupThreadID,
 	/*p.currentAcceleration = p.force / p.density;
 	p.velocity = p.velocityHalfStep + p.currentAcceleration * (deltaTime / 2.0f);*/
 
-	p.velocity += p.force / p.density * deltaTime;
+	p.velocity += p.force / mass * deltaTime;
 	p.position += p.velocity * deltaTime;
 
 	if (p.position.x - p.radius <= minBounds.x)
