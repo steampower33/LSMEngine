@@ -33,7 +33,7 @@ public:
 		float radius = 0.0f;
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
-		XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMFLOAT3 color = XMFLOAT3(0.843f, 0.874f, 0.933f);
 		float density = 0.0f;
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;

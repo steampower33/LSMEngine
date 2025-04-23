@@ -57,21 +57,21 @@ void main(uint tid : SV_GroupThreadID,
 		p.position.z = maxBounds.z - p.radius;
 	}
 
-	// 속도 계산
-	float maxSpeed = 5.0;
-	float speed = length(p.velocity);
-	float speedT = saturate(speed / maxSpeed);
+	//// 속도 계산
+	//float maxSpeed = 5.0;
+	//float speed = length(p.velocity);
+	//float speedT = saturate(speed / maxSpeed);
 
-	// 속도에 따라 색상 계산 (하늘색, 파란색, 하얀색)
-	float3 color = lerp(float3(0.0, 1.0, 1.0), float3(0.0, 0.0, 1.0), speedT); // 하늘색 -> 파란색
+	//// 속도에 따라 색상 계산 (하늘색, 파란색, 하얀색)
+	//float3 color = lerp(float3(0.403f, 0.537f, 0.749f), float3(0.0, 0.0, 1.0), speedT); // 하늘색 -> 파란색
 
-	// 빠르게 흐르는 부분은 흰색을 포함시킴
-	if (speedT > 0.8) {
-		color = lerp(color, float3(1.0, 1.0, 1.0), 0.2); // 하얀색 섞기
-	}
-	//p.life -= deltaTime;
+	//// 빠르게 흐르는 부분은 흰색을 포함시킴
+	//if (speedT > 0.8) {
+	//	color = lerp(color, float3(1.0, 1.0, 1.0), 0.2); // 하얀색 섞기
+	//}
+	////p.life -= deltaTime;
 
-	p.color = color;
+	//p.color = color;
 
 	//ParticlePosition[index] = p.position;
 
