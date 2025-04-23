@@ -18,7 +18,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 8
+#define STRUCTURED_CNT 7
 #define CONSTANT_CNT 1
 
 class SphSimulator
@@ -92,7 +92,7 @@ public:
 	float m_smoothingRadius = 0.5f;
 	const float m_radius = m_smoothingRadius / 2.0f;
 	const float m_dp = m_radius;
-	float m_maxBoundsX = 12.0f;
+	float m_maxBoundsX = 20.0f;
 	float m_maxBoundsY = 8.0f;
 	float m_maxBoundsZ = 8.0f;
 	float m_gravityCoeff = 1.0f;
@@ -109,7 +109,6 @@ private:
 	const UINT m_compactCellDataCnt = m_cellCnt;
 
 	vector<Particle> m_particles;
-	vector<XMFLOAT3> m_particlePositions;
 
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
@@ -122,8 +121,6 @@ private:
 	// SRV | UAV | UAV
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
-	ComPtr<ID3D12Resource> m_particlePositionsUploadBuffer;
-	ComPtr<ID3D12Resource> m_particlesHashUploadBuffer;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferUavGpuHandle[STRUCTURED_CNT];
 
@@ -135,15 +132,11 @@ private:
 
 	UINT m_particleAIndex = 1;
 	UINT m_particleBIndex = 0;
-	UINT m_particlePositionIndex = 2;
-	UINT m_cellCountIndex = 3;
-	UINT m_cellOffsetIndex = 4;
-	UINT m_cellStartIndex = 5;
-	UINT m_cellStartPartialSumIndex = 6;
-	UINT m_cellScatterIndex = 7;
-
-	UINT m_hashIdx = 2;
-	UINT m_compactCellIdx = 3;
+	UINT m_cellCountIndex = 2;
+	UINT m_cellOffsetIndex = 3;
+	UINT m_cellStartIndex = 4;
+	UINT m_cellStartPartialSumIndex = 5;
+	UINT m_cellScatterIndex = 6;
 
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
@@ -151,13 +144,7 @@ private:
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
 
-	void CalcHashes(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void BitonicSort(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void FlagGeneration(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void ScatterCompactCell(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList);
 	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
 
-	// Unuse
-	void FlagScan(ComPtr<ID3D12GraphicsCommandList> commandList);
 };

@@ -57,17 +57,12 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> postEffectsVS;
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
-	extern ComPtr<IDxcBlob> sphCalcHashCS;
-	extern ComPtr<IDxcBlob> sphBitonicSortCS;
 	extern ComPtr<IDxcBlob> sphClearCountCellCS;
 	extern ComPtr<IDxcBlob> sphCountCellCS;
 	extern ComPtr<IDxcBlob> sphCellLocalScanCS;
 	extern ComPtr<IDxcBlob> sphCellLocalScanBlockCS;
 	extern ComPtr<IDxcBlob> sphCellFinalAdditionCS;
 	extern ComPtr<IDxcBlob> sphCellScatterCS;
-	extern ComPtr<IDxcBlob> sphFlagGenerationCS;
-	extern ComPtr<IDxcBlob> sphClearCellCS;
-	extern ComPtr<IDxcBlob> sphScatterCompactCellCS;
 	extern ComPtr<IDxcBlob> sphCalcDensityCS;
 	extern ComPtr<IDxcBlob> sphCalcForcesCS;
 	extern ComPtr<IDxcBlob> sphCS;
@@ -122,17 +117,12 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurXCSPSO;
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
-	extern ComPtr<ID3D12PipelineState> sphCalcHashCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphBitonicSortCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphClearCountCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCountCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellLocalScanCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellLocalScanBlockCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellFinalAdditionCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellScatterCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphFlagGenerationCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphClearCellCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphScatterCompactCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
