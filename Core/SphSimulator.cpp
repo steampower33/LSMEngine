@@ -58,8 +58,6 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// ConstantBuffer 설정
-	m_constantBufferData.deltaTime = 1 / 120.0f;
-
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_constantBufferData.cellCnt = m_cellCnt;
@@ -167,19 +165,27 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt, UINT forceKey)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 1 / 100.0f;
+	m_constantBufferData.deltaTime = 1 / 240.0f;
 
-	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
+
+	if (forceKey == 1 && -m_maxBoundsX <= m_minBoundsMoveX)
+	{
+		m_minBoundsMoveX -= 0.02f;
+	}
+	else if (forceKey == 2 && m_minBoundsMoveX  <= -m_maxBoundsX + 5.0f )
+	{
+		m_minBoundsMoveX += 0.02f;
+	}
+	m_constantBufferData.minBounds = XMFLOAT3(m_minBoundsMoveX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_constantBufferData.cellCnt = m_cellCnt;
 	m_constantBufferData.smoothingRadius = m_smoothingRadius;
 	m_constantBufferData.gravityCoeff = m_gravityCoeff;
 	m_constantBufferData.collisionDamping = m_collisionDamping;
 	m_constantBufferData.numParticles = m_numParticles;
-	m_constantBufferData.gridDimX = static_cast<UINT>(ceilf(m_maxBoundsX * 2.0f / m_smoothingRadius));
-	m_constantBufferData.gridDimY = static_cast<UINT>(ceilf(m_maxBoundsY * 2.0f / m_smoothingRadius));
-	m_constantBufferData.gridDimZ = static_cast<UINT>(ceilf(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	m_constantBufferData.forceKey = forceKey;
+	m_constantBufferData.gridDimX = m_gridDimX;
+	m_constantBufferData.gridDimY = m_gridDimY;
+	m_constantBufferData.gridDimZ = m_gridDimZ;
 
 	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 
@@ -282,11 +288,6 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 	CalcDensityForces(commandList);
 	CalcSPH(commandList);
-
-	//CalcHashes(commandList); // 해시 연산
-	//BitonicSort(commandList); // 해시 값 기준 정렬
-	//FlagGeneration(commandList);
-	//ScatterCompactCell(commandList);
 }
 
 void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList)

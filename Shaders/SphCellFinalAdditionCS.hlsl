@@ -11,8 +11,5 @@ void main(uint tid       : SV_GroupThreadID,
 {
     uint i = groupIdx.x * GROUP_SIZE_X + tid;
 
-    if (i < GROUP_SIZE_X)
-        return;
-
     LocalScan[i] += PartialSum[i / GROUP_SIZE_X];
 }

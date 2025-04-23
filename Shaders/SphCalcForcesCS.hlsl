@@ -65,19 +65,19 @@ void main(uint tid : SV_GroupThreadID,
 		}
 	}
 
-	int gridDimX_6 = gridDimX / 6;
-	if (forceKey == 1)
-	{
-		//if (gridDimX_6 * 2 < cellID.x && cellID.x < gridDimX_6 * 3)
-		//	externalForce = float3(10.0, 0.0, 0.0) * mass;
-		//if (gridDimX_6 * 3 < cellID.x && cellID.x < gridDimX_6 * 4)
-		//	externalForce = float3(-10.0, 0.0, 0.0) * mass;
-		externalForce = float3(-4.0, 0.0, 0.0) * mass;
-	}
-	if (forceKey == 2)
-	{
-		externalForce = float3(4.0, 0.0, 0.0) * mass;
-	}
+	//int gridDimX_6 = gridDimX / 6;
+	//if (forceKey == 1)
+	//{
+	//	//if (gridDimX_6 * 2 < cellID.x && cellID.x < gridDimX_6 * 3)
+	//	//	externalForce = float3(10.0, 0.0, 0.0) * mass;
+	//	//if (gridDimX_6 * 3 < cellID.x && cellID.x < gridDimX_6 * 4)
+	//	//	externalForce = float3(-10.0, 0.0, 0.0) * mass;
+	//	externalForce = float3(-4.0, 0.0, 0.0) * mass;
+	//}
+	//if (forceKey == 2)
+	//{
+	//	externalForce = float3(4.0, 0.0, 0.0) * mass;
+	//}
 
 	p_i.force = pressureForce
 		+ viscosityForce

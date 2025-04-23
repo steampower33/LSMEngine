@@ -29,7 +29,7 @@ void main(uint tid : SV_GroupThreadID,
 		p.velocity.x *= -collisionDamping;
 		p.position.x = minBounds.x + p.radius;
 	}
-	else if (p.position.x + p.radius  >= maxBounds.x)
+	else if (p.position.x + p.radius >= maxBounds.x)
 	{
 		p.velocity.x *= -collisionDamping;
 		p.position.x = maxBounds.x - p.radius ;
