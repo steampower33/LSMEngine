@@ -72,7 +72,7 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	//	D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	// ConstantBuffer ¼³Á¤
-	m_constantBufferData.deltaTime = 1 / 100.0f;
+	m_constantBufferData.deltaTime = 1 / 120.0f;
 
 	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -145,36 +145,39 @@ void SphSimulator::GenerateParticles()
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	float spacingX = m_nX * m_radius;
+	float spacingX = m_nX * m_radius * 0.5f;
 	float minX = midX - spacingX;
 	float maxX = midX + spacingX;
 
-	float spacingY = m_nY * m_radius;
+	float spacingY = m_nY * m_radius * 0.5f;
 	float minY = midY - spacingY;
 	float maxY = midY + spacingY;
 
-	float spacingZ = m_nZ * m_radius;
+	float spacingZ = m_nZ * m_radius * 0.5f;
 	float minZ = midZ - spacingZ;
 	float maxZ = midZ + spacingZ;
 
-	for (UINT i = 0; i < m_nZ; i++)
+	for (UINT z = 0; z < m_nZ; z++)
 	{
-		for (UINT j = 0; j < m_nY; j++)
+		for (UINT y = 0; y < m_nY; y++)
 		{
-			for (UINT k = 0; k < m_nX; k++)
+			for (UINT x = 0; x < m_nX; x++)
 			{
-				UINT index = k + m_nY * j + m_nX * m_nY * i;
+				UINT index =
+					x +
+					m_nX * y +
+					m_nX * m_nY * z;
 
-				m_particles[index].position.x = minX + m_radius * 2.0f * k;
-				m_particles[index].position.y = minY + m_radius * 2.0f * j;
-				m_particles[index].position.z = minZ + m_radius * 2.0f * i;
+				m_particles[index].position.x = minX + m_radius * x;
+				m_particles[index].position.y = minY + m_radius * y;
+				m_particles[index].position.z = minZ + m_radius * z;
 
 				m_particles[index].life = dl(gen);
 				m_particles[index].radius = m_radius;
-				
-				m_particlePositions[index].x = minX + m_radius * 2.0f * k;
-				m_particlePositions[index].y = minY + m_radius * 2.0f * j;
-				m_particlePositions[index].z = minZ + m_radius * 2.0f * i;
+
+				m_particlePositions[index].x = minX + m_radius * x;
+				m_particlePositions[index].y = minY + m_radius * y;
+				m_particlePositions[index].z = minZ + m_radius * z;
 			}
 		}
 	}

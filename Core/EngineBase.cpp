@@ -23,10 +23,10 @@ EngineBase::EngineBase() :
 	m_scissorRect.bottom = static_cast<LONG>(m_height);
 
 	m_sceneControllerPos = ImVec2(5, 15);
-	m_sceneControllerSize = ImVec2(m_width * 0.20f, m_height - 15);
+	m_sceneControllerSize = ImVec2(m_width * 0.20f, m_height - 20);
 
-	m_scenePos = ImVec2(5 + m_sceneControllerSize.x + 5, 15);
-	m_sceneSize = ImVec2(m_width - (m_scenePos.x + 5), m_sceneControllerSize.y);
+	m_scenePos = ImVec2(m_sceneControllerSize.x, 15);
+	m_sceneSize = ImVec2(m_width - (m_scenePos.x + 25), m_sceneControllerSize.y);
 
 	m_assetsBrowserPos = ImVec2(m_sceneControllerPos.x, m_sceneControllerPos.y + m_sceneControllerSize.y + 5);
 	m_assetsBrowserSize = ImVec2(m_width - 5 - 5, m_height - m_sceneControllerSize.y - 5 - 5 - 15);
