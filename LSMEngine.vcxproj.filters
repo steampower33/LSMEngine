@@ -289,5 +289,8 @@
     <FxCompile Include="Shaders\SphCellScatterCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\SphKickDriftCS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

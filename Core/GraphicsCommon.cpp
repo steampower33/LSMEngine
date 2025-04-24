@@ -44,6 +44,7 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphCellLocalScanBlockCS;
 	ComPtr<IDxcBlob> sphCellFinalAdditionCS;
 	ComPtr<IDxcBlob> sphCellScatterCS;
+	ComPtr<IDxcBlob> sphKickDriftCS;
 	ComPtr<IDxcBlob> sphCalcDensityCS;
 	ComPtr<IDxcBlob> sphCalcForcesCS;
 	ComPtr<IDxcBlob> sphCS;
@@ -100,6 +101,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphCellLocalScanBlockCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellFinalAdditionCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellScatterCSPSO;
+	ComPtr<ID3D12PipelineState> sphKickDriftCSPSO;
 	ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
 	ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
@@ -392,6 +394,7 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphCellLocalScanBlockCS.hlsl", L"cs_6_0", sphCellLocalScanBlockCS);
 	CreateShader(device, L"SphCellFinalAdditionCS.hlsl", L"cs_6_0", sphCellFinalAdditionCS);
 	CreateShader(device, L"SphCellScatterCS.hlsl", L"cs_6_0", sphCellScatterCS);
+	CreateShader(device, L"SphKickDriftCS.hlsl", L"cs_6_0", sphKickDriftCS);
 	CreateShader(device, L"SphCalcDensityCS.hlsl", L"cs_6_0", sphCalcDensityCS);
 	CreateShader(device, L"SphCalcForcesCS.hlsl", L"cs_6_0", sphCalcForcesCS);
 	CreateShader(device, L"SphCS.hlsl", L"cs_6_0", sphCS);
@@ -769,6 +772,12 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCellScatterCSPSODesc.CS = { sphCellScatterCS->GetBufferPointer(), sphCellScatterCS->GetBufferSize() };
 	sphCellScatterCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCellScatterCSPSODesc, IID_PPV_ARGS(&sphCellScatterCSPSO)));
+	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphKickDriftCSPSODesc = {};
+	sphKickDriftCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphKickDriftCSPSODesc.CS = { sphKickDriftCS->GetBufferPointer(), sphKickDriftCS->GetBufferSize() };
+	sphKickDriftCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphKickDriftCSPSODesc, IID_PPV_ARGS(&sphKickDriftCSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcDensityCSPSODesc = {};
 	sphCalcDensityCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
