@@ -19,7 +19,7 @@ using Microsoft::WRL::ComPtr;
 using namespace std;
 
 #define STRUCTURED_CNT 7
-#define CONSTANT_CNT 1
+#define CONSTANT_CNT 2
 
 class SphSimulator
 {
@@ -38,7 +38,9 @@ public:
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
 		XMFLOAT3 currentAcceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p;
+		float p1;
+		XMFLOAT3 velocityHalf = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		float p2;
 	};
 
 	struct ParticleHash
@@ -55,7 +57,7 @@ public:
 		UINT endIndex = 0;
 	};
 
-	// 시뮬레이션 파라미터 (상수 버퍼용)
+	// Simulator Param
 	__declspec(align(256)) struct SimParams {
 		float deltaTime;
 		UINT numParticles;
@@ -69,13 +71,23 @@ public:
 
 		int gridDimZ;
 		float mass = 1.0f;
-		float pressureCoeff = 5.0f;
-		float density0 = 8.0f;
+		float pressureCoeff = 1.0f;
+		float density0 = 1.0f;
 
 		float viscosity = 0.1f;
 		float gravityCoeff;
 		float collisionDamping;
 		UINT forceKey;
+	};
+
+	// Emitter Parameter
+	__declspec(align(256)) struct EmitterParams {
+		XMFLOAT3 emitterPos;
+		float initialSpeed;
+		XMFLOAT3 emitterDir;
+		float particlesPerSecond;
+		float deltaTime;
+		float emitterRadius;
 	};
 
 	void Initialize(ComPtr<ID3D12Device> device,
@@ -85,7 +97,8 @@ public:
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 	
-	SimParams m_constantBufferData;
+	SimParams m_simParamsData;
+	EmitterParams m_emitterParamsData;
 	const UINT m_groupSizeX = 512;
 	const UINT m_nX = 64;
 	const UINT m_nY = 64;
@@ -127,11 +140,17 @@ private:
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferUavGpuHandle[STRUCTURED_CNT];
 
-	ComPtr<ID3D12Resource> m_constantBuffer;
-	UINT8* m_constantBufferDataBegin = nullptr;
-	UINT m_constantBufferSize = (sizeof(SimParams) + 255) & ~255;
-	D3D12_CPU_DESCRIPTOR_HANDLE m_constantBufferCbvCpuHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferCbvGpuHandle;
+	ComPtr<ID3D12Resource> m_simParamsConstantBuffer;
+	UINT8* m_simParamsConstantBufferDataBegin = nullptr;
+	UINT m_simParamsConstantBufferSize = (sizeof(SimParams) + 255) & ~255;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
+
+	ComPtr<ID3D12Resource> m_emitterParamsConstantBuffer;
+	UINT8* m_emitterParamsConstantBufferDataBegin = nullptr;
+	UINT m_emitterParamsConstantBufferSize = (sizeof(SimParams) + 255) & ~255;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_emitterParamsCbvCpuHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_emitterParamsCbvGpuHandle;
 
 	UINT m_particleAIndex = 0;
 	UINT m_particleBIndex = 1;
@@ -141,6 +160,7 @@ private:
 	UINT m_cellStartPartialSumIndex = 5;
 	UINT m_cellScatterIndex = 6;
 
+	void CreateConstantBuffer(ComPtr<ID3D12Device> device);
 	void GenerateParticles();
 	void CreateStructuredBufferWithViews(
 		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName);

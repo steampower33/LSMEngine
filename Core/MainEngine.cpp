@@ -541,19 +541,19 @@ void MainEngine::UpdateGUI()
 						});
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_constantBufferData.mass, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_simParamsData.mass, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_constantBufferData.pressureCoeff, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_constantBufferData.density0, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_simParamsData.density0, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_constantBufferData.viscosity, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_simParamsData.viscosity, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					flag += DrawTableRow("SmoothingRadius", [&]() {
@@ -701,8 +701,8 @@ void MainEngine::Update(float dt)
 
 	// Update BoundsBox
 	{
-		XMVECTOR minB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.minBounds);
-		XMVECTOR maxB = XMLoadFloat3(&m_sphSimulator->m_constantBufferData.maxBounds);
+		XMVECTOR minB = XMLoadFloat3(&m_sphSimulator->m_simParamsData.minBounds);
+		XMVECTOR maxB = XMLoadFloat3(&m_sphSimulator->m_simParamsData.maxBounds);
 
 		XMVECTOR size = XMVectorScale(XMVectorSubtract(maxB, minB), 0.5f);
 		XMVECTOR center = XMVectorScale(XMVectorAdd(minB, maxB), 0.5f);

@@ -18,9 +18,8 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p = ParticlesInput[index];
 
-	//float3 velocityHalf = p.velocity + 0.5 * p.currentAcceleration * deltaTime;
 	//p.currentAcceleration = p.force / mass;
-	//p.velocity = velocityHalf + 0.5 * p.currentAcceleration * deltaTime;
+	//p.velocity = p.velocityHalf + 0.5 * p.currentAcceleration * deltaTime;
 
 	p.velocity += p.force / mass * deltaTime;
 	p.position += p.velocity * deltaTime;

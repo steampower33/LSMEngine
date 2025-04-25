@@ -49,7 +49,6 @@ void main(uint tid : SV_GroupThreadID,
 
 			p_i.density += mass * influence;
 		}
-
 	}
 
 	p_i.pressure = pressureCoeff * (p_i.density - density0);

@@ -11,7 +11,9 @@ struct Particle {
     float3 force;
     float pressure;
     float3 currentAcceleration;
-    float p;
+    float p1;
+    float3 velocityHalf;
+    float p2;
 };
 
 struct ParticleHash

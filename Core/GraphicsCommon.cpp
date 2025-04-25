@@ -38,6 +38,7 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsVS;
 	ComPtr<IDxcBlob> postEffectsPS;
 
+	ComPtr<IDxcBlob> sphEmitterCS;
 	ComPtr<IDxcBlob> sphClearCountCellCS;
 	ComPtr<IDxcBlob> sphCountCellCS;
 	ComPtr<IDxcBlob> sphCellLocalScanCS;
@@ -95,6 +96,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurXCSPSO;
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
+	ComPtr<ID3D12PipelineState> sphEmitterCSPSO;
 	ComPtr<ID3D12PipelineState> sphClearCountCellCSPSO;
 	ComPtr<ID3D12PipelineState> sphCountCellCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellLocalScanCSPSO;
@@ -388,6 +390,7 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"BasicPS.hlsl", L"ps_6_0", basicPS);
 
 	// Sph
+	CreateShader(device, L"SphEmitterCS.hlsl", L"cs_6_0", sphEmitterCS);
 	CreateShader(device, L"SphClearCountCellCS.hlsl", L"cs_6_0", sphClearCountCellCS);
 	CreateShader(device, L"SphCellCountCS.hlsl", L"cs_6_0", sphCountCellCS);
 	CreateShader(device, L"SphCellLocalScanCS.hlsl", L"cs_6_0", sphCellLocalScanCS);
@@ -737,6 +740,12 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	basicSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSolidPSODesc, IID_PPV_ARGS(&basicSolidPSO)));
 
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphEmitterCSPSODesc = {};
+	sphEmitterCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphEmitterCSPSODesc.CS = { sphEmitterCS->GetBufferPointer(), sphEmitterCS->GetBufferSize() };
+	sphEmitterCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphEmitterCSPSODesc, IID_PPV_ARGS(&sphEmitterCSPSO)));
+	
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphClearCountCellCSPSODesc = {};
 	sphClearCountCellCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphClearCountCellCSPSODesc.CS = { sphClearCountCellCS->GetBufferPointer(), sphClearCountCellCS->GetBufferSize() };

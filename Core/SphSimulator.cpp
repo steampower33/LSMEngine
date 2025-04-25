@@ -31,8 +31,8 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	CreateStructuredBufferWithViews(device, 6, 12, 13, sizeof(UINT), m_numParticles, L"CellScatter");
 
 	// Particle A 초기 상태 -> UAV
-	UploadAndCopyData(device, commandList, m_particleDataSize, 
-		m_particlesUploadBuffer, L"ParticleUploadBuffer", m_structuredBuffer[0], 
+	UploadAndCopyData(device, commandList, m_particleDataSize,
+		m_particlesUploadBuffer, L"ParticleUploadBuffer", m_structuredBuffer[0],
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	// Particle B 초기 상태 -> SRV
@@ -59,29 +59,7 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	SetBarrier(commandList, m_structuredBuffer[6],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	// ConstantBuffer 설정
-	m_constantBufferData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
-	m_constantBufferData.cellCnt = m_cellCnt;
-	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gravityCoeff = m_gravityCoeff;
-	m_constantBufferData.collisionDamping = m_collisionDamping;
-	m_constantBufferData.numParticles = m_numParticles;
-	m_constantBufferData.gridDimX = m_gridDimX;
-	m_constantBufferData.gridDimY = m_gridDimY;
-	m_constantBufferData.gridDimZ = m_gridDimZ;
-
-	CreateConstUploadBuffer(device, m_constantBuffer, m_constantBufferData, m_constantBufferDataBegin);
-
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-	cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = m_constantBufferSize;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (2 * STRUCTURED_CNT));
-	device->CreateConstantBufferView(
-		&cbvDesc,
-		cbvHandle
-	);
+	CreateConstantBuffer(device);
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE currentGpuHandle(m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart());
 
@@ -92,7 +70,9 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 		m_structuredBufferUavGpuHandle[i] = currentGpuHandle;
 		currentGpuHandle.Offset(1, m_cbvSrvUavSize);
 	}
-	m_constantBufferCbvGpuHandle = currentGpuHandle;
+	m_simParamsCbvGpuHandle = currentGpuHandle;
+	currentGpuHandle.Offset(1, m_cbvSrvUavSize);
+	m_emitterParamsCbvGpuHandle = currentGpuHandle;
 }
 
 void SphSimulator::GenerateParticles()
@@ -167,7 +147,7 @@ void SphSimulator::GenerateParticles()
 void SphSimulator::Update(float dt, UINT& forceKey)
 {
 	// 일단은 CBV 전체를 업데이트
-	m_constantBufferData.deltaTime = 1 / 120.0f;
+	m_simParamsData.deltaTime = 1 / 120.0f;
 
 	static float restTime = 0.0f;
 	if (forceKey == 1)
@@ -189,7 +169,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 		}
 		else
 		{
-			restTime += m_constantBufferData.deltaTime;
+			restTime += m_simParamsData.deltaTime;
 			if (restTime >= 1.0f)
 			{
 				restTime = 0.0f;
@@ -198,18 +178,18 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 		}
 	}
 
-	m_constantBufferData.minBounds = XMFLOAT3(m_minBoundsMoveX, -m_maxBoundsY, -m_maxBoundsZ);
-	m_constantBufferData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
-	m_constantBufferData.cellCnt = m_cellCnt;
-	m_constantBufferData.smoothingRadius = m_smoothingRadius;
-	m_constantBufferData.gravityCoeff = m_gravityCoeff;
-	m_constantBufferData.collisionDamping = m_collisionDamping;
-	m_constantBufferData.numParticles = m_numParticles;
-	m_constantBufferData.gridDimX = m_gridDimX;
-	m_constantBufferData.gridDimY = m_gridDimY;
-	m_constantBufferData.gridDimZ = m_gridDimZ;
+	m_simParamsData.minBounds = XMFLOAT3(m_minBoundsMoveX, -m_maxBoundsY, -m_maxBoundsZ);
+	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
+	m_simParamsData.cellCnt = m_cellCnt;
+	m_simParamsData.smoothingRadius = m_smoothingRadius;
+	m_simParamsData.gravityCoeff = m_gravityCoeff;
+	m_simParamsData.collisionDamping = m_collisionDamping;
+	m_simParamsData.numParticles = m_numParticles;
+	m_simParamsData.gridDimX = m_gridDimX;
+	m_simParamsData.gridDimY = m_gridDimY;
+	m_simParamsData.gridDimZ = m_gridDimZ;
 
-	memcpy(m_constantBufferDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 }
 
 void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
@@ -219,7 +199,12 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
 
-	commandList->SetComputeRootDescriptorTable(8, m_constantBufferCbvGpuHandle); // CBV
+	// 이미터
+	commandList->SetPipelineState(Graphics::sphEmitterCSPSO.Get());
+	commandList->SetComputeRootDescriptorTable(8, m_emitterParamsCbvGpuHandle); // EmiiterParams CBV
+
+
+	commandList->SetComputeRootDescriptorTable(8, m_simParamsCbvGpuHandle); // SimParams CBV
 
 	// Clear CellCount
 	commandList->SetPipelineState(Graphics::sphClearCountCellCSPSO.Get());
@@ -228,7 +213,7 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 	UINT clearDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(clearDispatchX, 1, 1);
-	
+
 	// CellCount
 	commandList->SetPipelineState(Graphics::sphCountCellCSPSO.Get());
 
@@ -241,7 +226,7 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	UINT countDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 
 	commandList->Dispatch(countDispatchX, 1, 1);
-	
+
 	// Scan
 	commandList->SetPipelineState(Graphics::sphCellLocalScanCSPSO.Get());
 
@@ -313,7 +298,7 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 {
 	// Update KickDrift
 	commandList->SetPipelineState(Graphics::sphKickDriftCSPSO.Get());
-	
+
 	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -328,7 +313,7 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 	commandList->SetPipelineState(Graphics::sphCalcDensityCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex], 
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex], // ParticleA : SRV -> UAV
@@ -504,4 +489,50 @@ void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
 	SetBarrier(commandList, destBuffer,
 		D3D12_RESOURCE_STATE_COPY_DEST, destBufferState);
 
+}
+
+void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
+{
+
+	{
+		// SimParams 설정
+		m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
+		m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
+		m_simParamsData.cellCnt = m_cellCnt;
+		m_simParamsData.smoothingRadius = m_smoothingRadius;
+		m_simParamsData.gravityCoeff = m_gravityCoeff;
+		m_simParamsData.collisionDamping = m_collisionDamping;
+		m_simParamsData.numParticles = m_numParticles;
+		m_simParamsData.gridDimX = m_gridDimX;
+		m_simParamsData.gridDimY = m_gridDimY;
+		m_simParamsData.gridDimZ = m_gridDimZ;
+
+		CreateConstUploadBuffer(device, m_simParamsConstantBuffer, m_simParamsData, m_simParamsConstantBufferDataBegin);
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_simParamsConstantBuffer->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = m_simParamsConstantBufferSize;
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (2 * STRUCTURED_CNT));
+		device->CreateConstantBufferView(
+			&cbvDesc,
+			cbvHandle
+		);
+	}
+
+	{
+
+		// EmitterParams 설정
+		CreateConstUploadBuffer(device, m_emitterParamsConstantBuffer, m_emitterParamsData, m_emitterParamsConstantBufferDataBegin);
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = m_emitterParamsConstantBuffer->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = m_emitterParamsConstantBufferSize;
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (2 * STRUCTURED_CNT + 1));
+		device->CreateConstantBufferView(
+			&cbvDesc,
+			cbvHandle
+		);
+	}
 }
