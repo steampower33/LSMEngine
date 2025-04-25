@@ -80,75 +80,47 @@ void SphSimulator::GenerateParticles()
 	// Particle Data
 	m_particles.resize(m_numParticles);
 
-	vector<XMFLOAT3> rainbow = {
-		{1.0f, 0.0f, 0.0f},  // Red
-		{1.0f, 0.0f, 0.0f},  // Red
-		{1.0f, 0.65f, 0.0f}, // Orange
-		{1.0f, 0.65f, 0.0f}, // Orange
-		{1.0f, 1.0f, 0.0f},  // Yellow
-		{1.0f, 1.0f, 0.0f},  // Yellow
-		{0.0f, 1.0f, 0.0f},  // Green
-		{0.0f, 1.0f, 0.0f},  // Green
-		{0.0f, 0.0f, 1.0f},  // Blue
-		{0.0f, 0.0f, 1.0f},  // Blue
-		{0.3f, 0.0f, 0.5f},  // Indigo
-		{0.3f, 0.0f, 0.5f},  // Indigo
-		{0.5f, 0.0f, 1.0f},  // Violet/Purple
-		{0.5f, 0.0f, 1.0f},  // Violet/Purple
-		{1.0f, 1.0f, 1.0f},  // White
-		{1.0f, 1.0f, 1.0f},  // White
-	};
-
-	random_device rd;
-	mt19937 gen(rd());
-	uniform_real_distribution<float> dpx(-m_maxBoundsX * 2.0f, m_maxBoundsX * 2.0f);
-	uniform_real_distribution<float> dpy(-m_maxBoundsY * 2.0f, m_maxBoundsY * 2.0f);
-	uniform_real_distribution<float> dl(0.0f, 10.0f);
-	uniform_int_distribution<size_t> dc(0, rainbow.size() - 1);
-
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	float spacingX = m_nX * m_radius * 0.5f;
-	float minX = midX - spacingX;
-	float maxX = midX + spacingX;
-
-	float spacingY = m_nY * m_radius * 0.5f;
-	float minY = midY - spacingY;
-	float maxY = midY + spacingY;
-
-	float spacingZ = m_nZ * m_radius * 0.5f;
-	float minZ = midZ - spacingZ;
-	float maxZ = midZ + spacingZ;
-
-	for (UINT z = 0; z < m_nZ; z++)
+	const UINT batchX = 3;
+	const UINT batchY = 3;
+	const UINT batchZ = 3;
+	const UINT batchSize = batchX * batchY;
+	XMFLOAT3 emitterPos = { midX - m_maxBoundsX * 0.5f, m_maxBoundsY - m_dp * 2.0f * batchY, midZ };
+	const float spawnSpread = m_dp * 2.0f;
+	const float spawnRadius = 0.5f;
+	
+	for (UINT i = 0; i < m_numParticles; ++i)
 	{
-		for (UINT y = 0; y < m_nY; y++)
-		{
-			for (UINT x = 0; x < m_nX; x++)
-			{
-				UINT index =
-					x +
-					m_nX * y +
-					m_nX * m_nY * z;
+		UINT groupIdx = i / batchSize;
+		UINT subIdx = i % batchSize;
 
-				m_particles[index].position.x = minX + m_radius * x;
-				m_particles[index].position.y = minY + m_radius * y;
-				m_particles[index].position.z = minZ + m_radius * z;
+		m_particles[i].spawnTime = (groupIdx + 1) * 0.1f;
 
-				m_particles[index].life = dl(gen);
-				m_particles[index].radius = m_radius;
-			}
-		}
+		/*UINT gz = subIdx % batchZ;
+		UINT gy = subIdx / batchZ;
+
+		float oz = (float(gz) - float(batchZ - 1) * 0.5f) * spawnSpread;
+		float oy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;*/
+
+		float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
+
+		// 4) 폴라 좌표를 카트esian으로 변환
+		float oz = cosf(angle) * spawnRadius;
+		float oy = sinf(angle) * spawnRadius;
+
+		m_particles[i].position = XMFLOAT3{ emitterPos.x, emitterPos.y + oy, emitterPos.z + oz };
+
+		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -0.5f, -0.5f, -0.01f }) * 5.0f);
+
+		m_particles[i].radius = m_radius;
 	}
 }
 
 void SphSimulator::Update(float dt, UINT& forceKey)
 {
-	// 일단은 CBV 전체를 업데이트
-	m_simParamsData.deltaTime = 1 / 120.0f;
-
 	static float restTime = 0.0f;
 	if (forceKey == 1)
 	{
@@ -188,6 +160,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_simParamsData.gridDimX = m_gridDimX;
 	m_simParamsData.gridDimY = m_gridDimY;
 	m_simParamsData.gridDimZ = m_gridDimZ;
+	m_simParamsData.currentTime += m_simParamsData.deltaTime;
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 }
@@ -199,10 +172,9 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
 
-	// 이미터
-	commandList->SetPipelineState(Graphics::sphEmitterCSPSO.Get());
-	commandList->SetComputeRootDescriptorTable(8, m_emitterParamsCbvGpuHandle); // EmiiterParams CBV
-
+	//// 이미터
+	//commandList->SetPipelineState(Graphics::sphEmitterCSPSO.Get());
+	//commandList->SetComputeRootDescriptorTable(8, m_emitterParamsCbvGpuHandle); // EmiiterParams CBV
 
 	commandList->SetComputeRootDescriptorTable(8, m_simParamsCbvGpuHandle); // SimParams CBV
 
@@ -496,6 +468,7 @@ void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 
 	{
 		// SimParams 설정
+		m_simParamsData.deltaTime = m_deltaTime;
 		m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 		m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 		m_simParamsData.cellCnt = m_cellCnt;

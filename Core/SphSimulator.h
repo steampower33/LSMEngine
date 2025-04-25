@@ -11,9 +11,6 @@
 #include "ConstantBuffers.h"
 #include "GraphicsCommon.h"
 
-#include <numeric>
-#include <random>
-
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
@@ -38,7 +35,7 @@ public:
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
 		XMFLOAT3 currentAcceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float p1;
+		float spawnTime;
 		XMFLOAT3 velocityHalf = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float p2;
 	};
@@ -71,13 +68,15 @@ public:
 
 		int gridDimZ;
 		float mass = 1.0f;
-		float pressureCoeff = 1.0f;
+		float pressureCoeff = 0.1f;
 		float density0 = 1.0f;
 
-		float viscosity = 0.1f;
+		float viscosity = 0.3f;
 		float gravityCoeff;
 		float collisionDamping;
 		UINT forceKey;
+
+		float currentTime = 0.0f;
 	};
 
 	// Emitter Parameter
@@ -99,18 +98,19 @@ public:
 	
 	SimParams m_simParamsData;
 	EmitterParams m_emitterParamsData;
+	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
 	const UINT m_nX = 64;
 	const UINT m_nY = 64;
 	const UINT m_nZ = 8;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
-	float m_smoothingRadius = 0.4f;
-	const float m_radius = m_smoothingRadius / 2.0f;
+	float m_smoothingRadius = 0.2f;
+	const float m_radius = m_smoothingRadius * 0.5f;
 	const float m_dp = m_radius;
-	float m_maxBoundsX = 20.0f;
+	float m_maxBoundsX = 3.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
-	float m_maxBoundsY = 10.0f;
-	float m_maxBoundsZ = 5.0f;
+	float m_maxBoundsY = 6.0f;
+	float m_maxBoundsZ = 3.0f;
 	float m_gravityCoeff = 1.0f;
 	float m_collisionDamping = 0.95f;
 	UINT m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius);

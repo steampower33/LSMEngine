@@ -18,6 +18,10 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	float t0 = ParticlesInput[index].spawnTime;
+	if (currentTime < t0)
+		return;
+
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
 	float3 viscosityForce = float3(0.0, 0.0, 0.0);
 	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravityCoeff;

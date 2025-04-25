@@ -16,6 +16,12 @@ void main(uint tid : SV_GroupThreadID,
 		return;
 	}
 
+	float t0 = ParticlesInput[index].spawnTime;
+	if (currentTime < t0)
+	{
+		return;
+	}
+
 	Particle p = ParticlesInput[index];
 
 	//p.currentAcceleration = p.force / mass;

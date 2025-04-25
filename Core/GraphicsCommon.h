@@ -57,7 +57,6 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> postEffectsVS;
 	extern ComPtr<IDxcBlob> postEffectsPS;
 
-	extern ComPtr<IDxcBlob> sphEmitterCS;
 	extern ComPtr<IDxcBlob> sphClearCountCellCS;
 	extern ComPtr<IDxcBlob> sphCountCellCS;
 	extern ComPtr<IDxcBlob> sphCellLocalScanCS;
@@ -119,7 +118,6 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> blurXCSPSO;
 	extern ComPtr<ID3D12PipelineState> blurYCSPSO;
 
-	extern ComPtr<ID3D12PipelineState> sphEmitterCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphClearCountCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCountCellCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellLocalScanCSPSO;

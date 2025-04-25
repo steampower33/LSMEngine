@@ -15,6 +15,10 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= numParticles) return;
 
+	float t0 = ParticlesInput[index].spawnTime;
+	if (currentTime < t0)
+		return;
+
 	Particle p_i = ParticlesInput[index];
 
 	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);

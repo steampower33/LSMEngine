@@ -11,7 +11,7 @@ struct Particle {
     float3 force;
     float pressure;
     float3 currentAcceleration;
-    float p1;
+    float spawnTime;
     float3 velocityHalf;
     float p2;
 };
@@ -54,6 +54,8 @@ cbuffer SimParams : register(b0) {
     float gravityCoeff;
     float collisionDamping;
     uint forceKey;
+
+    float currentTime;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)
