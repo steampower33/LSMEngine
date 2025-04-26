@@ -48,7 +48,7 @@ public:
 
 	bool m_useFirstPersonView = false;
 
-	XMFLOAT3 m_pos{ 0.0f, 0.0f, -16.0f };
+	XMFLOAT3 m_pos{ 0.0f, 0.0f, 0.0f };
 
 	// roll, pitch, yaw
 	// https://en.wikipedia.org/wiki/Aircraft_principal_axes

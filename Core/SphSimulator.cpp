@@ -84,13 +84,13 @@ void SphSimulator::GenerateParticles()
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	const UINT batchX = 3;
-	const UINT batchY = 3;
-	const UINT batchZ = 3;
+	const UINT batchX = 10;
+	const UINT batchY = 10;
+	const UINT batchZ = 10;
 	const UINT batchSize = batchX * batchY;
 	XMFLOAT3 emitterPos = { midX - m_maxBoundsX * 0.5f, m_maxBoundsY - m_dp * 2.0f * batchY, midZ };
 	const float spawnSpread = m_dp * 2.0f;
-	const float spawnRadius = 0.5f;
+	const float spawnRadius = m_dp * 2.0f;
 	
 	for (UINT i = 0; i < m_numParticles; ++i)
 	{
@@ -99,17 +99,17 @@ void SphSimulator::GenerateParticles()
 
 		m_particles[i].spawnTime = (groupIdx + 1) * 0.1f;
 
-		/*UINT gz = subIdx % batchZ;
+		UINT gz = subIdx % batchZ;
 		UINT gy = subIdx / batchZ;
 
 		float oz = (float(gz) - float(batchZ - 1) * 0.5f) * spawnSpread;
-		float oy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;*/
+		float oy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;
 
-		float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
+		//float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
 
-		// 4) 폴라 좌표를 카트esian으로 변환
-		float oz = cosf(angle) * spawnRadius;
-		float oy = sinf(angle) * spawnRadius;
+		//// 4) 폴라 좌표를 카트esian으로 변환
+		//float oz = cosf(angle) * spawnRadius;
+		//float oy = sinf(angle) * spawnRadius;
 
 		m_particles[i].position = XMFLOAT3{ emitterPos.x, emitterPos.y + oy, emitterPos.z + oz };
 
@@ -126,7 +126,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	{
 		if (m_minBoundsMoveX <= -m_maxBoundsX + m_maxBoundsX * 0.4f)
 		{
-			m_minBoundsMoveX += pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.00003f;
+			m_minBoundsMoveX += pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.0001f;
 		}
 		else
 		{
@@ -137,7 +137,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	{
 		if (m_minBoundsMoveX >= -m_maxBoundsX)
 		{
-			m_minBoundsMoveX -= pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.00003f;
+			m_minBoundsMoveX -= pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.0001f;
 		}
 		else
 		{

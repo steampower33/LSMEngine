@@ -25,9 +25,9 @@ void MainEngine::Initialize()
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
 	m_camera->m_pos.y = m_sphSimulator->m_maxBoundsY * 0.5f;
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 1.5f;
 
-	m_camera->m_pitch = 0.5f;
+	m_camera->m_pitch = 0.3f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
 
 	{
@@ -783,7 +783,7 @@ void MainEngine::Render()
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(0, 0));
+	ThrowIfFailed(m_swapChain->Present(1, 0));
 
 	if (multiFrame)
 		MoveToNextFrame();
