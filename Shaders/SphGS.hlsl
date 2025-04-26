@@ -51,8 +51,8 @@ struct PSInput
 void main(point GSInput input[1], uint primID : SV_PrimitiveID,
 	inout TriangleStream<PSInput> outputStream)
 {
-    //if (input[0].isGhost != 0)
-    //    return;
+    if (input[0].isGhost != 0)
+        return;
 
     float hw = input[0].radius; // halfWidth
     float3 viewCenter = input[0].viewPos.xyz;
