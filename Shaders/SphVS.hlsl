@@ -37,6 +37,7 @@ struct GSInput
     float3 color : COLOR;
     float life : PSIZE0;
     float radius : PSIZE1;
+    uint  isGhost : TEXCOORD0;
 };
 
 StructuredBuffer<Particle> particles : register(t0);
@@ -53,6 +54,7 @@ GSInput main(uint vertexID : SV_VertexID)
 
     output.color = p.color;
     output.radius = p.radius;
+    output.isGhost = p.isGhost;
 
     return output;
 }

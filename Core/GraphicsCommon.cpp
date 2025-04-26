@@ -64,7 +64,8 @@ namespace Graphics
 
 	D3D12_BLEND_DESC disabledBlend;
 	D3D12_BLEND_DESC mirrorBlend;
-	D3D12_BLEND_DESC accumulateBS;
+	D3D12_BLEND_DESC accumulateBlend;
+	D3D12_BLEND_DESC alphaBlend;
 
 	D3D12_DEPTH_STENCIL_DESC basicDS;
 	D3D12_DEPTH_STENCIL_DESC disabledDS;
@@ -500,9 +501,27 @@ void Graphics::InitBlendStates()
 		accumulateBSDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // 모든 RGBA 채널에 쓰기 허용
 
 		// 2. Blend Description 설정
-		accumulateBS.AlphaToCoverageEnable = TRUE;                 // 알파-투-커버리지 비활성화 (보통 누적엔 불필요)
-		accumulateBS.IndependentBlendEnable = FALSE;                // 모든 렌더 타겟에 동일한
-		accumulateBS.RenderTarget[0] = accumulateBSDesc;
+		accumulateBlend.AlphaToCoverageEnable = TRUE;                 // 알파-투-커버리지 비활성화 (보통 누적엔 불필요)
+		accumulateBlend.IndependentBlendEnable = FALSE;                // 모든 렌더 타겟에 동일한
+		accumulateBlend.RenderTarget[0] = accumulateBSDesc;
+	}
+
+	{
+		D3D12_RENDER_TARGET_BLEND_DESC alphaBlendDesc = {};
+		alphaBlendDesc.BlendEnable = TRUE;
+		alphaBlendDesc.LogicOpEnable = FALSE;
+		alphaBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;      // 스플랫 알파
+		alphaBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;  // 남은 배경
+		alphaBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+		alphaBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;            // 알파는 누적
+		alphaBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		alphaBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		alphaBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		alphaBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		alphaBlend.AlphaToCoverageEnable = FALSE;
+		alphaBlend.IndependentBlendEnable = FALSE;
+		alphaBlend.RenderTarget[0] = alphaBlendDesc;
 	}
 }
 

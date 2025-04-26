@@ -85,7 +85,8 @@ namespace Graphics
 	// BLEND
 	extern D3D12_BLEND_DESC disabledBlend;
 	extern D3D12_BLEND_DESC mirrorBlend;
-	extern D3D12_BLEND_DESC accumulateBS;
+	extern D3D12_BLEND_DESC accumulateBlend;
+	extern D3D12_BLEND_DESC alphaBlend;
 
 	// DEPTH_STENCIL
 	extern D3D12_DEPTH_STENCIL_DESC basicDS;

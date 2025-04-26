@@ -818,8 +818,6 @@ void MainEngine::SphRenderPass()
 	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
-	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::sphPSO.Get());
 	m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
 
 	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());

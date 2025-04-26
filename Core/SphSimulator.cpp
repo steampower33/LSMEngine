@@ -78,6 +78,8 @@ void SphSimulator::GenerateParticles()
 	// Particle Data
 	m_particles.resize(m_numParticles);
 
+	UINT ghostCnt = 0;
+
 	UINT bottomCnt = wallXCnt * wallZCnt;
 
 	// Bottom
@@ -85,7 +87,7 @@ void SphSimulator::GenerateParticles()
 	{
 		for (UINT x = 0; x < wallXCnt; x++)
 		{
-			UINT index = m_numParticles - 1 - (x + z * wallXCnt);
+			UINT index = m_numParticles - 1 - (ghostCnt + x + z * wallXCnt);
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
@@ -94,6 +96,23 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].density = m_simParamsData.density0;
 		}
 	}
+	ghostCnt += bottomCnt;
+
+	// Up
+	for (UINT z = 0; z < wallZCnt; z++)
+	{
+		for (UINT x = 0; x < wallXCnt; x++)
+		{
+			UINT index = m_numParticles - 1 - (ghostCnt + x + z * wallXCnt);
+			m_particles[index].isGhost = true;
+			m_particles[index].spawnTime = -1.0f;
+			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
+			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
+			m_particles[index].radius = m_radius;
+			m_particles[index].density = m_simParamsData.density0;
+		}
+	}
+	ghostCnt += bottomCnt;
 
 	UINT sideCnt = wallZCnt * wallYCnt;
 
@@ -102,7 +121,7 @@ void SphSimulator::GenerateParticles()
 	{
 		for (UINT z = 0; z < wallZCnt; z++)
 		{
-			UINT index = m_numParticles - 1 - (bottomCnt + z + y * wallZCnt);
+			UINT index = m_numParticles - 1 - (ghostCnt + z + y * wallZCnt);
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
@@ -112,13 +131,14 @@ void SphSimulator::GenerateParticles()
 
 		}
 	}
+	ghostCnt += sideCnt;
 
 	// Right
 	for (UINT y = 0; y < wallYCnt; y++)
 	{
 		for (UINT z = 0; z < wallZCnt; z++)
 		{
-			UINT index = m_numParticles - 1 - (bottomCnt + sideCnt + z + y * wallZCnt);
+			UINT index = m_numParticles - 1 - (ghostCnt + z + y * wallZCnt);
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
@@ -128,6 +148,7 @@ void SphSimulator::GenerateParticles()
 
 		}
 	}
+	ghostCnt += sideCnt;
 
 	UINT frontCnt = wallXCnt * wallYCnt;
 
@@ -136,7 +157,7 @@ void SphSimulator::GenerateParticles()
 	{
 		for (UINT x = 0; x < wallXCnt; x++)
 		{
-			UINT index = m_numParticles - 1 - (bottomCnt + 2 * sideCnt + x + y * wallXCnt);
+			UINT index = m_numParticles - 1 - (ghostCnt + x + y * wallXCnt);
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
@@ -146,13 +167,14 @@ void SphSimulator::GenerateParticles()
 
 		}
 	}
+	ghostCnt += frontCnt;
 
 	// Back
 	for (UINT y = 0; y < wallYCnt; y++)
 	{
 		for (UINT x = 0; x < wallXCnt; x++)
 		{
-			UINT index = m_numParticles - 1 - (bottomCnt + 2 * sideCnt + frontCnt + x + y * wallXCnt);
+			UINT index = m_numParticles - 1 - (ghostCnt + x + y * wallXCnt);
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
@@ -162,6 +184,7 @@ void SphSimulator::GenerateParticles()
 
 		}
 	}
+	ghostCnt += frontCnt;
 
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
@@ -449,6 +472,8 @@ void SphSimulator::CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList)
 void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
+	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
+	commandList->SetPipelineState(Graphics::sphPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
 	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
