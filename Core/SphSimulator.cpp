@@ -71,8 +71,6 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 		currentGpuHandle.Offset(1, m_cbvSrvUavSize);
 	}
 	m_simParamsCbvGpuHandle = currentGpuHandle;
-	currentGpuHandle.Offset(1, m_cbvSrvUavSize);
-	m_emitterParamsCbvGpuHandle = currentGpuHandle;
 }
 
 void SphSimulator::GenerateParticles()
@@ -487,22 +485,6 @@ void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 		cbvDesc.SizeInBytes = m_simParamsConstantBufferSize;
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (2 * STRUCTURED_CNT));
-		device->CreateConstantBufferView(
-			&cbvDesc,
-			cbvHandle
-		);
-	}
-
-	{
-
-		// EmitterParams ¼³Á¤
-		CreateConstUploadBuffer(device, m_emitterParamsConstantBuffer, m_emitterParamsData, m_emitterParamsConstantBufferDataBegin);
-
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_emitterParamsConstantBuffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = m_emitterParamsConstantBufferSize;
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (2 * STRUCTURED_CNT + 1));
 		device->CreateConstantBufferView(
 			&cbvDesc,
 			cbvHandle

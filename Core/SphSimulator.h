@@ -79,16 +79,6 @@ public:
 		float currentTime = 0.0f;
 	};
 
-	// Emitter Parameter
-	__declspec(align(256)) struct EmitterParams {
-		XMFLOAT3 emitterPos;
-		float initialSpeed;
-		XMFLOAT3 emitterDir;
-		float particlesPerSecond;
-		float deltaTime;
-		float emitterRadius;
-	};
-
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 	void Update(float dt, UINT& forceKey);
@@ -97,7 +87,6 @@ public:
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 	
 	SimParams m_simParamsData;
-	EmitterParams m_emitterParamsData;
 	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
 	const UINT m_nX = 64;
@@ -146,12 +135,6 @@ private:
 	UINT m_simParamsConstantBufferSize = (sizeof(SimParams) + 255) & ~255;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
-
-	ComPtr<ID3D12Resource> m_emitterParamsConstantBuffer;
-	UINT8* m_emitterParamsConstantBufferDataBegin = nullptr;
-	UINT m_emitterParamsConstantBufferSize = (sizeof(SimParams) + 255) & ~255;
-	D3D12_CPU_DESCRIPTOR_HANDLE m_emitterParamsCbvCpuHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE m_emitterParamsCbvGpuHandle;
 
 	UINT m_particleAIndex = 0;
 	UINT m_particleBIndex = 1;
