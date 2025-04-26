@@ -18,8 +18,11 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	float t0 = ParticlesInput[index].spawnTime;
+	float t0 = p_i.spawnTime;
 	if (currentTime < t0)
+		return;
+
+	if (p_i.isGhost)
 		return;
 
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
@@ -61,11 +64,23 @@ void main(uint tid : SV_GroupThreadID,
 
 			float3 dir = x_ij / dist;
 
-			pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
-				SpikyGradient_3D(dist, smoothingRadius);
+			if (!p_j.isGhost)
+			{
+				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
+					SpikyGradient_3D(dist, smoothingRadius);
 
-			viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
-				ViscosityLaplacian_3D(dist, smoothingRadius);
+				viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
+					ViscosityLaplacian_3D(dist, smoothingRadius);
+			}
+			else
+			{
+				pressureForce += -dir * mass * (p_i.pressure + 0.0) / (2.0 * p_j.density) *
+					SpikyGradient_3D(dist, smoothingRadius);
+
+				viscosityForce += viscosity * mass * (0.0 - p_i.velocity) / p_j.density *
+					ViscosityLaplacian_3D(dist, smoothingRadius);
+
+			}
 		}
 	}
 

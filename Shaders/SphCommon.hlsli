@@ -13,7 +13,7 @@ struct Particle {
     float3 currentAcceleration;
     float spawnTime;
     float3 velocityHalf;
-    float p2;
+    float isGhost;
 };
 
 struct ParticleHash
