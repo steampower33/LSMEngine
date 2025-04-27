@@ -74,12 +74,11 @@ void main(uint tid : SV_GroupThreadID,
 			}
 			else
 			{
-				pressureForce += -dir * mass * (p_i.pressure + 0.0) / (2.0 * p_j.density) *
+				pressureForce += -dir * mass * (p_i.pressure) / (2.0 * p_j.density) *
 					SpikyGradient_3D(dist, smoothingRadius);
 
 				viscosityForce += viscosity * mass * (0.0 - p_i.velocity) / p_j.density *
 					ViscosityLaplacian_3D(dist, smoothingRadius);
-
 			}
 		}
 	}

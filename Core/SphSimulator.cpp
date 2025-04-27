@@ -93,7 +93,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 		}
 	}
 	ghostCnt += bottomCnt;
@@ -109,7 +109,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 		}
 	}
 	ghostCnt += bottomCnt;
@@ -127,7 +127,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 
 		}
 	}
@@ -144,7 +144,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 
 		}
 	}
@@ -163,7 +163,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 
 		}
 	}
@@ -180,7 +180,7 @@ void SphSimulator::GenerateParticles()
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
 			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 			m_particles[index].radius = m_radius;
-			m_particles[index].density = m_simParamsData.density0;
+			m_particles[index].density = wallDensity;
 
 		}
 	}
@@ -190,10 +190,10 @@ void SphSimulator::GenerateParticles()
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	const UINT batchX = 10;
-	const UINT batchY = 10;
-	const UINT batchZ = 10;
-	const UINT batchSize = batchX * batchY;
+	const UINT batchX = 4;
+	const UINT batchY = 4;
+	const UINT batchZ = 4;
+	const UINT batchSize = 8;
 	XMFLOAT3 emitterPos = { midX, midY + m_maxBoundsY * 0.5f, midZ };
 	const float spawnSpread = m_dp * 2.0f;
 	const float spawnRadius = m_dp * 2.0f;
@@ -208,21 +208,22 @@ void SphSimulator::GenerateParticles()
 
 		m_particles[i].spawnTime = (groupIdx + 1) * 0.1f;
 
-		UINT gz = subIdx % batchZ;
+		UINT gx = subIdx / batchX;
 		UINT gy = subIdx / batchZ;
+		UINT gz = subIdx % batchZ;
 
-		float oz = (float(gz) - float(batchZ - 1) * 0.5f) * spawnSpread;
-		float oy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;
+		float dx = (float(gx) - float(batchX - 1) * 0.5f) * spawnSpread;
+		float dy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;
+		float dz = (float(gz) - float(batchZ - 1) * 0.5f) * spawnSpread;
 
-		//float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
+		float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
 
-		//// 4) 폴라 좌표를 카트esian으로 변환
-		//float oz = cosf(angle) * spawnRadius;
-		//float oy = sinf(angle) * spawnRadius;
+		float ady = sinf(angle) * spawnRadius;
+		float adz = cosf(angle) * spawnRadius;
 
-		m_particles[i].position = XMFLOAT3{ emitterPos.x, emitterPos.y + oy, emitterPos.z + oz };
+		m_particles[i].position = XMFLOAT3{ emitterPos.x, emitterPos.y + ady, emitterPos.z + adz };
 
-		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -0.5f, -0.5f, 0.1f }) * 10.0f);
+		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -1.0f, 0.0f }) * 5.0f);
 
 		m_particles[i].radius = m_radius;
 	}
