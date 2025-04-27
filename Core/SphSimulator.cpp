@@ -230,34 +230,6 @@ void SphSimulator::GenerateParticles()
 
 void SphSimulator::Update(float dt, UINT& forceKey)
 {
-	static float restTime = 0.0f;
-	if (forceKey == 1)
-	{
-		if (m_minBoundsMoveX <= -m_maxBoundsX + m_maxBoundsX * 0.4f)
-		{
-			m_minBoundsMoveX += pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.0001f;
-		}
-		else
-		{
-			forceKey = 2;
-		}
-	}
-	else if (forceKey == 2)
-	{
-		if (m_minBoundsMoveX >= -m_maxBoundsX)
-		{
-			m_minBoundsMoveX -= pow(abs(m_maxBoundsX - m_minBoundsMoveX), 2.0f) * 0.0001f;
-		}
-		else
-		{
-			restTime += m_simParamsData.deltaTime;
-			if (restTime >= 1.0f)
-			{
-				restTime = 0.0f;
-				forceKey = 1;
-			}
-		}
-	}
 
 	m_simParamsData.minBounds = XMFLOAT3(m_minBoundsMoveX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -270,6 +242,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_simParamsData.gridDimY = m_gridDimY;
 	m_simParamsData.gridDimZ = m_gridDimZ;
 	m_simParamsData.currentTime += m_simParamsData.deltaTime;
+	m_simParamsData.forceKey = forceKey;
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 }

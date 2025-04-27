@@ -84,6 +84,15 @@ void main(uint tid : SV_GroupThreadID,
 		}
 	}
 
+	if (forceKey == 1)
+	{
+		externalForce += float3(-5.0, 0.0, 0.0);
+	}
+	else if (forceKey == 2)
+	{
+		externalForce += float3(5.0, 0.0, 0.0);
+	}
+
 	p_i.force = pressureForce
 		+ viscosityForce
 		+ gravityForce

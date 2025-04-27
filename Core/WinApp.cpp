@@ -155,9 +155,17 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 			pEngine->m_isPaused = !pEngine->m_isPaused;
 		}
 
-		if (wParam == VK_SHIFT)
+		if (wParam == VK_LEFT)
 		{
-			pEngine->m_forceKey = !pEngine->m_forceKey;
+			pEngine->m_forceKey = 1;
+		}
+		if (wParam == VK_RIGHT)
+		{
+			pEngine->m_forceKey = 2;
+		}
+		if (wParam == VK_DOWN)
+		{
+			pEngine->m_forceKey = 0;
 		}
 		pEngine->m_camera->KeyDown(wParam);
 		break;

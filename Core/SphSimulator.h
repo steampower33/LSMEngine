@@ -68,7 +68,7 @@ public:
 
 		int gridDimZ;
 		float mass = 1.0f;
-		float pressureCoeff = 0.5f;
+		float pressureCoeff = 1.0f;
 		float density0 = 1.0f;
 
 		float viscosity = 0.1f;
@@ -96,7 +96,7 @@ public:
 	float m_smoothingRadius = 0.4f;
 	const float m_radius = m_smoothingRadius * 0.25f;
 	const float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 5.0f;
+	float m_maxBoundsX = 15.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
 	float m_maxBoundsZ = 5.0f;
