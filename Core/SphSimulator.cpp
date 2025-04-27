@@ -30,14 +30,14 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	CreateStructuredBufferWithViews(device, 5, 10, 11, sizeof(UINT), (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX, L"CellStartPartialSum");
 	CreateStructuredBufferWithViews(device, 6, 12, 13, sizeof(UINT), m_numParticles, L"CellScatter");
 
-	// Particle A 초기 상태 -> UAV
+	// Particle A 초기 상태 -> SRV
 	UploadAndCopyData(device, commandList, m_particleDataSize,
 		m_particlesUploadBuffer, L"ParticleUploadBuffer", m_structuredBuffer[0],
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	// Particle B 초기 상태 -> SRV
+	// Particle B 초기 상태 -> UAV
 	SetBarrier(commandList, m_structuredBuffer[1],
-		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellCount 초기 상태 -> UAV
 	SetBarrier(commandList, m_structuredBuffer[2],
@@ -230,7 +230,6 @@ void SphSimulator::GenerateParticles()
 
 void SphSimulator::Update(float dt, UINT& forceKey)
 {
-
 	m_simParamsData.minBounds = XMFLOAT3(m_minBoundsMoveX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_simParamsData.cellCnt = m_cellCnt;
@@ -254,11 +253,21 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
 
-	//// 이미터
-	//commandList->SetPipelineState(Graphics::sphEmitterCSPSO.Get());
-	//commandList->SetComputeRootDescriptorTable(8, m_emitterParamsCbvGpuHandle); // EmiiterParams CBV
-
 	commandList->SetComputeRootDescriptorTable(8, m_simParamsCbvGpuHandle); // SimParams CBV
+
+	// Update KickDrift
+	commandList->SetPipelineState(Graphics::sphKickDriftCSPSO.Get());
+
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : SRV -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
+
+	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
+	commandList->Dispatch(dispatchX, 1, 1);
 
 	// Clear CellCount
 	commandList->SetPipelineState(Graphics::sphClearCountCellCSPSO.Get());
@@ -272,8 +281,12 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 	commandList->SetPipelineState(Graphics::sphCountCellCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0
 	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellOffsetIndex]); // UAV 1
 
@@ -350,26 +363,11 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	// Update KickDrift
-	commandList->SetPipelineState(Graphics::sphKickDriftCSPSO.Get());
-
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
-
 	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
-	commandList->Dispatch(dispatchX, 1, 1);
 
 	// Density
 	commandList->SetPipelineState(Graphics::sphCalcDensityCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex], // ParticleA : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
