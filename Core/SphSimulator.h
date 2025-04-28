@@ -90,7 +90,7 @@ public:
 	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.5f;
-	const float m_radius = m_smoothingRadius * 0.25f;
+	const float m_radius = m_smoothingRadius * 0.5f;
 	const float m_dp = m_smoothingRadius * 0.4f;
 	float m_maxBoundsX = 15.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
