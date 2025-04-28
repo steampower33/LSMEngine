@@ -42,7 +42,6 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 	ShowWindow(m_hwnd, nShowCmd);
 	UpdateWindow(m_hwnd);
 
-	// 메시지 루프
 	MSG msg = {};
 	while (msg.message != WM_QUIT)
 	{
@@ -60,7 +59,6 @@ int WinApp::Run(EngineBase* pEngine, HINSTANCE hInstance, int nShowCmd)
 		pEngine->Render();
 
 		//pEngine->m_isPaused = true;
-
 	}
 
 	pEngine->Destroy();

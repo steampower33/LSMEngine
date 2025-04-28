@@ -190,40 +190,45 @@ void SphSimulator::GenerateParticles()
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	const UINT batchX = 4;
-	const UINT batchY = 4;
-	const UINT batchZ = 4;
-	const UINT batchSize = 8;
-	XMFLOAT3 emitterPos = { midX, midY + m_maxBoundsY * 0.5f, midZ };
-	const float spawnSpread = m_dp * 2.0f;
-	const float spawnRadius = m_dp * 2.0f;
+	XMFLOAT3 centerPos = { midX, midY + m_maxBoundsY * 0.5f, midZ };
+	const float radius1 = m_dp * 2.0f;
+	const UINT numParticlesRing1 = 8;
+	const float radius2 = m_dp * 4.0f;
+	const UINT numParticlesRing2 = 16;
+	const UINT batchSize = 1 + numParticlesRing1 + numParticlesRing2;
 
-	for (UINT i = 0; i < m_numParticles; ++i)
+	for (UINT i = 0; i < m_numParticles - ghostCnt; ++i)
 	{
-		if (m_particles[i].isGhost)
-			break;
-
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
 		m_particles[i].spawnTime = (groupIdx + 1) * 0.1f;
 
-		UINT gx = subIdx / batchX;
-		UINT gy = subIdx / batchZ;
-		UINT gz = subIdx % batchZ;
+		if (subIdx == 0) {
+			m_particles[i].position = centerPos;
+		}
+		else if (0 < subIdx && subIdx < 1 + numParticlesRing1)
+		{
+			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing1);
+			float angle = static_cast<float>(i) * angleStep;
+			float x = centerPos.x;
+			float y = centerPos.y + radius1 * cosf(angle);
+			float z = centerPos.z + radius1 * sinf(angle);
+			m_particles[i].position = XMFLOAT3{ x, y, z };
+		}
+		else if (1 + numParticlesRing1 <= subIdx && subIdx < batchSize)
+		{
+			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing2);
+			float angle = static_cast<float>(i) * angleStep;
+			float x = centerPos.x;
+			float y = centerPos.y + radius2 * cosf(angle);
+			float z = centerPos.z + radius2 * sinf(angle);
+			m_particles[i].position = XMFLOAT3{ x, y, z };
 
-		float dx = (float(gx) - float(batchX - 1) * 0.5f) * spawnSpread;
-		float dy = (float(gy) - float(batchY - 1) * 0.5f) * spawnSpread;
-		float dz = (float(gz) - float(batchZ - 1) * 0.5f) * spawnSpread;
-
-		float angle = (float)subIdx / (float)batchSize * (2.0f * XM_PI);
-
-		float ady = sinf(angle) * spawnRadius;
-		float adz = cosf(angle) * spawnRadius;
-
-		m_particles[i].position = XMFLOAT3{ emitterPos.x, emitterPos.y + ady, emitterPos.z + adz };
+		}
 
 		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -1.0f, 0.0f }) * 5.0f);
+
 
 		m_particles[i].radius = m_radius;
 	}

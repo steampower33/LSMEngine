@@ -94,12 +94,12 @@ public:
 	const UINT m_nZ = 32;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
 	float m_smoothingRadius = 0.5f;
-	const float m_radius = m_smoothingRadius * 0.3f;
+	const float m_radius = m_smoothingRadius * 0.25f;
 	const float m_dp = m_smoothingRadius * 0.4f;
-	float m_maxBoundsX = 3.0f;
+	float m_maxBoundsX = 5.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
-	float m_maxBoundsZ = 3.0f;
+	float m_maxBoundsZ = 5.0f;
 	float m_gravityCoeff = 1.0f;
 	float m_collisionDamping = 0.4f;
 
