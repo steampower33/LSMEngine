@@ -68,7 +68,7 @@ public:
 
 		int gridDimZ;
 		float mass = 1.0f;
-		float pressureCoeff = 5.0f;
+		float pressureCoeff = 7.0f;
 		float density0 = 20.0f;
 
 		float viscosity = 0.1f;
@@ -110,7 +110,7 @@ public:
 		m_wallYCnt * m_wallZCnt * 2 +
 		m_wallXCnt * m_wallZCnt * 2;
 	float wallDensity = m_simParamsData.density0 * 2.0f;
-	float wallPressure = m_simParamsData.pressureCoeff * wallDensity * 0.5f;
+	float wallPressure = m_simParamsData.pressureCoeff * wallDensity * 0.7f;
 	const UINT m_nX = 32;
 	const UINT m_nY = 32;
 	const UINT m_nZ = 32;
