@@ -44,6 +44,7 @@ struct PSInput
 	float4 clipPos : SV_POSITION;
 	float2 texCoord : TEXCOORD;
 	float3 color : COLOR;
+    float radius : PSIZE1;
 	uint primID : SV_PrimitiveID;
 };
 
@@ -63,6 +64,7 @@ void main(point GSInput input[1], uint primID : SV_PrimitiveID,
     PSInput output;
     output.color = input[0].color;
     output.primID = primID;
+    output.radius = input[0].radius;
 
     // 뷰 공간에서 꼭짓점 계산 후, 프로젝션 변환하여 클립 공간 좌표 얻기
     float3 cornerViewPos;

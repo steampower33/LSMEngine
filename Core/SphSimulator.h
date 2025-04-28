@@ -30,7 +30,7 @@ public:
 		float radius = 0.0f;
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float life = -1.0f;
-		XMFLOAT3 color = XMFLOAT3(0.843f, 0.874f, 0.933f);
+		XMFLOAT3 color = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float density = 0.0f;
 		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float pressure = 0.0f;
@@ -89,14 +89,10 @@ public:
 	SimParams m_simParamsData;
 	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
-	const UINT m_nX = 32;
-	const UINT m_nY = 32;
-	const UINT m_nZ = 32;
-	const UINT m_numParticles = m_nX * m_nY * m_nZ;
 	float m_smoothingRadius = 0.5f;
 	const float m_radius = m_smoothingRadius * 0.25f;
 	const float m_dp = m_smoothingRadius * 0.4f;
-	float m_maxBoundsX = 5.0f;
+	float m_maxBoundsX = 15.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
 	float m_maxBoundsZ = 5.0f;
@@ -106,12 +102,20 @@ public:
 	UINT m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius) + 1;
 	UINT m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius) + 1;
 	UINT m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius) + 1;
-	UINT m_cellCnt = m_gridDimX * m_gridDimY * m_gridDimZ;
-	//UINT m_cellCnt = m_numParticles;
-	UINT wallXCnt = m_maxBoundsX * 2 / m_dp + 1;
-	UINT wallYCnt = m_maxBoundsY * 2 / m_dp + 1;
-	UINT wallZCnt = m_maxBoundsZ * 2 / m_dp + 1;
-	UINT wallDensity = m_simParamsData.density0;
+	UINT m_wallXCnt = m_maxBoundsX * 2 / m_dp + 1;
+	UINT m_wallYCnt = m_maxBoundsY * 2 / m_dp + 1;
+	UINT m_wallZCnt = m_maxBoundsZ * 2 / m_dp + 1;
+	UINT m_ghostCnt = 
+		m_wallXCnt * m_wallYCnt * 2 +
+		m_wallYCnt * m_wallZCnt * 2 +
+		m_wallXCnt * m_wallZCnt * 2;
+	float wallDensity = m_simParamsData.density0 * 2.0f;
+	float wallPressure = m_simParamsData.pressureCoeff * wallDensity * 0.5f;
+	const UINT m_nX = 32;
+	const UINT m_nY = 32;
+	const UINT m_nZ = 32;
+	const UINT m_numParticles = m_nX * m_nY * m_nZ + m_ghostCnt;
+	UINT m_cellCnt = m_numParticles;
 	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);

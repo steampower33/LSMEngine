@@ -29,6 +29,16 @@ cbuffer GlobalConstants : register(b0)
 	float4x4 d05;
 }
 
+#define PI 3.1415926535
+
+// 3차원 Poly6 커널 함수
+float Poly6_3D(float r, float h)
+{
+	if (r >= h) return 0.0;
+
+	float C = 315.0 / (64.0 * PI * pow(h, 9.0));
+	return C * pow((h * h - r * r), 3);
+}
 
 float3 LinearToneMapping(float3 color)
 {
@@ -44,20 +54,23 @@ struct PSInput
 	float4 clipPos : SV_POSITION;
 	float2 texCoord : TEXCOORD;
 	float3 color : COLOR;
+	float radius : PSIZE1;
 	uint primID : SV_PrimitiveID;
 };
 
 float4 main(PSInput input) : SV_TARGET
 {
-	float radius = 0.5;
-	float dist = length(float2(0.5, 0.5) - input.texCoord);
+	float2 offset = (float2(0.5, 0.5) - input.texCoord) * 2.0;
+	float sqrDst = dot(offset, offset);
 
-	if (dist > radius)
-		discard;
+	if (sqrDst > 1) discard;
 
-	float q = dist / radius;
+	float3 color = float3(0.7f, 0.7f, 0.8f);
 
-	float scale = 1.0 - q;
-	//return float4(LinearToneMapping(input.color.rgb * scale), 1.0);
-	return float4(input.color.rgb * scale, 1.0);
+	float ndcZ = input.clipPos.z;
+
+	float z = sqrt(1 - sqrDst);
+	float depth = ndcZ - z * input.radius;
+
+	return float4(depth, depth, depth, depth);
 }
