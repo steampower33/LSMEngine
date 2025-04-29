@@ -9,7 +9,11 @@ SphSimulator::~SphSimulator() {}
 void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height)
 {
-	GenerateParticles();
+	m_particles.resize(m_numParticles);
+
+	GenerateGhostParticles();
+	GenerateEmitterParticles();
+	//GenerateDamParticles();
 
 	m_cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -73,11 +77,8 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_simParamsCbvGpuHandle = currentGpuHandle;
 }
 
-void SphSimulator::GenerateParticles()
+void SphSimulator::GenerateGhostParticles()
 {
-	// Particle Data
-	m_particles.resize(m_numParticles);
-
 	UINT ghostCnt = 0;
 
 	UINT bottomCnt = m_wallXCnt * m_wallZCnt;
@@ -190,20 +191,27 @@ void SphSimulator::GenerateParticles()
 		}
 	}
 	ghostCnt += frontCnt;
+}
+
+void SphSimulator::GenerateEmitterParticles()
+{
+	//m_particles.resize(m_numParticles);
 
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	XMFLOAT3 centerPos = { midX, midY + m_maxBoundsY * 0.5f, midZ };
-	const float radius1 = m_dp * 2.0f;
+	XMFLOAT3 centerPos = { midX - m_maxBoundsX * 0.5f, midY + m_maxBoundsY * 0.5f, midZ };
+	const float radius1 = m_dp * 4.0f;
 	const UINT numParticlesRing1 = 8;
-	const float radius2 = m_dp * 4.0f;
+	const float radius2 = m_dp * 8.0f;
 	const UINT numParticlesRing2 = 16;
 	const UINT batchSize = 1 + numParticlesRing1 + numParticlesRing2;
 
-	for (UINT i = 0; i < m_numParticles - ghostCnt; ++i)
+	for (UINT i = 0; i < m_numParticles; ++i)
 	{
+		if (m_particles[i].isGhost)
+			break;
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
@@ -234,6 +242,47 @@ void SphSimulator::GenerateParticles()
 		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
 
 		m_particles[i].radius = m_radius;
+	}
+}
+
+void SphSimulator::GenerateDamParticles()
+{
+
+	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
+	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
+	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
+
+	float spacingX = m_nX * m_radius * 0.5f;
+	float minX = midX - spacingX;
+	float maxX = midX + spacingX;
+
+	float spacingY = m_nY * m_radius * 0.5f;
+	float minY = midY - spacingY;
+	float maxY = midY + spacingY;
+
+	float spacingZ = m_nZ * m_radius * 0.5f;
+	float minZ = midZ - spacingZ;
+	float maxZ = midZ + spacingZ;
+
+	for (UINT z = 0; z < m_nZ; z++)
+	{
+		for (UINT y = 0; y < m_nY; y++)
+		{
+			for (UINT x = 0; x < m_nX; x++)
+			{
+				UINT index =
+					x +
+					m_nX * y +
+					m_nX * m_nY * z;
+
+				m_particles[index].position.x = minX + m_dp * x;
+				m_particles[index].position.y = minY + m_dp * y;
+				m_particles[index].position.z = minZ + m_dp * z;
+
+				m_particles[index].life = -1.0f;
+				m_particles[index].radius = m_radius;
+			}
+		}
 	}
 }
 
@@ -555,7 +604,6 @@ void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
 
 void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 {
-
 	{
 		// SimParams ¼³Á¤
 		m_simParamsData.deltaTime = m_deltaTime;
@@ -568,6 +616,7 @@ void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 		m_simParamsData.gridDimX = m_gridDimX;
 		m_simParamsData.gridDimY = m_gridDimY;
 		m_simParamsData.gridDimZ = m_gridDimZ;
+		m_simParamsData.collisionDamping = m_collisionDamping;
 
 		CreateConstUploadBuffer(device, m_simParamsConstantBuffer, m_simParamsData, m_simParamsConstantBufferDataBegin);
 
