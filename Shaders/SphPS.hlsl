@@ -29,17 +29,6 @@ cbuffer GlobalConstants : register(b0)
 	float4x4 d05;
 }
 
-#define PI 3.1415926535
-
-// 3차원 Poly6 커널 함수
-float Poly6_3D(float r, float h)
-{
-	if (r >= h) return 0.0;
-
-	float C = 315.0 / (64.0 * PI * pow(h, 9.0));
-	return C * pow((h * h - r * r), 3);
-}
-
 float3 LinearToneMapping(float3 color)
 {
 	float3 invGamma = float3(1, 1, 1) / 2.2;
@@ -65,12 +54,11 @@ float4 main(PSInput input) : SV_TARGET
 
 	if (sqrDst > 1) discard;
 
-	float3 color = float3(0.7f, 0.7f, 0.8f);
+	float3 normal = normalize(float3(offset.x, offset.y, sqrt(1 - sqrDst)));
+	
+	float3 lightDir = normalize(float3(0, 0, 1));
+	float  NdotL = saturate(dot(normal, lightDir));
+	float3 color = float3(0.0, 0.35, 0.7) * NdotL;
 
-	float ndcZ = input.clipPos.z;
-
-	float z = sqrt(1 - sqrDst);
-	float depth = ndcZ - z * input.radius;
-
-	return float4(depth, depth, depth, depth);
+	return float4(LinearToneMapping(color), 1);
 }

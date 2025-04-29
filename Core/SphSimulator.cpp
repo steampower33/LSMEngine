@@ -233,7 +233,6 @@ void SphSimulator::GenerateParticles()
 
 		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
 
-
 		m_particles[i].radius = m_radius;
 	}
 }
@@ -245,7 +244,6 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_simParamsData.cellCnt = m_cellCnt;
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
 	m_simParamsData.gravityCoeff = m_gravityCoeff;
-	m_simParamsData.collisionDamping = m_collisionDamping;
 	m_simParamsData.numParticles = m_numParticles;
 	m_simParamsData.gridDimX = m_gridDimX;
 	m_simParamsData.gridDimY = m_gridDimY;
@@ -566,7 +564,6 @@ void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 		m_simParamsData.cellCnt = m_cellCnt;
 		m_simParamsData.smoothingRadius = m_smoothingRadius;
 		m_simParamsData.gravityCoeff = m_gravityCoeff;
-		m_simParamsData.collisionDamping = m_collisionDamping;
 		m_simParamsData.numParticles = m_numParticles;
 		m_simParamsData.gridDimX = m_gridDimX;
 		m_simParamsData.gridDimY = m_gridDimY;

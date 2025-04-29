@@ -564,10 +564,6 @@ void MainEngine::UpdateGUI()
 						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_gravityCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
-					flag += DrawTableRow("CollisionDamping", [&]() {
-						return ImGui::DragFloat("##CollisionDamping", &m_sphSimulator->m_collisionDamping, dragValue, minValue, maxValue, "%.2f");
-						});
-
 					ImGui::EndTable();
 				}
 
