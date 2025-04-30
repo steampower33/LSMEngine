@@ -91,8 +91,8 @@ public:
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.2f;
 	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius * 0.4;
-	float m_maxBoundsX = 10.0f;
+	const float m_dp = m_smoothingRadius * 0.5;
+	float m_maxBoundsX = 3.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
 	float m_maxBoundsZ = 3.0f;
@@ -110,7 +110,7 @@ public:
 		m_wallYCnt * m_wallZCnt * 2 +
 		m_wallXCnt * m_wallZCnt * 2;
 	float wallDensity = m_simParamsData.density0;
-	float wallPressure = m_simParamsData.pressureCoeff * wallDensity * 0.5f;
+	float wallPressure = m_simParamsData.pressureCoeff * wallDensity;
 	const UINT m_nX = 32;
 	const UINT m_nY = 32;
 	const UINT m_nZ = 32;

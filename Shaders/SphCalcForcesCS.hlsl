@@ -77,7 +77,7 @@ void main(uint tid : SV_GroupThreadID,
 				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
 					Poly6_3D(dist, smoothingRadius);
 
-				viscosityForce += viscosity * mass * (0.0 - p_i.velocity) / p_j.density *
+				viscosityForce += 0.01 * mass * (0.0 - p_i.velocity) / p_j.density *
 					ViscosityLaplacian_3D(dist, smoothingRadius);
 			}
 		}
@@ -85,12 +85,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	if (forceKey == 1)
 	{
-		if (p_i.position.y < (maxBounds.y + minBounds.y))
+		if (p_i.position.y < (maxBounds.y + minBounds.y) * 0.25)
 			externalForce += float3(-10.0, 0.0, 0.0);
 	}
 	else if (forceKey == 2)
 	{
-		if (p_i.position.y < (maxBounds.y + minBounds.y))
+		if (p_i.position.y < (maxBounds.y + minBounds.y) * 0.25)
 			externalForce += float3(10.0, 0.0, 0.0);
 	}
 
