@@ -17,16 +17,13 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	float t0 = p_i.spawnTime;
-	if (currentTime < t0)
-		return;
+	float3 pos_pred_i = p_i.predictedPosition;
 
-	if (p_i.isGhost)
-		return;
+	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
 
-	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
-
-	p_i.density = 0.0;
+	float density = 0.0;
+	float nearDensity = 0.0;
+	float sqrRadius = smoothingRadius * smoothingRadius;
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
@@ -47,18 +44,22 @@ void main(uint tid : SV_GroupThreadID,
 		{
 			uint particleIndexB = SortedIdx[n];
 
-			// Here you can load particleB and do the SPH evaluation logic
 			Particle p_j = ParticlesInput[particleIndexB];
 
-			float dist = length(p_j.position - p_i.position);
+			float3 x_ij_pred = p_j.predictedPosition - pos_pred_i;
 
-			float influence = Poly6_3D(dist, smoothingRadius);
+			float sqrDist = dot(x_ij_pred, x_ij_pred);
 
-			p_i.density += mass * influence;
+			if (sqrDist > sqrRadius) continue;
+
+			float dist = sqrt(sqrDist);
+			density += mass * DensityKernel(dist, smoothingRadius);
+			nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
 		}
 	}
 
-	p_i.pressure = pressureCoeff * (p_i.density - density0);
+	p_i.density = density;
+	p_i.nearDensity = nearDensity;
 
 	ParticlesOutput[index] = p_i;
 }

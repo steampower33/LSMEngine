@@ -1,4 +1,3 @@
-#include "SphCommon.hlsli"
 
 cbuffer GlobalConstants : register(b0)
 {
@@ -28,8 +27,18 @@ cbuffer GlobalConstants : register(b0)
     float4x4 d03;
     float4x4 d04;
     float4x4 d05;
-
 }
+
+struct Particle {
+    float3 position;
+    float3 velocity;
+    float3 force;
+    float density;
+    float nearDensity;
+    float3 predictedPosition;
+    uint isGhost;
+    float spawnTime;
+};
 
 struct GSInput
 {
@@ -52,8 +61,8 @@ GSInput main(uint vertexID : SV_VertexID)
 
     output.viewPos = mul(float4(p.position.xyz, 1.0), view);
 
-    output.color = p.color;
-    output.radius = p.radius;
+    output.color = float3(0.0, 0.0, 0.0);
+    output.radius = 0.1;
     output.isGhost = p.isGhost;
 
     return output;

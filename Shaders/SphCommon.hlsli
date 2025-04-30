@@ -3,17 +3,13 @@
 
 struct Particle {
     float3 position;
-    float radius;
     float3 velocity;
-    float life;
-    float3 color;
-    float density;
     float3 force;
-    float pressure;
-    float3 currentAcceleration;
+    float density;
+    float nearDensity;
+    float3 predictedPosition;
+    uint isGhost;
     float spawnTime;
-    float3 velocityHalf;
-    float isGhost;
 };
 
 struct ParticleHash
@@ -47,7 +43,7 @@ cbuffer SimParams : register(b0) {
 
     int gridDimZ;
     float mass;
-    float pressureCoeff;
+    float radius;
     float density0;
 
     float viscosity;
@@ -56,6 +52,8 @@ cbuffer SimParams : register(b0) {
     uint forceKey;
 
     float currentTime;
+    float pressureCoeff;
+    float nearPressureCoeff;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)
@@ -177,3 +175,93 @@ static const int3 offsets3D[27] =
     int3(1, 1, 0),
     int3(1, 1, 1)
 };
+
+float SmoothingKernelPoly6(float dst, float radius)
+{
+    if (dst < radius)
+    {
+        float scale = 315 / (64 * PI * pow(abs(radius), 9));
+        float v = radius * radius - dst * dst;
+        return v * v * v * scale;
+    }
+    return 0;
+}
+
+// 3d conversion: done
+float SpikyKernelPow3(float dst, float radius)
+{
+    if (dst < radius)
+    {
+        float scale = 15 / (PI * pow(radius, 6));
+        float v = radius - dst;
+        return v * v * v * scale;
+    }
+    return 0;
+}
+
+// 3d conversion: done
+//Integrate[(h-r)^2 r^2 Sin[¥è], {r, 0, h}, {¥è, 0, ¥ð}, {¥õ, 0, 2*¥ð}]
+float SpikyKernelPow2(float dst, float radius)
+{
+    if (dst < radius)
+    {
+        float scale = 15 / (2 * PI * pow(radius, 5));
+        float v = radius - dst;
+        return v * v * scale;
+    }
+    return 0;
+}
+
+// 3d conversion: done
+float DerivativeSpikyPow3(float dst, float radius)
+{
+    if (dst <= radius)
+    {
+        float scale = 45 / (pow(radius, 6) * PI);
+        float v = radius - dst;
+        return -v * v * scale;
+    }
+    return 0;
+}
+
+// 3d conversion: done
+float DerivativeSpikyPow2(float dst, float radius)
+{
+    if (dst <= radius)
+    {
+        float scale = 15 / (pow(radius, 5) * PI);
+        float v = radius - dst;
+        return -v * scale;
+    }
+    return 0;
+}
+
+float DensityKernel(float dst, float radius)
+{
+    return SpikyKernelPow2(dst, radius);
+}
+
+float NearDensityKernel(float dst, float radius)
+{
+    return SpikyKernelPow3(dst, radius);
+}
+
+float DensityDerivative(float dst, float radius)
+{
+    return DerivativeSpikyPow2(dst, radius);
+}
+
+float NearDensityDerivative(float dst, float radius)
+{
+    return DerivativeSpikyPow3(dst, radius);
+}
+
+float PressureFromDensity(float density, float targetDensity, float pressureCoeff)
+{
+    return (density - targetDensity) * pressureCoeff;
+}
+
+float NearPressureFromDensity(float nearDensity, float nearPressureCoeff)
+{
+    return nearDensity * nearPressureCoeff;
+}

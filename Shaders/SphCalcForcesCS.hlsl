@@ -18,24 +18,21 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	float t0 = p_i.spawnTime;
-	if (currentTime < t0)
-		return;
-
-	if (p_i.isGhost)
-		return;
+	float density_i = p_i.density;
+	float near_density_i = p_i.nearDensity;
+	float pressure_i = PressureFromDensity(density_i, density0, pressureCoeff);
+	float near_pressure_i = NearPressureFromDensity(near_density_i, nearPressureCoeff);
 
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
-	float3 viscosityForce = float3(0.0, 0.0, 0.0);
-	float3 gravityForce = float3(0.0, -9.8f, 0.0) * mass * gravityCoeff;
-	float3 externalForce = float3(0.0, 0.0, 0.0);
 
-	int3 cellID = floor((p_i.position - minBounds) / smoothingRadius);
+	float3 pos_pred_i = p_i.predictedPosition;
+	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
+	float sqrRadius = smoothingRadius * smoothingRadius;
 
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
-		
+
 		if ((neighborIndex.x < 0 || neighborIndex.x >= gridDimX) ||
 			(neighborIndex.y < 0 || neighborIndex.y >= gridDimY) ||
 			(neighborIndex.z < 0 || neighborIndex.z >= gridDimZ))
@@ -57,47 +54,31 @@ void main(uint tid : SV_GroupThreadID,
 
 			Particle p_j = ParticlesInput[particleIndexB];
 
-			float3 x_ij = p_j.position - p_i.position;
-			float dist = length(x_ij);
+			float3 pos_pred_j = p_j.predictedPosition;
 
-			if (dist < 1e-9f) continue;
+			float3 x_ij_pred = pos_pred_j - pos_pred_i;
+			float sqrDist = dot(x_ij_pred, x_ij_pred);
 
-			float3 dir = x_ij / dist;
+			if (sqrDist > sqrRadius) continue;
 
-			if (!p_j.isGhost)
-			{
-				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
-					SpikyGradient_3D(dist, smoothingRadius);
+			float density_j = p_j.density;
+			float near_density_j = p_j.nearDensity;
+			float pressure_j = PressureFromDensity(density_j, density0, pressureCoeff);
+			float near_pressure_j = NearPressureFromDensity(near_density_j, nearPressureCoeff);
 
-				viscosityForce += viscosity * mass * (p_j.velocity - p_i.velocity) / p_j.density *
-					ViscosityLaplacian_3D(dist, smoothingRadius);
-			}
-			else
-			{
-				pressureForce += -dir * mass * (p_i.pressure + p_j.pressure) / (2.0 * p_j.density) *
-					Poly6_3D(dist, smoothingRadius);
+			float sharedPressure = (pressure_i + pressure_j) / 2.0f;
+			float sharedNearPressure = (near_pressure_i + near_pressure_j) / 2.0f;
 
-				viscosityForce += 0.01 * mass * (0.0 - p_i.velocity) / p_j.density *
-					ViscosityLaplacian_3D(dist, smoothingRadius);
-			}
+			float dist = length(x_ij_pred);
+			float3 dir = x_ij_pred / dist;
+
+			pressureForce += dir * DensityDerivative(dist, smoothingRadius) * sharedPressure / density_j;
+			pressureForce += dir * NearDensityDerivative(dist, smoothingRadius) * sharedNearPressure / near_density_j;
 		}
 	}
 
-	if (forceKey == 1)
-	{
-		if (p_i.position.y < (maxBounds.y + minBounds.y) * 0.25)
-			externalForce += float3(-10.0, 0.0, 0.0);
-	}
-	else if (forceKey == 2)
-	{
-		if (p_i.position.y < (maxBounds.y + minBounds.y) * 0.25)
-			externalForce += float3(10.0, 0.0, 0.0);
-	}
-
-	p_i.force = pressureForce
-		+ viscosityForce
-		+ gravityForce
-		+ externalForce;
+	float3 acceleration = pressureForce / density_i;
+	p_i.velocity += acceleration * deltaTime;
 
 	ParticlesOutput[index] = p_i;
 }

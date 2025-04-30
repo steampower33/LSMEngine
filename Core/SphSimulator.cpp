@@ -11,9 +11,9 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 {
 	m_particles.resize(m_numParticles);
 
-	GenerateGhostParticles();
-	GenerateEmitterParticles();
-	//GenerateDamParticles();
+	//GenerateGhostParticles();
+	//GenerateEmitterParticles();
+	GenerateDamParticles();
 
 	m_cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -92,10 +92,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 		}
 	}
 	ghostCnt += bottomCnt;
@@ -109,10 +105,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 		}
 	}
 	ghostCnt += bottomCnt;
@@ -128,10 +120,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 
 		}
 	}
@@ -146,10 +134,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 
 		}
 	}
@@ -166,10 +150,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 
 		}
 	}
@@ -184,10 +164,6 @@ void SphSimulator::GenerateGhostParticles()
 			m_particles[index].isGhost = true;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
-			m_particles[index].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-			m_particles[index].radius = m_radius;
-			m_particles[index].density = wallDensity;
-			m_particles[index].pressure = wallPressure;
 		}
 	}
 	ghostCnt += frontCnt;
@@ -240,14 +216,11 @@ void SphSimulator::GenerateEmitterParticles()
 		}
 
 		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
-
-		m_particles[i].radius = m_radius;
 	}
 }
 
 void SphSimulator::GenerateDamParticles()
 {
-
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
@@ -278,9 +251,6 @@ void SphSimulator::GenerateDamParticles()
 				m_particles[index].position.x = minX + m_dp * x;
 				m_particles[index].position.y = minY + m_dp * y;
 				m_particles[index].position.z = minZ + m_dp * z;
-
-				m_particles[index].life = -1.0f;
-				m_particles[index].radius = m_radius;
 			}
 		}
 	}

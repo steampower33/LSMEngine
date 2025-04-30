@@ -548,6 +548,10 @@ void MainEngine::UpdateGUI()
 						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
+					flag += DrawTableRow("NearPressureCoeff", [&]() {
+						return ImGui::DragFloat("##NearPressureCoeff", &m_sphSimulator->m_simParamsData.nearPressureCoeff, dragValue, minValue, maxValue, "%.2f");
+						});
+
 					flag += DrawTableRow("Density0", [&]() {
 						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_simParamsData.density0, dragValue, minValue, maxValue, "%.2f");
 						});
