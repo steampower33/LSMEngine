@@ -58,7 +58,7 @@ float4 main(PSInput input) : SV_TARGET
 	
 	float3 lightDir = normalize(float3(0, 0, 1));
 	float  NdotL = saturate(dot(normal, lightDir));
-	float3 color = float3(0.0, 0.35, 0.7) * NdotL;
+	float3 color = input.color * NdotL;
 
 	return float4(LinearToneMapping(color), 1);
 }

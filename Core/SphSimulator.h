@@ -28,12 +28,11 @@ public:
 	struct Particle {
 		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 force = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float density = 0.0f;
 		float nearDensity = 0.0f;
-		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		UINT isGhost;
-		float spawnTime;
+		UINT isGhost = false;
+		float spawnTime = -1.0f;
 	};
 
 	struct ParticleHash
@@ -65,16 +64,17 @@ public:
 		int gridDimZ;
 		float mass = 1.0f;
 		float radius = 0.1f;
-		float density0 = 1.0f;
-
-		float viscosity = 0.1f;
-		float gravityCoeff;
-		float collisionDamping;
-		UINT forceKey;
-
 		float currentTime = 0.0f;
-		float pressureCoeff = 20.0f;
-		float nearPressureCoeff = 1.0f;
+		
+		float pressureCoeff = 40.0f;
+		float nearPressureCoeff = 30.0f;
+		float density0 = 100.0f;
+		float viscosity = 0.1f;
+		
+		float gravityCoeff = 1.0f;
+		float collisionDamping = 0.0f;
+		UINT forceKey = 0;
+		float p1;
 	};
 
 	void Initialize(ComPtr<ID3D12Device> device,
@@ -89,33 +89,29 @@ public:
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.2f;
 	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius * 0.5;
-	float m_maxBoundsX = 5.0f;
+	const float m_dp = m_smoothingRadius;
+	float m_maxBoundsX = 10.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
-	float m_maxBoundsZ = 5.0f;
-	float m_gravityCoeff = 1.0f;
-	float m_collisionDamping = 0.4f;
+	float m_maxBoundsZ = 4.0f;
+	float m_collisionDamping = 0.2f;
 
-	UINT m_gridDimX = static_cast<UINT>(m_maxBoundsX * 2.0f / m_smoothingRadius) + 1;
-	UINT m_gridDimY = static_cast<UINT>(m_maxBoundsY * 2.0f / m_smoothingRadius) + 1;
-	UINT m_gridDimZ = static_cast<UINT>(m_maxBoundsZ * 2.0f / m_smoothingRadius) + 1;
+	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
+	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
+	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	UINT m_wallXCnt = m_maxBoundsX * 2 / m_dp + 1;
 	UINT m_wallYCnt = m_maxBoundsY * 2 / m_dp + 1;
 	UINT m_wallZCnt = m_maxBoundsZ * 2 / m_dp + 1;
-	UINT m_ghostCnt = 
+	UINT m_ghostCnt =
+		m_wallXCnt * m_wallZCnt * 2 +
 		m_wallXCnt * m_wallYCnt * 2 +
-		m_wallYCnt * m_wallZCnt * 2 +
-		m_wallXCnt * m_wallZCnt * 2;
-	float wallDensity = m_simParamsData.density0;
-	float wallPressure = m_simParamsData.pressureCoeff * wallDensity;
-	const UINT m_nX = 32;
-	const UINT m_nY = 32;
-	const UINT m_nZ = 32;
+		m_wallYCnt * m_wallZCnt * 2;
+	const UINT m_nX = 80;
+	const UINT m_nY = 30;
+	const UINT m_nZ = 20;
 	//const UINT m_numParticles = m_nX * m_nY * m_nZ + m_ghostCnt;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
-	UINT m_cellCnt = m_numParticles > 2048 ? m_numParticles : 2048;
-	//UINT m_cellCnt = m_gridDimX * m_gridDimY * m_gridDimZ;
+	UINT m_cellCnt = m_numParticles * 2;
 	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
@@ -145,8 +141,8 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
 
-	UINT m_particleAIndex = 0;
-	UINT m_particleBIndex = 1;
+	UINT m_particleAIndex = 1;
+	UINT m_particleBIndex = 0;
 	UINT m_cellCountIndex = 2;
 	UINT m_cellOffsetIndex = 3;
 	UINT m_cellStartIndex = 4;

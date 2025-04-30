@@ -38,15 +38,16 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsVS;
 	ComPtr<IDxcBlob> postEffectsPS;
 
+	ComPtr<IDxcBlob> sphExternalCS;
 	ComPtr<IDxcBlob> sphClearCountCellCS;
 	ComPtr<IDxcBlob> sphCountCellCS;
 	ComPtr<IDxcBlob> sphCellLocalScanCS;
 	ComPtr<IDxcBlob> sphCellLocalScanBlockCS;
 	ComPtr<IDxcBlob> sphCellFinalAdditionCS;
 	ComPtr<IDxcBlob> sphCellScatterCS;
-	ComPtr<IDxcBlob> sphKickDriftCS;
 	ComPtr<IDxcBlob> sphCalcDensityCS;
-	ComPtr<IDxcBlob> sphCalcForcesCS;
+	ComPtr<IDxcBlob> sphCalcPressureForceCS;
+	ComPtr<IDxcBlob> sphCalcViscosityCS;
 	ComPtr<IDxcBlob> sphCS;
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
@@ -102,9 +103,10 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphCellLocalScanBlockCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellFinalAdditionCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellScatterCSPSO;
-	ComPtr<ID3D12PipelineState> sphKickDriftCSPSO;
+	ComPtr<ID3D12PipelineState> sphExternalCSPSO;
 	ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
-	ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
+	ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
+	ComPtr<ID3D12PipelineState> sphCalcViscosityCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -389,15 +391,16 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"BasicPS.hlsl", L"ps_6_0", basicPS);
 
 	// Sph
+	CreateShader(device, L"SphExternalCS.hlsl", L"cs_6_0", sphExternalCS);
 	CreateShader(device, L"SphClearCountCellCS.hlsl", L"cs_6_0", sphClearCountCellCS);
 	CreateShader(device, L"SphCellCountCS.hlsl", L"cs_6_0", sphCountCellCS);
 	CreateShader(device, L"SphCellLocalScanCS.hlsl", L"cs_6_0", sphCellLocalScanCS);
 	CreateShader(device, L"SphCellLocalScanBlockCS.hlsl", L"cs_6_0", sphCellLocalScanBlockCS);
 	CreateShader(device, L"SphCellFinalAdditionCS.hlsl", L"cs_6_0", sphCellFinalAdditionCS);
 	CreateShader(device, L"SphCellScatterCS.hlsl", L"cs_6_0", sphCellScatterCS);
-	CreateShader(device, L"SphKickDriftCS.hlsl", L"cs_6_0", sphKickDriftCS);
 	CreateShader(device, L"SphCalcDensityCS.hlsl", L"cs_6_0", sphCalcDensityCS);
-	CreateShader(device, L"SphCalcForcesCS.hlsl", L"cs_6_0", sphCalcForcesCS);
+	CreateShader(device, L"SphCalcPressureForceCS.hlsl", L"cs_6_0", sphCalcPressureForceCS);
+	CreateShader(device, L"SphCalcViscosityCS.hlsl", L"cs_6_0", sphCalcViscosityCS);
 	CreateShader(device, L"SphCS.hlsl", L"cs_6_0", sphCS);
 	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
 	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
@@ -794,9 +797,9 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphKickDriftCSPSODesc = {};
 	sphKickDriftCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
-	sphKickDriftCSPSODesc.CS = { sphKickDriftCS->GetBufferPointer(), sphKickDriftCS->GetBufferSize() };
+	sphKickDriftCSPSODesc.CS = { sphExternalCS->GetBufferPointer(), sphExternalCS->GetBufferSize() };
 	sphKickDriftCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&sphKickDriftCSPSODesc, IID_PPV_ARGS(&sphKickDriftCSPSO)));
+	ThrowIfFailed(device->CreateComputePipelineState(&sphKickDriftCSPSODesc, IID_PPV_ARGS(&sphExternalCSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcDensityCSPSODesc = {};
 	sphCalcDensityCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
@@ -806,9 +809,15 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcForcesCSPSODesc = {};
 	sphCalcForcesCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
-	sphCalcForcesCSPSODesc.CS = { sphCalcForcesCS->GetBufferPointer(), sphCalcForcesCS->GetBufferSize() };
+	sphCalcForcesCSPSODesc.CS = { sphCalcPressureForceCS->GetBufferPointer(), sphCalcPressureForceCS->GetBufferSize() };
 	sphCalcForcesCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcForcesCSPSODesc, IID_PPV_ARGS(&sphCalcForcesCSPSO)));
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcForcesCSPSODesc, IID_PPV_ARGS(&sphCalcPressureForceCSPSO)));
+	
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcViscosityCSPSODesc = {};
+	sphCalcViscosityCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphCalcViscosityCSPSODesc.CS = { sphCalcViscosityCS->GetBufferPointer(), sphCalcViscosityCS->GetBufferSize() };
+	sphCalcViscosityCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcViscosityCSPSODesc, IID_PPV_ARGS(&sphCalcViscosityCSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCSPSODesc = {};
 	sphCSPSODesc.pRootSignature = sphComputeRootSignature.Get();

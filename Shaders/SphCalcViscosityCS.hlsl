@@ -13,6 +13,7 @@ void main(uint tid : SV_GroupThreadID,
 	uint groupIdx : SV_GroupID)
 {
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
+
 	if (index >= numParticles) return;
 
 	Particle p_i = ParticlesInput[index];
@@ -24,12 +25,12 @@ void main(uint tid : SV_GroupThreadID,
 	}
 
 	float3 pos_pred_i = p_i.predictedPosition;
-
 	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
-
-	float density = 0.0;
-	float nearDensity = 0.0;
 	float sqrRadius = smoothingRadius * smoothingRadius;
+
+	float3 velocity = p_i.velocity;
+
+	float3 viscosityForce = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
@@ -50,35 +51,27 @@ void main(uint tid : SV_GroupThreadID,
 		{
 			uint particleIndexB = SortedIdx[n];
 
+			//자기자신 제외
+			if (index == particleIndexB) continue;
+
 			Particle p_j = ParticlesInput[particleIndexB];
 
-			float3 x_ij_pred = p_j.predictedPosition - pos_pred_i;
+			float3 pos_pred_j = p_j.predictedPosition;
 
+			float3 x_ij_pred = pos_pred_j - pos_pred_i;
 			float sqrDist = dot(x_ij_pred, x_ij_pred);
 
 			if (sqrDist > sqrRadius) continue;
 
-			float dist = sqrt(sqrDist);
-			density += mass * DensityKernel(dist, smoothingRadius);
-			nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
+			float dist = length(x_ij_pred);
 
-			//if (!p_i.isGhost)
-			//{
-			//	float dist = sqrt(sqrDist);
-			//	density += mass * DensityKernel(dist, smoothingRadius);
-			//	nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
-			//}
-			//else if (p_i.isGhost && !p_j.isGhost)
-			//{
-			//	float dist = sqrt(sqrDist);
-			//	density += mass * DensityKernel(dist, smoothingRadius);
-			//	nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
-			//}
+			float3 neighbourVelocity = p_j.velocity;
+
+			viscosityForce += (neighbourVelocity - velocity) * SmoothingKernelPoly6(dist, smoothingRadius);
 		}
 	}
 
-	p_i.density = density;
-	p_i.nearDensity = nearDensity;
+	p_i.velocity += viscosityForce * viscosity * deltaTime;
 
 	ParticlesOutput[index] = p_i;
 }

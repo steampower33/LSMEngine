@@ -32,10 +32,9 @@ cbuffer GlobalConstants : register(b0)
 struct Particle {
     float3 position;
     float3 velocity;
-    float3 force;
+    float3 predictedPosition;
     float density;
     float nearDensity;
-    float3 predictedPosition;
     uint isGhost;
     float spawnTime;
 };

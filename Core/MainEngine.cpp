@@ -25,7 +25,7 @@ void MainEngine::Initialize()
 	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
 	m_camera->m_pos.y = m_sphSimulator->m_maxBoundsY * 0.5f;
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY) * 1.5f;
+	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
 
 	m_camera->m_pitch = 0.3f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
@@ -523,8 +523,8 @@ void MainEngine::UpdateGUI()
 				if (ImGui::BeginTable("SphTable", 2, flags))
 				{
 					float minValue = 0.0f;
-					float maxValue = 100.0f;
-					float dragValue = 0.001f;
+					float maxValue = 1000.0f;
+					float dragValue = 0.01f;
 
 					UINT flag = 0;
 
@@ -565,7 +565,7 @@ void MainEngine::UpdateGUI()
 						});
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_gravityCoeff, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.2f");
 						});
 
 					ImGui::EndTable();

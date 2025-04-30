@@ -63,9 +63,10 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphCellLocalScanBlockCS;
 	extern ComPtr<IDxcBlob> sphCellFinalAdditionCS;
 	extern ComPtr<IDxcBlob> sphCellScatterCS;
-	extern ComPtr<IDxcBlob> sphKickDriftCS;
+	extern ComPtr<IDxcBlob> sphExternalCS;
 	extern ComPtr<IDxcBlob> sphCalcDensityCS;
-	extern ComPtr<IDxcBlob> sphCalcForcesCS;
+	extern ComPtr<IDxcBlob> sphCalcPressureForceCS;
+	extern ComPtr<IDxcBlob> sphCalcViscosityCS;
 	extern ComPtr<IDxcBlob> sphCS;
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
@@ -125,9 +126,10 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphCellLocalScanBlockCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellFinalAdditionCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCellScatterCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphKickDriftCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphExternalCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphCalcForcesCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphCalcViscosityCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
 

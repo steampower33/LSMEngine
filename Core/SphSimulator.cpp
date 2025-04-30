@@ -89,90 +89,96 @@ void SphSimulator::GenerateGhostParticles()
 		for (UINT x = 0; x < m_wallXCnt; x++)
 		{
 			UINT index = m_numParticles - 1 - (ghostCnt + x + z * m_wallXCnt);
-			m_particles[index].isGhost = true;
+			m_particles[index].isGhost = 1;
 			m_particles[index].spawnTime = -1.0f;
 			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
+			m_particles[index].predictedPosition = m_particles[index].predictedPosition;
+			m_particles[index].density = 1000.0f;
+			m_particles[index].nearDensity = 1000.0f;
 		}
 	}
 	ghostCnt += bottomCnt;
 
-	// Up
-	for (UINT z = 0; z < m_wallZCnt; z++)
-	{
-		for (UINT x = 0; x < m_wallXCnt; x++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + x + z * m_wallXCnt);
-			m_particles[index].isGhost = true;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
-		}
-	}
-	ghostCnt += bottomCnt;
+	//// Up
+	//for (UINT z = 0; z < m_wallZCnt; z++)
+	//{
+	//	for (UINT x = 0; x < m_wallXCnt; x++)
+	//	{
+	//		UINT index = m_numParticles - 1 - (ghostCnt + x + z * m_wallXCnt);
+	//		m_particles[index].isGhost = 1;
+	//		m_particles[index].spawnTime = -1.0f;
+	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
+	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
+	//	}
+	//}
+	//ghostCnt += bottomCnt;
 
-	UINT sideCnt = m_wallZCnt * m_wallYCnt;
+	//UINT sideCnt = m_wallZCnt * m_wallYCnt;
 
-	// Left
-	for (UINT y = 0; y < m_wallYCnt; y++)
-	{
-		for (UINT z = 0; z < m_wallZCnt; z++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
-			m_particles[index].isGhost = true;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
+	//// Left
+	//for (UINT y = 0; y < m_wallYCnt; y++)
+	//{
+	//	for (UINT z = 0; z < m_wallZCnt; z++)
+	//	{
+	//		UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
+	//		m_particles[index].isGhost = 1;
+	//		m_particles[index].spawnTime = -1.0f;
+	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
+	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
 
-		}
-	}
-	ghostCnt += sideCnt;
+	//	}
+	//}
+	//ghostCnt += sideCnt;
 
-	// Right
-	for (UINT y = 0; y < m_wallYCnt; y++)
-	{
-		for (UINT z = 0; z < m_wallZCnt; z++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
-			m_particles[index].isGhost = true;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
+	//// Right
+	//for (UINT y = 0; y < m_wallYCnt; y++)
+	//{
+	//	for (UINT z = 0; z < m_wallZCnt; z++)
+	//	{
+	//		UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
+	//		m_particles[index].isGhost = 1;
+	//		m_particles[index].spawnTime = -1.0f;
+	//		m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
+	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
 
-		}
-	}
-	ghostCnt += sideCnt;
+	//	}
+	//}
+	//ghostCnt += sideCnt;
 
-	UINT frontCnt = m_wallXCnt * m_wallYCnt;
+	//UINT frontCnt = m_wallXCnt * m_wallYCnt;
 
-	// Front
-	for (UINT y = 0; y < m_wallYCnt; y++)
-	{
-		for (UINT x = 0; x < m_wallXCnt; x++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
-			m_particles[index].isGhost = true;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
+	//// Front
+	//for (UINT y = 0; y < m_wallYCnt; y++)
+	//{
+	//	for (UINT x = 0; x < m_wallXCnt; x++)
+	//	{
+	//		UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
+	//		m_particles[index].isGhost = 1;
+	//		m_particles[index].spawnTime = -1.0f;
+	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
+	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
 
-		}
-	}
-	ghostCnt += frontCnt;
+	//	}
+	//}
+	//ghostCnt += frontCnt;
 
-	// Back
-	for (UINT y = 0; y < m_wallYCnt; y++)
-	{
-		for (UINT x = 0; x < m_wallXCnt; x++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
-			m_particles[index].isGhost = true;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
-		}
-	}
-	ghostCnt += frontCnt;
+	//// Back
+	//for (UINT y = 0; y < m_wallYCnt; y++)
+	//{
+	//	for (UINT x = 0; x < m_wallXCnt; x++)
+	//	{
+	//		UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
+	//		m_particles[index].isGhost = 1;
+	//		m_particles[index].spawnTime = -1.0f;
+	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
+	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
+	//	}
+	//}
+	//ghostCnt += frontCnt;
 }
 
 void SphSimulator::GenerateEmitterParticles()
 {
-	//m_particles.resize(m_numParticles);
-
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
@@ -225,15 +231,15 @@ void SphSimulator::GenerateDamParticles()
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
 	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
 
-	float spacingX = m_nX * m_radius * 0.5f;
+	float spacingX = m_nX * m_dp * 0.5f;
 	float minX = midX - spacingX;
 	float maxX = midX + spacingX;
 
-	float spacingY = m_nY * m_radius * 0.5f;
+	float spacingY = m_nY * m_dp * 0.5f;
 	float minY = midY - spacingY;
 	float maxY = midY + spacingY;
 
-	float spacingZ = m_nZ * m_radius * 0.5f;
+	float spacingZ = m_nZ * m_dp * 0.5f;
 	float minZ = midZ - spacingZ;
 	float maxZ = midZ + spacingZ;
 
@@ -248,9 +254,7 @@ void SphSimulator::GenerateDamParticles()
 					m_nX * y +
 					m_nX * m_nY * z;
 
-				m_particles[index].position.x = minX + m_dp * x;
-				m_particles[index].position.y = minY + m_dp * y;
-				m_particles[index].position.z = minZ + m_dp * z;
+				m_particles[index].position = XMFLOAT3{ minX + m_dp * x, minY + m_dp * y, minZ + m_dp * z };
 			}
 		}
 	}
@@ -262,15 +266,17 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_simParamsData.cellCnt = m_cellCnt;
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
-	m_simParamsData.gravityCoeff = m_gravityCoeff;
 	m_simParamsData.numParticles = m_numParticles;
-	m_simParamsData.gridDimX = m_gridDimX;
-	m_simParamsData.gridDimY = m_gridDimY;
-	m_simParamsData.gridDimZ = m_gridDimZ;
+	m_simParamsData.gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
+	m_simParamsData.gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
+	m_simParamsData.gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	m_simParamsData.currentTime += m_simParamsData.deltaTime;
 	m_simParamsData.forceKey = forceKey;
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
+
+	m_particleAIndex = !m_particleAIndex;
+	m_particleBIndex = !m_particleBIndex;
 }
 
 void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
@@ -282,8 +288,8 @@ void SphSimulator::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList)
 
 	commandList->SetComputeRootDescriptorTable(8, m_simParamsCbvGpuHandle); // SimParams CBV
 
-	// Update KickDrift
-	commandList->SetPipelineState(Graphics::sphKickDriftCSPSO.Get());
+	// Update External Forces
+	commandList->SetPipelineState(Graphics::sphExternalCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : SRV -> UAV
 	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
@@ -411,8 +417,8 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 
 	commandList->Dispatch(dispatchX, 1, 1);
 
-	// Forces
-	commandList->SetPipelineState(Graphics::sphCalcForcesCSPSO.Get());
+	// PressureForce
+	commandList->SetPipelineState(Graphics::sphCalcPressureForceCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
 	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
@@ -425,9 +431,24 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
 
-	// 디스크립터  설정은 Density와 동일
 	commandList->Dispatch(dispatchX, 1, 1);
 
+	// Viscosity
+	commandList->SetPipelineState(Graphics::sphCalcViscosityCSPSO.Get());
+
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],	  
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],     // ParticleA : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
+
+	commandList->Dispatch(dispatchX, 1, 1);
+	
 	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],    // CellCount : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -448,19 +469,19 @@ void SphSimulator::CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandLi
 
 void SphSimulator::CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList)
 {
-	// SPH 연산 - Final Kick, 경계조건처리
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
+	// 위치 업데이트, 경계조건 처리
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],    
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],    // ParticleA : SRV -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],     // ParticleB : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
 
 	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 	commandList->Dispatch(dispatchX, 1, 1);
@@ -473,14 +494,14 @@ void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 	commandList->SetPipelineState(Graphics::sphPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
-	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
 	commandList->SetGraphicsRootConstantBufferView(1, globalConstsUploadHeap->GetGPUVirtualAddress()); // CBV
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
@@ -581,7 +602,6 @@ void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 		m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 		m_simParamsData.cellCnt = m_cellCnt;
 		m_simParamsData.smoothingRadius = m_smoothingRadius;
-		m_simParamsData.gravityCoeff = m_gravityCoeff;
 		m_simParamsData.numParticles = m_numParticles;
 		m_simParamsData.gridDimX = m_gridDimX;
 		m_simParamsData.gridDimY = m_gridDimY;

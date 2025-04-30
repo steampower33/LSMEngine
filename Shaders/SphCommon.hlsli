@@ -4,10 +4,9 @@
 struct Particle {
     float3 position;
     float3 velocity;
-    float3 force;
+    float3 predictedPosition;
     float density;
     float nearDensity;
-    float3 predictedPosition;
     uint isGhost;
     float spawnTime;
 };
@@ -44,16 +43,17 @@ cbuffer SimParams : register(b0) {
     int gridDimZ;
     float mass;
     float radius;
-    float density0;
+    float currentTime;
 
+    float pressureCoeff;
+    float nearPressureCoeff;
+    float density0;
     float viscosity;
+
     float gravityCoeff;
     float collisionDamping;
     uint forceKey;
-
-    float currentTime;
-    float pressureCoeff;
-    float nearPressureCoeff;
+    float p1;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)

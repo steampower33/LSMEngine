@@ -16,46 +16,68 @@ void main(uint tid : SV_GroupThreadID,
 		return;
 	}
 
-	Particle p = ParticlesInput[index];
+	Particle p_i = ParticlesInput[index];
 
-	float t0 = p.spawnTime;
-	if (currentTime < t0)
+	if (currentTime < p_i.spawnTime || p_i.isGhost)
+	{
+		ParticlesOutput[index] = p_i;
 		return;
-
-	p.position += p.velocity * deltaTime;
-
-	if (p.position.x - radius <= minBounds.x)
-	{
-		p.velocity.x *= -collisionDamping;
-		p.position.x = minBounds.x + radius;
-	}
-	else if (p.position.x + radius >= maxBounds.x)
-	{
-		p.velocity.x *= -collisionDamping;
-		p.position.x = maxBounds.x - radius;
 	}
 
-	if (p.position.y - radius <= minBounds.y)
-	{
-		p.velocity.y *= -collisionDamping;
-		p.position.y = minBounds.y + radius;
-	}
-	else if (p.position.y + radius >= maxBounds.y)
-	{
-		p.velocity.y *= -collisionDamping;
-		p.position.y = maxBounds.y - radius;
-	}
+	p_i.position += p_i.velocity * deltaTime;
 
-	if (p.position.z - radius <= minBounds.z)
-	{
-		p.velocity.z *= -collisionDamping;
-		p.position.z = minBounds.z + radius;
-	}
-	else if (p.position.z + radius >= maxBounds.z)
-	{
-		p.velocity.z *= -collisionDamping;
-		p.position.z = maxBounds.z - radius;
-	}
+    float3 pos = p_i.position;
+    float3 vel = p_i.velocity;
+    bool collided = false;
 
-	ParticlesOutput[index] = p;
+    // X축 경계 검사
+    if (pos.x - radius < minBounds.x) // 입자 반경 고려
+    {
+        pos.x = minBounds.x + radius + 1e-5f; // 경계 바로 안쪽으로 (엡실론 추가)
+        if (vel.x < 0) vel.x *= -collisionDamping; // 안쪽으로 향하는 속도만 반전/감쇠
+        collided = true;
+    }
+    else if (pos.x + radius > maxBounds.x)
+    {
+        pos.x = maxBounds.x - radius - 1e-5f;
+        if (vel.x > 0) vel.x *= -collisionDamping;
+        collided = true;
+    }
+
+    // Y축 경계 검사
+    if (pos.y - radius < minBounds.y)
+    {
+        pos.y = minBounds.y + radius + 1e-5f;
+        if (vel.y < 0) vel.y *= -collisionDamping;
+        collided = true;
+    }
+    else if (pos.y + radius > maxBounds.y)
+    {
+        pos.y = maxBounds.y - radius - 1e-5f;
+        if (vel.y > 0) vel.y *= -collisionDamping;
+        collided = true;
+    }
+
+    // Z축 경계 검사
+    if (pos.z - radius < minBounds.z)
+    {
+        pos.z = minBounds.z + radius + 1e-5f;
+        if (vel.z < 0) vel.z *= -collisionDamping;
+        collided = true;
+    }
+    else if (pos.z + radius > maxBounds.z)
+    {
+        pos.z = maxBounds.z - radius - 1e-5f;
+        if (vel.z > 0) vel.z *= -collisionDamping;
+        collided = true;
+    }
+
+    // 충돌 발생 시 업데이트된 데이터 쓰기
+    if (collided)
+    {
+        p_i.position = pos;
+        p_i.velocity = vel;
+    }
+
+	ParticlesOutput[index] = p_i;
 }

@@ -18,6 +18,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	if (currentTime < p_i.spawnTime || p_i.isGhost)
+	{
+		ParticlesOutput[index] = p_i;
+		return;
+	}
+
 	float density_i = p_i.density;
 	float near_density_i = p_i.nearDensity;
 	float pressure_i = PressureFromDensity(density_i, density0, pressureCoeff);
@@ -33,10 +39,10 @@ void main(uint tid : SV_GroupThreadID,
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
 
-		if ((neighborIndex.x < 0 || neighborIndex.x >= gridDimX) ||
-			(neighborIndex.y < 0 || neighborIndex.y >= gridDimY) ||
-			(neighborIndex.z < 0 || neighborIndex.z >= gridDimZ))
-			continue;
+		//if ((neighborIndex.x < 0 || neighborIndex.x >= gridDimX) ||
+		//	(neighborIndex.y < 0 || neighborIndex.y >= gridDimY) ||
+		//	(neighborIndex.z < 0 || neighborIndex.z >= gridDimZ))
+		//	continue;
 
 		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
@@ -63,8 +69,12 @@ void main(uint tid : SV_GroupThreadID,
 
 			float density_j = p_j.density;
 			float near_density_j = p_j.nearDensity;
-			float pressure_j = PressureFromDensity(density_j, density0, pressureCoeff);
-			float near_pressure_j = NearPressureFromDensity(near_density_j, nearPressureCoeff);
+
+			float safe_density_j = max(density_j, 1e-6f);
+			float safe_near_density_j = max(near_density_j, 1e-6f);
+
+			float pressure_j = PressureFromDensity(safe_density_j, density0, pressureCoeff);
+			float near_pressure_j = NearPressureFromDensity(safe_near_density_j, nearPressureCoeff);
 
 			float sharedPressure = (pressure_i + pressure_j) / 2.0f;
 			float sharedNearPressure = (near_pressure_i + near_pressure_j) / 2.0f;
@@ -72,12 +82,13 @@ void main(uint tid : SV_GroupThreadID,
 			float dist = length(x_ij_pred);
 			float3 dir = x_ij_pred / dist;
 
-			pressureForce += dir * DensityDerivative(dist, smoothingRadius) * sharedPressure / density_j;
-			pressureForce += dir * NearDensityDerivative(dist, smoothingRadius) * sharedNearPressure / near_density_j;
+			pressureForce += dir * DensityDerivative(dist, smoothingRadius) * sharedPressure / safe_density_j;
+			pressureForce += dir * NearDensityDerivative(dist, smoothingRadius) * sharedNearPressure / safe_near_density_j;
 		}
 	}
 
-	float3 acceleration = pressureForce / density_i;
+	float safe_density_i = max(density_i, 1e-6f);
+	float3 acceleration = pressureForce / safe_density_i;
 	p_i.velocity += acceleration * deltaTime;
 
 	ParticlesOutput[index] = p_i;
