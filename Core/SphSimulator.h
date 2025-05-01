@@ -66,12 +66,12 @@ public:
 		float radius = 0.1f;
 		float currentTime = 0.0f;
 		
-		float pressureCoeff = 40.0f;
-		float nearPressureCoeff = 30.0f;
-		float density0 = 100.0f;
-		float viscosity = 0.1f;
+		float pressureCoeff = 100.0f;
+		float nearPressureCoeff = 200.0f;
+		float density0 = 150.0f;
+		float viscosity = 0.3f;
 		
-		float gravityCoeff = 1.0f;
+		float gravityCoeff = 3.0f;
 		float collisionDamping = 0.0f;
 		UINT forceKey = 0;
 		float p1;
@@ -87,14 +87,14 @@ public:
 	SimParams m_simParamsData;
 	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
-	float m_smoothingRadius = 0.2f;
+	float m_smoothingRadius = 0.3f;
 	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius;
-	float m_maxBoundsX = 10.0f;
+	const float m_dp = m_smoothingRadius * 0.5f;
+	float m_maxBoundsX = 20.0f;
 	float m_minBoundsMoveX = -m_maxBoundsX;
 	float m_maxBoundsY = 5.0f;
-	float m_maxBoundsZ = 4.0f;
-	float m_collisionDamping = 0.2f;
+	float m_maxBoundsZ = 2.0f;
+	float m_collisionDamping = 0.4f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
@@ -106,8 +106,8 @@ public:
 		m_wallXCnt * m_wallZCnt * 2 +
 		m_wallXCnt * m_wallYCnt * 2 +
 		m_wallYCnt * m_wallZCnt * 2;
-	const UINT m_nX = 80;
-	const UINT m_nY = 30;
+	const UINT m_nX = 50;
+	const UINT m_nY = 40;
 	const UINT m_nZ = 20;
 	//const UINT m_numParticles = m_nX * m_nY * m_nZ + m_ghostCnt;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;

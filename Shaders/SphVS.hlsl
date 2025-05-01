@@ -61,7 +61,7 @@ GSInput main(uint vertexID : SV_VertexID)
     output.viewPos = mul(float4(p.position.xyz, 1.0), view);
 
     output.color = float3(0.0, 0.0, 0.0);
-    output.radius = 0.1;
+    output.radius = 0.15;
     output.isGhost = p.isGhost;
 
     return output;
