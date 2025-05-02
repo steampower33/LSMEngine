@@ -524,48 +524,48 @@ void MainEngine::UpdateGUI()
 				{
 					float minValue = 0.0f;
 					float maxValue = 1000.0f;
-					float dragValue = 0.01f;
+					float dragValue = 0.001f;
 
 					UINT flag = 0;
 
 					flag += DrawTableRow("Width", [&]() {
-						return ImGui::DragFloat("##Width", &m_sphSimulator->m_maxBoundsX, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Width", &m_sphSimulator->m_maxBoundsX, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Height", [&]() {
-						return ImGui::DragFloat("##Height", &m_sphSimulator->m_maxBoundsY, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Height", &m_sphSimulator->m_maxBoundsY, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Depth", [&]() {
-						return ImGui::DragFloat("##Depth", &m_sphSimulator->m_maxBoundsZ, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Depth", &m_sphSimulator->m_maxBoundsZ, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_simParamsData.mass, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_simParamsData.mass, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("NearPressureCoeff", [&]() {
-						return ImGui::DragFloat("##NearPressureCoeff", &m_sphSimulator->m_simParamsData.nearPressureCoeff, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##NearPressureCoeff", &m_sphSimulator->m_simParamsData.nearPressureCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_simParamsData.density0, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_simParamsData.density0, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_simParamsData.viscosity, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_simParamsData.viscosity, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("SmoothingRadius", [&]() {
-						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.2f");
+						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					ImGui::EndTable();

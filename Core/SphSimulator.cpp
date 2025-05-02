@@ -164,6 +164,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
 	m_simParamsData.cellCnt = m_cellCnt;
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
+	m_simParamsData.radius = m_smoothingRadius * 0.5f;
 	m_simParamsData.numParticles = m_numParticles;
 	m_simParamsData.gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	m_simParamsData.gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
