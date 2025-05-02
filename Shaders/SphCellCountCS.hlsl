@@ -12,10 +12,8 @@ void main(uint tid : SV_GroupThreadID,
     uint i = groupIdx.x * GROUP_SIZE_X + tid;
     if (i >= numParticles) return;
 
-    float3 position = ParticlesInput[i].position;
-
     // 상대적 위치로 변환 -> 커널 반경으로 나눠줌 -> 해시 계산 -> cellIndex
-    uint cellIndex = GetCellKeyFromCellID(floor((position - minBounds) / smoothingRadius));
+    uint cellIndex = GetCellKeyFromCellID(floor((ParticlesInput[i].predictedPosition - minBounds) / smoothingRadius));
 
     uint localOff;
     InterlockedAdd(CellCount[cellIndex], 1, localOff);

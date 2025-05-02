@@ -47,9 +47,9 @@ void main(uint tid : SV_GroupThreadID,
 
 			if (sqrDist > sqrRadius) continue;
 
-			float dist = sqrt(sqrDist);
-			density += mass * DensityKernel(dist, smoothingRadius);
-			nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
+			float r = sqrt(sqrDist);
+			density += DensityKernel(r, smoothingRadius);
+			nearDensity += NearDensityKernel(r, smoothingRadius);
 		}
 	}
 

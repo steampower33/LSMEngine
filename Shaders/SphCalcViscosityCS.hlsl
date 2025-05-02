@@ -52,11 +52,11 @@ void main(uint tid : SV_GroupThreadID,
 
 			if (sqrDist > sqrRadius) continue;
 
-			float dist = length(x_ij_pred);
+			float r = length(x_ij_pred);
 
 			float3 neighbourVelocity = p_j.velocity;
 
-			viscosityForce += (neighbourVelocity - velocity) * Poly6Kernel(dist, smoothingRadius);
+			viscosityForce += (neighbourVelocity - velocity) * Poly6Kernel(r, smoothingRadius);
 		}
 	}
 

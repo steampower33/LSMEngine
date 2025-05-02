@@ -66,28 +66,28 @@ public:
 		float radius = 0.1f;
 		float currentTime = 0.0f;
 		
-		float pressureCoeff = 100.0f;
-		float nearPressureCoeff = 200.0f;
-		float density0 = 150.0f;
-		float viscosity = 0.3f;
+		float pressureCoeff = 50.0f;
+		float nearPressureCoeff = 100.0f;
+		float density0 = 100.0f;
+		float viscosity = 0.1f;
 		
-		float gravityCoeff = 3.0f;
+		float gravityCoeff = 1.0f;
 		float collisionDamping = 0.0f;
 		UINT forceKey = 0;
 		float p1;
 	};
-
+	
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 	void Update(float dt, UINT& forceKey);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
-
+	
 	SimParams m_simParamsData;
 	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
-	float m_smoothingRadius = 0.3f;
+	float m_smoothingRadius = 0.4f;
 	const float m_radius = m_smoothingRadius * 0.5f;
 	const float m_dp = m_smoothingRadius * 0.5f;
 	float m_maxBoundsX = 20.0f;
@@ -103,7 +103,7 @@ public:
 	const UINT m_nY = 40;
 	const UINT m_nZ = 20;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
-	UINT m_cellCnt = m_numParticles * 2;
+	UINT m_cellCnt = m_numParticles;
 	
 private:
 	const UINT m_particleDataSize = sizeof(Particle);

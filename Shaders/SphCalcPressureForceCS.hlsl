@@ -66,7 +66,7 @@ void main(uint tid : SV_GroupThreadID,
 			float sharedNearPressure = (near_pressure_i + near_pressure_j) / 2.0f;
 
 			float dist = length(x_ij_pred);
-			float3 dir = x_ij_pred / dist;
+			float3 dir = dist > 0 ? x_ij_pred / dist : float3(0.0, 1.0, 0.0);
 
 			pressureForce += dir * DensityDerivative(dist, smoothingRadius) * sharedPressure / density_j;
 			pressureForce += dir * NearDensityDerivative(dist, smoothingRadius) * sharedNearPressure / near_density_j;
