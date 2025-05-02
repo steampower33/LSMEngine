@@ -35,8 +35,8 @@ struct Particle {
     float3 predictedPosition;
     float density;
     float nearDensity;
-    uint isGhost;
     float spawnTime;
+    float p;
 };
 
 struct GSInput
@@ -62,7 +62,6 @@ GSInput main(uint vertexID : SV_VertexID)
 
     output.color = float3(0.0, 0.0, 0.0);
     output.radius = 0.15;
-    output.isGhost = p.isGhost;
 
     return output;
 }

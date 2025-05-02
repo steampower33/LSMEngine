@@ -18,12 +18,6 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	if (currentTime < p_i.spawnTime || p_i.isGhost)
-	{
-		ParticlesOutput[index] = p_i;
-		return;
-	}
-
 	p_i.position += p_i.velocity * deltaTime;
 
     float3 pos = p_i.position;

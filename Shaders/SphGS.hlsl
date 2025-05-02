@@ -36,7 +36,6 @@ struct GSInput
     float3 color : COLOR;
     float life : PSIZE0;
     float radius : PSIZE1;
-    uint  isGhost : TEXCOORD0;
 };
 
 struct PSInput
@@ -52,10 +51,6 @@ struct PSInput
 void main(point GSInput input[1], uint primID : SV_PrimitiveID,
 	inout TriangleStream<PSInput> outputStream)
 {
-    //if (input[0].isGhost != 0)
-    //    return;
-
-
 
     float hw = input[0].radius; // halfWidth
     float3 viewCenter = input[0].viewPos.xyz;
@@ -64,13 +59,10 @@ void main(point GSInput input[1], uint primID : SV_PrimitiveID,
     float3 right = float3(hw, 0, 0);
 
     PSInput output;
-    if (input[0].isGhost)
-        output.color = float3(1.0, 0.0, 0.0);
-    else
-        output.color = float3(0.0, 0.35, 0.7);
 
     output.primID = primID;
     output.radius = input[0].radius;
+    output.color = float3(0.0, 0.35, 0.7);
 
     // 뷰 공간에서 꼭짓점 계산 후, 프로젝션 변환하여 클립 공간 좌표 얻기
     float3 cornerViewPos;

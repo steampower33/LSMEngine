@@ -17,12 +17,6 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	if (currentTime < p_i.spawnTime || p_i.isGhost)
-	{
-		ParticlesOutput[index] = p_i;
-		return;
-	}
-
 	float3 pos_pred_i = p_i.predictedPosition;
 
 	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
@@ -33,11 +27,6 @@ void main(uint tid : SV_GroupThreadID,
 	for (int i = 0; i < 27; ++i)
 	{
 		int3 neighborIndex = cellID + offsets3D[i];
-
-		//if ((neighborIndex.x < 0 || neighborIndex.x >= gridDimX) ||
-		//	(neighborIndex.y < 0 || neighborIndex.y >= gridDimY) ||
-		//	(neighborIndex.z < 0 || neighborIndex.z >= gridDimZ))
-		//	continue;
 
 		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
@@ -61,19 +50,6 @@ void main(uint tid : SV_GroupThreadID,
 			float dist = sqrt(sqrDist);
 			density += mass * DensityKernel(dist, smoothingRadius);
 			nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
-
-			//if (!p_i.isGhost)
-			//{
-			//	float dist = sqrt(sqrDist);
-			//	density += mass * DensityKernel(dist, smoothingRadius);
-			//	nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
-			//}
-			//else if (p_i.isGhost && !p_j.isGhost)
-			//{
-			//	float dist = sqrt(sqrDist);
-			//	density += mass * DensityKernel(dist, smoothingRadius);
-			//	nearDensity += mass * NearDensityKernel(dist, smoothingRadius);
-			//}
 		}
 	}
 

@@ -77,106 +77,6 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_simParamsCbvGpuHandle = currentGpuHandle;
 }
 
-void SphSimulator::GenerateGhostParticles()
-{
-	UINT ghostCnt = 0;
-
-	UINT bottomCnt = m_wallXCnt * m_wallZCnt;
-
-	// Bottom
-	for (UINT z = 0; z < m_wallZCnt; z++)
-	{
-		for (UINT x = 0; x < m_wallXCnt; x++)
-		{
-			UINT index = m_numParticles - 1 - (ghostCnt + x + z * m_wallXCnt);
-			m_particles[index].isGhost = 1;
-			m_particles[index].spawnTime = -1.0f;
-			m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
-			m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-			m_particles[index].density = 1000.0f;
-			m_particles[index].nearDensity = 1000.0f;
-		}
-	}
-	ghostCnt += bottomCnt;
-
-	//// Up
-	//for (UINT z = 0; z < m_wallZCnt; z++)
-	//{
-	//	for (UINT x = 0; x < m_wallXCnt; x++)
-	//	{
-	//		UINT index = m_numParticles - 1 - (ghostCnt + x + z * m_wallXCnt);
-	//		m_particles[index].isGhost = 1;
-	//		m_particles[index].spawnTime = -1.0f;
-	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, m_maxBoundsY, -m_maxBoundsZ + m_dp * z);
-	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-	//	}
-	//}
-	//ghostCnt += bottomCnt;
-
-	//UINT sideCnt = m_wallZCnt * m_wallYCnt;
-
-	//// Left
-	//for (UINT y = 0; y < m_wallYCnt; y++)
-	//{
-	//	for (UINT z = 0; z < m_wallZCnt; z++)
-	//	{
-	//		UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
-	//		m_particles[index].isGhost = 1;
-	//		m_particles[index].spawnTime = -1.0f;
-	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
-	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-
-	//	}
-	//}
-	//ghostCnt += sideCnt;
-
-	//// Right
-	//for (UINT y = 0; y < m_wallYCnt; y++)
-	//{
-	//	for (UINT z = 0; z < m_wallZCnt; z++)
-	//	{
-	//		UINT index = m_numParticles - 1 - (ghostCnt + z + y * m_wallZCnt);
-	//		m_particles[index].isGhost = 1;
-	//		m_particles[index].spawnTime = -1.0f;
-	//		m_particles[index].position = XMFLOAT3(m_maxBoundsX, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ + m_dp * z);
-	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-
-	//	}
-	//}
-	//ghostCnt += sideCnt;
-
-	//UINT frontCnt = m_wallXCnt * m_wallYCnt;
-
-	//// Front
-	//for (UINT y = 0; y < m_wallYCnt; y++)
-	//{
-	//	for (UINT x = 0; x < m_wallXCnt; x++)
-	//	{
-	//		UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
-	//		m_particles[index].isGhost = 1;
-	//		m_particles[index].spawnTime = -1.0f;
-	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, -m_maxBoundsZ);
-	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-
-	//	}
-	//}
-	//ghostCnt += frontCnt;
-
-	//// Back
-	//for (UINT y = 0; y < m_wallYCnt; y++)
-	//{
-	//	for (UINT x = 0; x < m_wallXCnt; x++)
-	//	{
-	//		UINT index = m_numParticles - 1 - (ghostCnt + x + y * m_wallXCnt);
-	//		m_particles[index].isGhost = 1;
-	//		m_particles[index].spawnTime = -1.0f;
-	//		m_particles[index].position = XMFLOAT3(-m_maxBoundsX + m_dp * x, -m_maxBoundsY + m_dp * y, m_maxBoundsZ);
-	//		m_particles[index].predictedPosition = m_particles[index].predictedPosition;
-	//	}
-	//}
-	//ghostCnt += frontCnt;
-}
-
 void SphSimulator::GenerateEmitterParticles()
 {
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
@@ -192,8 +92,6 @@ void SphSimulator::GenerateEmitterParticles()
 
 	for (UINT i = 0; i < m_numParticles; ++i)
 	{
-		if (m_particles[i].isGhost)
-			break;
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 

@@ -31,8 +31,8 @@ public:
 		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		float density = 0.0f;
 		float nearDensity = 0.0f;
-		UINT isGhost = false;
 		float spawnTime = -1.0f;
+		float p;
 	};
 
 	struct ParticleHash
@@ -60,7 +60,7 @@ public:
 		int gridDimX;
 		XMFLOAT3 maxBounds;
 		int gridDimY;
-
+		
 		int gridDimZ;
 		float mass = 1.0f;
 		float radius = 0.1f;
@@ -99,17 +99,9 @@ public:
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	UINT m_wallXCnt = m_maxBoundsX * 2 / m_dp + 1;
-	UINT m_wallYCnt = m_maxBoundsY * 2 / m_dp + 1;
-	UINT m_wallZCnt = m_maxBoundsZ * 2 / m_dp + 1;
-	UINT m_ghostCnt =
-		m_wallXCnt * m_wallZCnt * 2 +
-		m_wallXCnt * m_wallYCnt * 2 +
-		m_wallYCnt * m_wallZCnt * 2;
 	const UINT m_nX = 50;
 	const UINT m_nY = 40;
 	const UINT m_nZ = 20;
-	//const UINT m_numParticles = m_nX * m_nY * m_nZ + m_ghostCnt;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ;
 	UINT m_cellCnt = m_numParticles * 2;
 	
@@ -150,7 +142,6 @@ private:
 	UINT m_cellScatterIndex = 6;
 
 	void CreateConstantBuffer(ComPtr<ID3D12Device> device);
-	void GenerateGhostParticles();
 	void GenerateEmitterParticles();
 	void GenerateDamParticles();
 	void CreateStructuredBufferWithViews(

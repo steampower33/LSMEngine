@@ -12,13 +12,6 @@ void main(uint tid : SV_GroupThreadID,
     uint i = groupIdx.x * GROUP_SIZE_X + tid;
     if (i >= numParticles) return;
 
-    float t0 = ParticlesInput[i].spawnTime;
-    if (currentTime < t0)
-    {
-        CellOffset[i] = uint2(0xFFFFFFFF, 0xFFFFFFFF);
-        return;
-    }
-
     float3 position = ParticlesInput[i].position;
 
     // 상대적 위치로 변환 -> 커널 반경으로 나눠줌 -> 해시 계산 -> cellIndex
