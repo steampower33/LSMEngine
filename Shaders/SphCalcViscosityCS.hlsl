@@ -56,7 +56,7 @@ void main(uint tid : SV_GroupThreadID,
 
 			float3 neighbourVelocity = p_j.velocity;
 
-			viscosityForce += (neighbourVelocity - velocity) * Poly6Kernel(r, smoothingRadius);
+			viscosityForce += mass * (neighbourVelocity - velocity) / p_j.density * ViscosityLaplacian(r, smoothingRadius);
 		}
 	}
 
