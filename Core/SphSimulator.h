@@ -51,60 +51,62 @@ public:
 
 	// Simulator Param
 	__declspec(align(256)) struct SimParams {
-		float deltaTime;
+		float deltaTime = 1 / 120.0f;
 		UINT numParticles;
 		float smoothingRadius;
 		UINT cellCnt;
 
 		XMFLOAT3 minBounds;
-		int gridDimX;
-		XMFLOAT3 maxBounds;
-		int gridDimY;
-		
-		int gridDimZ;
-		float mass = 1.0f;
-		float radius = 0.0f;
 		float currentTime = 0.0f;
-		
-		float pressureCoeff = 40.0f;
-		float nearPressureCoeff = 0.5f;
-		float density0 = 4000.0f;
-		float viscosity = 0.01f;
-		
-		float gravityCoeff = 1.0f;
-		float collisionDamping = 0.0f;
+		XMFLOAT3 maxBounds;
+		float endTime = 0.0f;
+
+		int gridDimX;
+		int gridDimY;
+		int gridDimZ;
 		UINT forceKey = 0;
-		float p1;
+		
+		float density0 = 1000.0f;
+		float pressureCoeff = 30.0f;
+		float nearPressureCoeff = 2.0f;
+		float viscosity = 0.4f;
+		
+		float mass = 0.3f;
+		float radius = 0.0f;
+		float boundaryStiffness = 1000.0f;
+		float boundaryDamping = 1.5f;
+
+		float gravityCoeff = 1.0f;
+		float duration = 1.0f;
+		float startTime;
+		float p3;
 	};
 	
-	void Initialize(ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
-	void Update(float dt, UINT& forceKey);
-	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList);
-	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
-		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
-	
 	SimParams m_simParamsData;
-	const float m_deltaTime = 1 / 120.0f;
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.1f;
 	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 5.0f;
-	float m_minBoundsMoveX = -m_maxBoundsX;
+	const float m_dp = m_smoothingRadius * 0.8f;
+	float m_maxBoundsX = 6.0f;
 	float m_maxBoundsY = 2.0f;
-	float m_maxBoundsZ = 1.5f;
-	float m_collisionDamping = 0.1f;
+	float m_maxBoundsZ = 1.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	const UINT m_nX = 64;
-	const UINT m_nY = 64;
-	const UINT m_nZ = 16;
-	const UINT m_numParticles = m_nX * m_nY * m_nZ;
+	const UINT m_nX = 32;
+	const UINT m_nY = 32;
+	const UINT m_nZ = 32;
+	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles;
-	
+
+	void Initialize(ComPtr<ID3D12Device> device,
+		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
+	void Update(float dt, UINT& forceKey);
+	void ComputeCustomSolver(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
+	void ComputeIterationSolver(ComPtr<ID3D12GraphicsCommandList>& commandList);
+	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
+		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
@@ -117,11 +119,6 @@ private:
 	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
 	UINT m_cbvSrvUavSize = 0;
 
-	// Ping Pong 형식으로 버퍼 구성(Particle Structured)
-	// 매 프레임 마다 쓰고 읽는 버퍼를 변경
-	// 버퍼당 srv, uav 하나씩
-	// 초기 상태
-	// SRV | UAV | UAV
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
@@ -148,8 +145,4 @@ private:
 		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName);
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
-
-	void CalcDensityForces(ComPtr<ID3D12GraphicsCommandList> commandList);
-	void CalcSPH(ComPtr<ID3D12GraphicsCommandList> commandList);
-
 };

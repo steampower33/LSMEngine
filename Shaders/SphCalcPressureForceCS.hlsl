@@ -23,7 +23,10 @@ void main(uint tid : SV_GroupThreadID,
 	float pressure_i = PressureFromDensity(density_i, density0, pressureCoeff);
 	float near_pressure_i = NearPressureFromDensity(near_density_i, nearPressureCoeff);
 
+	float3 velocity_i = p_i.velocity;
+
 	float3 pressureForce = float3(0.0, 0.0, 0.0);
+	float3 viscosityForce = float3(0.0, 0.0, 0.0);
 
 	float3 pos_pred_i = p_i.predictedPosition;
 	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
@@ -65,15 +68,19 @@ void main(uint tid : SV_GroupThreadID,
 			float sharedPressure = (pressure_i + pressure_j) / 2.0f;
 			float sharedNearPressure = (near_pressure_i + near_pressure_j) / 2.0f;
 
-			float dist = length(x_ij_pred);
-			float3 dir = dist > 0 ? x_ij_pred / dist : float3(0.0, 1.0, 0.0);
+			float3 velocity_j = p_j.velocity;
 
-			pressureForce += dir * DensityDerivative(dist, smoothingRadius) * sharedPressure / density_j;
-			pressureForce += dir * NearDensityDerivative(dist, smoothingRadius) * sharedNearPressure / near_density_j;
+			float r = length(x_ij_pred);
+			float3 dir = r > 0 ? x_ij_pred / r : float3(0.0, 1.0, 0.0);
+
+			pressureForce += dir * mass *
+				(sharedPressure / density_j * DensityDerivative(r, smoothingRadius) +
+				sharedNearPressure / near_density_j * NearDensityDerivative(r, smoothingRadius));
+
+			viscosityForce += mass * (velocity_j - velocity_i) / density_j * ViscosityLaplacian(r, smoothingRadius);
 		}
 	}
-
-	float3 acceleration = pressureForce / density_i;
+	float3 acceleration = (pressureForce + viscosity * viscosityForce) / density_i;
 	p_i.velocity += acceleration * deltaTime;
 
 	ParticlesOutput[index] = p_i;

@@ -36,24 +36,29 @@ cbuffer SimParams : register(b0) {
 	uint cellCnt;
 
 	float3 minBounds;
-	int gridDimX;
-	float3 maxBounds;
-	int gridDimY;
-
-	int gridDimZ;
-	float mass;
-	float radius;
 	float currentTime;
+	float3 maxBounds;
+	float endTime;
 
+	int gridDimX;
+	int gridDimY;
+	int gridDimZ;
+	uint forceKey;
+
+	float density0;
 	float pressureCoeff;
 	float nearPressureCoeff;
-	float density0;
 	float viscosity;
 
+	float mass;
+	float radius;
+	float boundaryStiffness;
+	float boundaryDamping;
+
 	float gravityCoeff;
-	float collisionDamping;
-	uint forceKey;
-	float p1;
+	float duration;
+	float startTime;
+	float p3;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)

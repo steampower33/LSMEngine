@@ -523,7 +523,7 @@ void MainEngine::UpdateGUI()
 				if (ImGui::BeginTable("SphTable", 2, flags))
 				{
 					float minValue = 0.0f;
-					float maxValue = 1000.0f;
+					float maxValue = 10000.0f;
 					float dragValue = 0.001f;
 
 					UINT flag = 0;
@@ -566,6 +566,13 @@ void MainEngine::UpdateGUI()
 
 					flag += DrawTableRow("Gravity", [&]() {
 						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.3f");
+						});
+					flag += DrawTableRow("BoundaryStiffness", [&]() {
+						return ImGui::DragFloat("##BoundaryStiffness", &m_sphSimulator->m_simParamsData.boundaryStiffness, dragValue, minValue, maxValue, "%.3f");
+						});
+
+					flag += DrawTableRow("BoundaryDamping", [&]() {
+						return ImGui::DragFloat("##BoundaryDamping", &m_sphSimulator->m_simParamsData.boundaryDamping, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					ImGui::EndTable();
@@ -793,7 +800,7 @@ void MainEngine::Render()
 
 void MainEngine::SphCalcPass()
 {
-	m_sphSimulator->Compute(m_pCurrFR->m_cmdList);
+	m_sphSimulator->ComputeCustomSolver(m_pCurrFR->m_cmdList, m_reset);
 }
 
 void MainEngine::SphRenderPass()

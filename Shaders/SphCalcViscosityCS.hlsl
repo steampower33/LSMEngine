@@ -18,49 +18,49 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
-	float3 pos_pred_i = p_i.predictedPosition;
-	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
-	float sqrRadius = smoothingRadius * smoothingRadius;
+	//float3 pos_pred_i = p_i.predictedPosition;
+	//int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
+	//float sqrRadius = smoothingRadius * smoothingRadius;
 
-	float3 velocity = p_i.velocity;
+	//float3 velocity = p_i.velocity;
 
-	float3 viscosityForce = float3(0.0, 0.0, 0.0);
-	for (int i = 0; i < 27; ++i)
-	{
-		int3 neighborIndex = cellID + offsets3D[i];
+	//float3 viscosityForce = float3(0.0, 0.0, 0.0);
+	//for (int i = 0; i < 27; ++i)
+	//{
+	//	int3 neighborIndex = cellID + offsets3D[i];
 
-		uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
+	//	uint flatNeighborIndex = GetCellKeyFromCellID(neighborIndex);
 
-		uint startIndex = CellStart[flatNeighborIndex];
-		uint endIndex = startIndex + CellCount[flatNeighborIndex];
+	//	uint startIndex = CellStart[flatNeighborIndex];
+	//	uint endIndex = startIndex + CellCount[flatNeighborIndex];
 
-		if (startIndex == endIndex) continue;
+	//	if (startIndex == endIndex) continue;
 
-		for (int n = startIndex; n < endIndex; ++n)
-		{
-			uint particleIndexB = SortedIdx[n];
+	//	for (int n = startIndex; n < endIndex; ++n)
+	//	{
+	//		uint particleIndexB = SortedIdx[n];
 
-			//자기자신 제외
-			if (index == particleIndexB) continue;
+	//		//자기자신 제외
+	//		if (index == particleIndexB) continue;
 
-			Particle p_j = ParticlesInput[particleIndexB];
+	//		Particle p_j = ParticlesInput[particleIndexB];
 
-			float3 pos_pred_j = p_j.predictedPosition;
+	//		float3 pos_pred_j = p_j.predictedPosition;
 
-			float3 x_ij_pred = pos_pred_j - pos_pred_i;
-			float sqrDist = dot(x_ij_pred, x_ij_pred);
+	//		float3 x_ij_pred = pos_pred_j - pos_pred_i;
+	//		float sqrDist = dot(x_ij_pred, x_ij_pred);
 
-			if (sqrDist > sqrRadius) continue;
+	//		if (sqrDist > sqrRadius) continue;
 
-			float r = length(x_ij_pred);
+	//		float r = length(x_ij_pred);
 
-			float3 neighbourVelocity = p_j.velocity;
+	//		float3 neighbourVelocity = p_j.velocity;
 
-			viscosityForce += mass * (neighbourVelocity - velocity) / p_j.density * ViscosityLaplacian(r, smoothingRadius);
-		}
-	}
+	//		viscosityForce += mass * (neighbourVelocity - velocity) / p_j.density * ViscosityLaplacian(r, smoothingRadius);
+	//	}
+	//}
 
-	p_i.velocity += viscosityForce * viscosity * deltaTime;
+	//p_i.velocity += viscosityForce * viscosity * deltaTime;
 
 	ParticlesOutput[index] = p_i;
 }

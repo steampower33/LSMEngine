@@ -15,8 +15,17 @@ void main(uint tid : SV_GroupThreadID,
 	Particle p_i = ParticlesInput[index];
 
 	float3 gravityAcceleration = float3(0, -9.8, 0) * gravityCoeff;
+	
+	float3 externalForce = float3(0, 0, 0);
+	if (forceKey == 10) {
+		float t = currentTime;
+		if (t >= startTime && t < startTime + duration)
+		{
+			externalForce.x = -5.0;
+		}
+	}
 
-	p_i.velocity += gravityAcceleration * deltaTime;
+	p_i.velocity += (gravityAcceleration + externalForce) * deltaTime;
 	p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
 
 	ParticlesOutput[index] = p_i;
