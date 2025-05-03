@@ -18,6 +18,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	if (currentTime < p_i.spawnTime)
+	{
+		ParticlesOutput[index] = p_i;
+		return;
+	}
+
 	float3 pos = p_i.position;
 	float3 vel = p_i.velocity;
 	float3 Fb = float3(0, 0, 0);

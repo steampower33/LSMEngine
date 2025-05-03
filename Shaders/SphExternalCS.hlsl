@@ -14,6 +14,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	if (currentTime < p_i.spawnTime)
+	{
+		ParticlesOutput[index] = p_i;
+		return;
+	}
+
 	float3 gravityAcceleration = float3(0, -9.8, 0) * gravityCoeff;
 	
 	float3 externalForce = float3(0, 0, 0);

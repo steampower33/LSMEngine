@@ -87,9 +87,9 @@ public:
 	float m_smoothingRadius = 0.1f;
 	const float m_radius = m_smoothingRadius * 0.5f;
 	const float m_dp = m_smoothingRadius * 0.8f;
-	float m_maxBoundsX = 6.0f;
+	float m_maxBoundsX = 2.0f;
 	float m_maxBoundsY = 2.0f;
-	float m_maxBoundsZ = 1.0f;
+	float m_maxBoundsZ = 2.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));

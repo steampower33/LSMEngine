@@ -17,6 +17,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	if (currentTime < p_i.spawnTime)
+	{
+		ParticlesOutput[index] = p_i;
+		return;
+	}
+
 	float3 pos_pred_i = p_i.predictedPosition;
 
 	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);

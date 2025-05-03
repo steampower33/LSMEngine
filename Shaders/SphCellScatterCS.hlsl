@@ -16,6 +16,9 @@ void main(uint tid       : SV_GroupThreadID,
 
     uint2 info = CellOffset[i];
 
+    if (info.x == 0xFFFFFFFF || info.y == 0xFFFFFFFF)
+        return;
+
     uint dst = CellStart[info.x] + info.y;
 
     SortedIdx[dst] = i;

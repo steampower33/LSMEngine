@@ -18,6 +18,12 @@ void main(uint tid : SV_GroupThreadID,
 
 	Particle p_i = ParticlesInput[index];
 
+	if (currentTime < p_i.spawnTime)
+	{
+		ParticlesOutput[index] = p_i;
+		return;
+	}
+
 	float density_i = p_i.density;
 	float near_density_i = p_i.nearDensity;
 	float pressure_i = PressureFromDensity(density_i, density0, pressureCoeff);
