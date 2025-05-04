@@ -21,11 +21,17 @@ void MainEngine::Initialize()
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
+	//SphSimCustom
 	m_sphSimCustom = make_shared<SphSimCustom>();
 	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
-
 	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY * 0.5f;
 	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY);
+
+	//// SphSimPDF
+	//m_sphSimPDF = make_shared<SphSimPDF>();
+	//m_sphSimPDF->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
+	//m_camera->m_pos.y = m_sphSimPDF->m_maxBoundsY * 0.5f;
+	//m_camera->m_pos.z = -max(m_sphSimPDF->m_maxBoundsX, m_sphSimPDF->m_maxBoundsY);
 
 	m_camera->m_pitch = 0.3f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
@@ -702,9 +708,12 @@ void MainEngine::Update(float dt)
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
 
 	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
-
+	
 	if (!m_isPaused)
-		m_sphSimCustom->Update(dt, m_forceKey);
+	{
+		//m_sphSimPDF->UpdatePDF(dt, m_forceKey);
+		m_sphSimCustom->UpdateCustom(dt, m_forceKey);
+	}
 
 	// Update BoundsBox
 	{
@@ -800,7 +809,7 @@ void MainEngine::Render()
 
 void MainEngine::SphCalcPass()
 {
-	m_sphSimCustom->Compute(m_pCurrFR->m_cmdList, m_reset);
+	m_sphSimCustom->ComputeCustom(m_pCurrFR->m_cmdList, m_reset);
 }
 
 void MainEngine::SphRenderPass()
@@ -825,7 +834,8 @@ void MainEngine::SphRenderPass()
 	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	m_sphSimCustom->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+	m_sphSimCustom->RenderCustom(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+	//m_sphSimPDF->RenderPDF(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
 
 	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
 	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());

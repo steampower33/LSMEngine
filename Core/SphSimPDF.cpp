@@ -1,12 +1,12 @@
-#include "SphSimCustom.h"
+#include "SphSimPDF.h"
 
-SphSimCustom::SphSimCustom()
+SphSimPDF::SphSimPDF()
 {
 }
 
-SphSimCustom::~SphSimCustom() {}
+SphSimPDF::~SphSimPDF() {}
 
-void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
+void SphSimPDF::Initialize(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height)
 {
 	m_particles.resize(m_numParticles);
@@ -76,7 +76,7 @@ void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 	m_simParamsCbvGpuHandle = currentGpuHandle;
 }
 
-void SphSimCustom::GenerateEmitterParticles()
+void SphSimPDF::GenerateEmitterParticles()
 {
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
@@ -122,7 +122,7 @@ void SphSimCustom::GenerateEmitterParticles()
 	}
 }
 
-void SphSimCustom::GenerateDamParticles()
+void SphSimPDF::GenerateDamParticles()
 {
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
@@ -179,7 +179,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::UpdateCustom(float dt, UINT& forceKey)
+void SphSimPDF::UpdatePDF(float dt, UINT& forceKey)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -200,11 +200,11 @@ void SphSimCustom::UpdateCustom(float dt, UINT& forceKey)
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 
-	//m_particleAIndex = !m_particleAIndex;
-	//m_particleBIndex = !m_particleBIndex;
+	m_particleAIndex = !m_particleAIndex;
+	m_particleBIndex = !m_particleBIndex;
 }
 
-void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
+void SphSimPDF::ComputePDF(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
 {
 	if (reset)
 	{
@@ -224,6 +224,7 @@ void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
+
 	commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
 
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
@@ -352,7 +353,7 @@ void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 	commandList->Dispatch(dispatchX, 1, 1);
 
-	// PressureForce, Viscosity
+	// PressureForce
 	commandList->SetPipelineState(Graphics::sphCalcPressureForceCSPSO.Get());
 
 	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
@@ -365,6 +366,22 @@ void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
 	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
+
+	commandList->Dispatch(dispatchX, 1, 1);
+
+	// Viscosity
+	commandList->SetPipelineState(Graphics::sphCalcViscosityCSPSO.Get());
+
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],     // ParticleA : SRV -> UAV
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
 
 	commandList->Dispatch(dispatchX, 1, 1);
 
@@ -385,43 +402,43 @@ void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// 위치 업데이트, 경계조건 처리
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],     // ParticleA : SRV -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],     // ParticleB : SRV -> UAV
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
+	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
 
 	commandList->Dispatch(dispatchX, 1, 1);
 }
 
-void SphSimCustom::RenderCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
+void SphSimPDF::RenderPDF(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 	commandList->SetPipelineState(Graphics::sphPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
-	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
 	commandList->SetGraphicsRootConstantBufferView(1, globalConstsUploadHeap->GetGPUVirtualAddress()); // CBV
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	commandList->DrawInstanced(m_numParticles, 1, 0, 0);
 }
 
-void SphSimCustom::CreateStructuredBufferWithViews(
+void SphSimPDF::CreateStructuredBufferWithViews(
 	ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName)
 {
 	UINT particleDataSize = static_cast<UINT>(dataSize * dataCnt);
@@ -473,7 +490,7 @@ void SphSimCustom::CreateStructuredBufferWithViews(
 		nullptr, &uavDesc, uavHandle);
 }
 
-void SphSimCustom::UploadAndCopyData(ComPtr<ID3D12Device> device,
+void SphSimPDF::UploadAndCopyData(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState)
 {
 	UINT totalDataSize = dataSize * m_numParticles;
@@ -505,7 +522,7 @@ void SphSimCustom::UploadAndCopyData(ComPtr<ID3D12Device> device,
 
 }
 
-void SphSimCustom::CreateConstantBuffer(ComPtr<ID3D12Device> device)
+void SphSimPDF::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 {
 	{
 		// SimParams 설정

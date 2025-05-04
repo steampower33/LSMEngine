@@ -84,6 +84,9 @@
     <ClCompile Include="Core\SphSimCustom.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\SphSimPDF.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -171,6 +174,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\SphSimCustom.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SphSimPDF.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,11 +18,11 @@ using namespace std;
 #define STRUCTURED_CNT 7
 #define CONSTANT_CNT 2
 
-class SphSimCustom
+class SphSimPDF
 {
 public:
-	SphSimCustom();
-	~SphSimCustom();
+	SphSimPDF();
+	~SphSimPDF();
 
 	// 입자 구조
 	struct Particle {
@@ -65,12 +65,12 @@ public:
 		int gridDimY;
 		int gridDimZ;
 		UINT forceKey = 0;
-		
+
 		float density0 = 1000.0f;
 		float pressureCoeff = 30.0f;
 		float nearPressureCoeff = 2.0f;
 		float viscosity = 0.4f;
-		
+
 		float mass = 0.3f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
@@ -81,7 +81,7 @@ public:
 		float startTime;
 		float p3;
 	};
-	
+
 	SimParams m_simParamsData;
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.1f;
@@ -103,9 +103,9 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
-	void UpdateCustom(float dt, UINT& forceKey);
-	void ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
-	void RenderCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
+	void UpdatePDF(float dt, UINT& forceKey);
+	void ComputePDF(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
+	void RenderPDF(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
@@ -130,8 +130,8 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
 
-	UINT m_particleAIndex = 0;
-	UINT m_particleBIndex = 1;
+	UINT m_particleAIndex = 1;
+	UINT m_particleBIndex = 0;
 	UINT m_cellCountIndex = 2;
 	UINT m_cellOffsetIndex = 3;
 	UINT m_cellStartIndex = 4;
