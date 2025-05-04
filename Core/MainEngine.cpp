@@ -21,11 +21,11 @@ void MainEngine::Initialize()
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
-	m_sphSimulator = make_shared<SphSimulator>();
-	m_sphSimulator->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
+	m_sphSimCustom = make_shared<SphSimCustom>();
+	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 
-	m_camera->m_pos.y = m_sphSimulator->m_maxBoundsY * 0.5f;
-	m_camera->m_pos.z = -max(m_sphSimulator->m_maxBoundsX, m_sphSimulator->m_maxBoundsY);
+	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY * 0.5f;
+	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY);
 
 	m_camera->m_pitch = 0.3f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
@@ -529,50 +529,50 @@ void MainEngine::UpdateGUI()
 					UINT flag = 0;
 
 					flag += DrawTableRow("Width", [&]() {
-						return ImGui::DragFloat("##Width", &m_sphSimulator->m_maxBoundsX, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Width", &m_sphSimCustom->m_maxBoundsX, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Height", [&]() {
-						return ImGui::DragFloat("##Height", &m_sphSimulator->m_maxBoundsY, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Height", &m_sphSimCustom->m_maxBoundsY, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Depth", [&]() {
-						return ImGui::DragFloat("##Depth", &m_sphSimulator->m_maxBoundsZ, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Depth", &m_sphSimCustom->m_maxBoundsZ, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Mass", [&]() {
-						return ImGui::DragFloat("##Mass", &m_sphSimulator->m_simParamsData.mass, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Mass", &m_sphSimCustom->m_simParamsData.mass, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("PressureCoeff", [&]() {
-						return ImGui::DragFloat("##PressureCoeff", &m_sphSimulator->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##PressureCoeff", &m_sphSimCustom->m_simParamsData.pressureCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("NearPressureCoeff", [&]() {
-						return ImGui::DragFloat("##NearPressureCoeff", &m_sphSimulator->m_simParamsData.nearPressureCoeff, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##NearPressureCoeff", &m_sphSimCustom->m_simParamsData.nearPressureCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Density0", [&]() {
-						return ImGui::DragFloat("##Density0", &m_sphSimulator->m_simParamsData.density0, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Density0", &m_sphSimCustom->m_simParamsData.density0, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Viscosity", [&]() {
-						return ImGui::DragFloat("##Viscosity", &m_sphSimulator->m_simParamsData.viscosity, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Viscosity", &m_sphSimCustom->m_simParamsData.viscosity, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("SmoothingRadius", [&]() {
-						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimulator->m_smoothingRadius, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimCustom->m_smoothingRadius, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("Gravity", [&]() {
-						return ImGui::DragFloat("##Gravity", &m_sphSimulator->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##Gravity", &m_sphSimCustom->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
 					flag += DrawTableRow("BoundaryStiffness", [&]() {
-						return ImGui::DragFloat("##BoundaryStiffness", &m_sphSimulator->m_simParamsData.boundaryStiffness, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##BoundaryStiffness", &m_sphSimCustom->m_simParamsData.boundaryStiffness, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					flag += DrawTableRow("BoundaryDamping", [&]() {
-						return ImGui::DragFloat("##BoundaryDamping", &m_sphSimulator->m_simParamsData.boundaryDamping, dragValue, minValue, maxValue, "%.3f");
+						return ImGui::DragFloat("##BoundaryDamping", &m_sphSimCustom->m_simParamsData.boundaryDamping, dragValue, minValue, maxValue, "%.3f");
 						});
 
 					ImGui::EndTable();
@@ -704,12 +704,12 @@ void MainEngine::Update(float dt)
 	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
 
 	if (!m_isPaused)
-		m_sphSimulator->Update(dt, m_forceKey);
+		m_sphSimCustom->Update(dt, m_forceKey);
 
 	// Update BoundsBox
 	{
-		XMVECTOR minB = XMLoadFloat3(&m_sphSimulator->m_simParamsData.minBounds);
-		XMVECTOR maxB = XMLoadFloat3(&m_sphSimulator->m_simParamsData.maxBounds);
+		XMVECTOR minB = XMLoadFloat3(&m_sphSimCustom->m_simParamsData.minBounds);
+		XMVECTOR maxB = XMLoadFloat3(&m_sphSimCustom->m_simParamsData.maxBounds);
 
 		XMVECTOR size = XMVectorScale(XMVectorSubtract(maxB, minB), 0.5f);
 		XMVECTOR center = XMVectorScale(XMVectorAdd(minB, maxB), 0.5f);
@@ -800,7 +800,7 @@ void MainEngine::Render()
 
 void MainEngine::SphCalcPass()
 {
-	m_sphSimulator->ComputeCustomSolver(m_pCurrFR->m_cmdList, m_reset);
+	m_sphSimCustom->Compute(m_pCurrFR->m_cmdList, m_reset);
 }
 
 void MainEngine::SphRenderPass()
@@ -825,7 +825,7 @@ void MainEngine::SphRenderPass()
 	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	m_sphSimulator->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+	m_sphSimCustom->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
 
 	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
 	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());

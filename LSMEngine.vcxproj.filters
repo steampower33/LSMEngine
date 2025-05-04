@@ -81,7 +81,7 @@
     <ClCompile Include="Core\FrameResource.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Core\SphSimulator.cpp">
+    <ClCompile Include="Core\SphSimCustom.cpp">
       <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>
@@ -170,7 +170,7 @@
     <ClInclude Include="Core\FrameResource.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Core\SphSimulator.h">
+    <ClInclude Include="Core\SphSimCustom.h">
       <Filter>Core</Filter>
     </ClInclude>
   </ItemGroup>

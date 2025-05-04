@@ -28,7 +28,7 @@
     <ClCompile Include="Core\MainEngine.cpp" />
     <ClCompile Include="Core\GraphicsCommon.cpp" />
     <ClCompile Include="Core\PostProcess.cpp" />
-    <ClCompile Include="Core\SphSimulator.cpp" />
+    <ClCompile Include="Core\SphSimCustom.cpp" />
     <ClCompile Include="Core\Ray.cpp" />
     <ClCompile Include="Core\WinApp.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -55,7 +55,7 @@
     <ClInclude Include="Core\MainEngine.h" />
     <ClInclude Include="Core\GraphicsCommon.h" />
     <ClInclude Include="Core\PostProcess.h" />
-    <ClInclude Include="Core\SphSimulator.h" />
+    <ClInclude Include="Core\SphSimCustom.h" />
     <ClInclude Include="Core\Ray.h" />
     <ClInclude Include="Core\WinApp.h" />
     <ClInclude Include="imgui\imconfig.h" />

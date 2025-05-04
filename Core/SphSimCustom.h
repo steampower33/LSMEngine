@@ -18,11 +18,11 @@ using namespace std;
 #define STRUCTURED_CNT 7
 #define CONSTANT_CNT 2
 
-class SphSimulator
+class SphSimCustom
 {
 public:
-	SphSimulator();
-	~SphSimulator();
+	SphSimCustom();
+	~SphSimCustom();
 
 	// 입자 구조
 	struct Particle {
@@ -103,8 +103,7 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 	void Update(float dt, UINT& forceKey);
-	void ComputeCustomSolver(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
-	void ComputeIterationSolver(ComPtr<ID3D12GraphicsCommandList>& commandList);
+	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:

@@ -1,18 +1,18 @@
-#include "SphSimulator.h"
+#include "SphSimCustom.h"
 
-SphSimulator::SphSimulator()
+SphSimCustom::SphSimCustom()
 {
 }
 
-SphSimulator::~SphSimulator() {}
+SphSimCustom::~SphSimCustom() {}
 
-void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
+void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height)
 {
 	m_particles.resize(m_numParticles);
 
-	GenerateEmitterParticles();
-	//GenerateDamParticles();
+	//GenerateEmitterParticles();
+	GenerateDamParticles();
 
 	m_cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -76,7 +76,7 @@ void SphSimulator::Initialize(ComPtr<ID3D12Device> device,
 	m_simParamsCbvGpuHandle = currentGpuHandle;
 }
 
-void SphSimulator::GenerateEmitterParticles()
+void SphSimCustom::GenerateEmitterParticles()
 {
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
@@ -122,7 +122,7 @@ void SphSimulator::GenerateEmitterParticles()
 	}
 }
 
-void SphSimulator::GenerateDamParticles()
+void SphSimCustom::GenerateDamParticles()
 {
 	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
 	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
@@ -179,7 +179,7 @@ void SphSimulator::GenerateDamParticles()
 	}
 }
 
-void SphSimulator::Update(float dt, UINT& forceKey)
+void SphSimCustom::Update(float dt, UINT& forceKey)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -204,7 +204,7 @@ void SphSimulator::Update(float dt, UINT& forceKey)
 	m_particleBIndex = !m_particleBIndex;
 }
 
-void SphSimulator::ComputeCustomSolver(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
+void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
 {
 	if (reset)
 	{
@@ -417,12 +417,7 @@ void SphSimulator::ComputeCustomSolver(ComPtr<ID3D12GraphicsCommandList>& comman
 	commandList->Dispatch(dispatchX, 1, 1);
 }
 
-void SphSimulator::ComputeIterationSolver(ComPtr<ID3D12GraphicsCommandList>& commandList)
-{
-
-}
-
-void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
+void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
@@ -442,8 +437,7 @@ void SphSimulator::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	commandList->DrawInstanced(m_numParticles, 1, 0, 0);
 }
 
-// StructuredBuffer를 생성하고, m_cbvSrvUavHeap의 index 위치에 SRV, index + 1위치에 UAV를 생성
-void SphSimulator::CreateStructuredBufferWithViews(
+void SphSimCustom::CreateStructuredBufferWithViews(
 	ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName)
 {
 	UINT particleDataSize = static_cast<UINT>(dataSize * dataCnt);
@@ -495,7 +489,7 @@ void SphSimulator::CreateStructuredBufferWithViews(
 		nullptr, &uavDesc, uavHandle);
 }
 
-void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
+void SphSimCustom::UploadAndCopyData(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState)
 {
 	UINT totalDataSize = dataSize * m_numParticles;
@@ -527,7 +521,7 @@ void SphSimulator::UploadAndCopyData(ComPtr<ID3D12Device> device,
 
 }
 
-void SphSimulator::CreateConstantBuffer(ComPtr<ID3D12Device> device)
+void SphSimCustom::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 {
 	{
 		// SimParams 설정
