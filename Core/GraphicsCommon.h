@@ -28,6 +28,7 @@ namespace Graphics
 	extern ComPtr<ID3D12RootSignature> blurComputeRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
+	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 
 	// SHADER 
 	extern ComPtr<IDxcBlob> basicVS;
@@ -66,7 +67,6 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphExternalCS;
 	extern ComPtr<IDxcBlob> sphCalcDensityCS;
 	extern ComPtr<IDxcBlob> sphCalcPressureForceCS;
-	extern ComPtr<IDxcBlob> sphCalcViscosityCS;
 	extern ComPtr<IDxcBlob> sphCS;
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
@@ -129,9 +129,13 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphExternalCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphCalcViscosityCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
+
+	// PDF CS
+
+	// PDF PSO
+
 
 	extern ComPtr<ID3D12PipelineState> boundsBoxPSO;
 

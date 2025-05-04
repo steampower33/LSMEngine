@@ -47,7 +47,6 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphCellScatterCS;
 	ComPtr<IDxcBlob> sphCalcDensityCS;
 	ComPtr<IDxcBlob> sphCalcPressureForceCS;
-	ComPtr<IDxcBlob> sphCalcViscosityCS;
 	ComPtr<IDxcBlob> sphCS;
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
@@ -106,7 +105,6 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphExternalCSPSO;
 	ComPtr<ID3D12PipelineState> sphCalcDensityCSPSO;
 	ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
-	ComPtr<ID3D12PipelineState> sphCalcViscosityCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
 
@@ -400,7 +398,6 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphCellScatterCS.hlsl", L"cs_6_0", sphCellScatterCS);
 	CreateShader(device, L"SphCalcDensityCS.hlsl", L"cs_6_0", sphCalcDensityCS);
 	CreateShader(device, L"SphCalcPressureForceCS.hlsl", L"cs_6_0", sphCalcPressureForceCS);
-	CreateShader(device, L"SphCalcViscosityCS.hlsl", L"cs_6_0", sphCalcViscosityCS);
 	CreateShader(device, L"SphCS.hlsl", L"cs_6_0", sphCS);
 	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
 	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
@@ -813,12 +810,6 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCalcForcesCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcForcesCSPSODesc, IID_PPV_ARGS(&sphCalcPressureForceCSPSO)));
 	
-	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCalcViscosityCSPSODesc = {};
-	sphCalcViscosityCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
-	sphCalcViscosityCSPSODesc.CS = { sphCalcViscosityCS->GetBufferPointer(), sphCalcViscosityCS->GetBufferSize() };
-	sphCalcViscosityCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&sphCalcViscosityCSPSODesc, IID_PPV_ARGS(&sphCalcViscosityCSPSO)));
-
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphCSPSODesc = {};
 	sphCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
 	sphCSPSODesc.CS = { sphCS->GetBufferPointer(), sphCS->GetBufferSize() };

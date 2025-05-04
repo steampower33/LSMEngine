@@ -8,7 +8,6 @@
 #include "Ray.h"
 #include <DirectXCollision.h>
 #include <cmath>
-#include "SphSimCustom.h"
 #include "SphSimPDF.h"
 
 class MainEngine : public EngineBase
@@ -42,8 +41,7 @@ private:
 
 	shared_ptr<Model> m_screenSquare;
 	shared_ptr<Model> m_boundsBox;
-	shared_ptr<SphSimCustom> m_sphSimCustom;
-	//shared_ptr<SphSimPDF> m_sphSimPDF;
+	shared_ptr<SphSimPDF> m_sphSimPDF;
 
 	ShapesInfo m_shapesInfo;
 
