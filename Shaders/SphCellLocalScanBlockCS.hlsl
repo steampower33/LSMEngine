@@ -1,6 +1,6 @@
 #include "SphCommon.hlsli"
 
-RWStructuredBuffer<uint> PartialSum : register(u0);
+RWStructuredBuffer<uint> PartialSum : register(u10);
 
 groupshared uint shMem[GROUP_SIZE_X];
 

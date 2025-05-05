@@ -48,17 +48,17 @@ struct GSInput
     uint  isGhost : TEXCOORD0;
 };
 
-StructuredBuffer<Particle> particles : register(t0);
+StructuredBuffer<float3> positions : register(t0);
 
 GSInput main(uint vertexID : SV_VertexID)
 {
     const float fadeLife = 0.2f;
 
-    Particle p = particles[vertexID];
+    float3 pos = positions[vertexID];
 
     GSInput output;
 
-    output.viewPos = mul(float4(p.position.xyz, 1.0), view);
+    output.viewPos = mul(float4(pos, 1.0), view);
 
     output.color = float3(0.0, 0.0, 0.0);
     output.radius = 0.05;

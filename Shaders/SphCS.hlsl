@@ -1,9 +1,9 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<Particle> ParticlesInput : register(t0);
+StructuredBuffer<float3> PredictedPositions : register(t1);
 
-RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
-//RWStructuredBuffer<float3> ParticlePosition : register(u1);
+RWStructuredBuffer<float3> Positions: register(u0);
+RWStructuredBuffer<float3> Velocities : register(u2);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -16,16 +16,14 @@ void main(uint tid : SV_GroupThreadID,
 		return;
 	}
 
-	Particle p_i = ParticlesInput[index];
+	//if (currentTime < p_i.spawnTime)
+	//{
+	//	ParticlesOutput[index] = p_i;
+	//	return;
+	//}
 
-	if (currentTime < p_i.spawnTime)
-	{
-		ParticlesOutput[index] = p_i;
-		return;
-	}
-
-	float3 pos = p_i.predictedPosition;
-	float3 vel = p_i.velocity;
+	float3 pos = PredictedPositions[index];
+	float3 vel = Velocities[index];
 	float3 Fb = float3(0, 0, 0);
 
 	// X- ¸é
@@ -79,8 +77,7 @@ void main(uint tid : SV_GroupThreadID,
 			vel.z -= boundaryDamping * vel.z;
 	}
 
-	p_i.velocity = vel + (Fb / mass) * deltaTime;
-	p_i.position += p_i.velocity * deltaTime;
-
-	ParticlesOutput[index] = p_i;
+	vel += (Fb / mass) * deltaTime;
+	Positions[index] += vel * deltaTime;
+	Velocities[index] = vel;
 }

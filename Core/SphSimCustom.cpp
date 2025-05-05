@@ -9,10 +9,11 @@ SphSimCustom::~SphSimCustom() {}
 void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 	ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height)
 {
-	m_particles.resize(m_numParticles);
+	m_positions.resize(m_numParticles);
 
 	//GenerateEmitterParticles();
 	GenerateDamParticles();
+
 
 	m_cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -24,52 +25,88 @@ void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 	ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_cbvSrvUavHeap)));
 	m_cbvSrvUavHeap->SetName(L"SPH SRV/UAV/CBV Heap");
 
-	// StructuredBuffer 생성
-	CreateStructuredBufferWithViews(device, 0, 0, 1, m_particleDataSize, m_numParticles, L"Particle A");
-	CreateStructuredBufferWithViews(device, 1, 2, 3, m_particleDataSize, m_numParticles, L"Particle B");
-	CreateStructuredBufferWithViews(device, 2, 4, 5, sizeof(UINT), m_cellCnt, L"CellCount");
-	CreateStructuredBufferWithViews(device, 3, 6, 7, sizeof(UINT) * 2, m_numParticles, L"CellOffset");
-	CreateStructuredBufferWithViews(device, 4, 8, 9, sizeof(UINT), m_cellCnt, L"CellStart");
-	CreateStructuredBufferWithViews(device, 5, 10, 11, sizeof(UINT), (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX, L"CellStartPartialSum");
-	CreateStructuredBufferWithViews(device, 6, 12, 13, sizeof(UINT), m_numParticles, L"CellScatter");
 
-	// Particle A 초기 상태 -> SRV
-	UploadAndCopyData(device, commandList, m_particleDataSize,
-		m_particlesUploadBuffer, L"ParticleUploadBuffer", m_structuredBuffer[0],
+	// StructuredBuffer 생성
+	CreateStructuredBufferWithViews(device, 0, sizeof(XMFLOAT3), m_numParticles, L"Position");
+	CreateStructuredBufferWithViews(device, 1, sizeof(XMFLOAT3), m_numParticles, L"PredictedPosition");
+	CreateStructuredBufferWithViews(device, 2, sizeof(XMFLOAT3), m_numParticles, L"Velocity");
+	CreateStructuredBufferWithViews(device, 3, sizeof(XMFLOAT3), m_numParticles, L"PredictedVelocity");
+	CreateStructuredBufferWithViews(device, 4, sizeof(float), m_numParticles, L"Density");
+	CreateStructuredBufferWithViews(device, 5, sizeof(float), m_numParticles, L"NearDensity");
+	CreateStructuredBufferWithViews(device, 6, sizeof(float), m_numParticles, L"SpawnTime");
+
+	CreateStructuredBufferWithViews(device, 7, sizeof(UINT), m_cellCnt, L"CellCount");
+	CreateStructuredBufferWithViews(device, 8, sizeof(UINT) * 2, m_numParticles, L"CellOffset");
+	CreateStructuredBufferWithViews(device, 9, sizeof(UINT), m_cellCnt, L"CellStart");
+	CreateStructuredBufferWithViews(device, 10, sizeof(UINT), (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX, L"CellStartPartialSum");
+	CreateStructuredBufferWithViews(device, 11, sizeof(UINT), m_numParticles, L"CellScatter");
+
+	// Position 초기 상태 -> SRV
+	UploadAndCopyData(device, commandList, sizeof(XMFLOAT3),
+		m_positionUploadBuffer, L"PositionUploadBuffer", m_structuredBuffer[m_positionIndex],
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	// Particle B 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[1],
+	// PredictedPosition 초기 상태 -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_predictedPositionIndex],
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// Velocity 초기 상태 -> SRV
+	SetBarrier(commandList, m_structuredBuffer[m_velocityIndex],
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	// PredictedVelocity 초기 상태 -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_predictedVelocityIndex],
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// Density 초기 상태 -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_densityIndex],
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// NearDensity 초기 상태 -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_nearDensityIndex],
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// SpawnTime 초기 상태 -> UAV
+	SetBarrier(commandList, m_structuredBuffer[m_spawnTimeIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellCount 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[2],
+	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellOffset 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[3],
+	SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellStart 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[4],
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellStartPartialSum 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[5],
+	SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// CellScatter 초기 상태 -> UAV
-	SetBarrier(commandList, m_structuredBuffer[6],
+	SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	CreateConstantBuffer(device);
 
+	CD3DX12_CPU_DESCRIPTOR_HANDLE currentCpuHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart());
 	CD3DX12_GPU_DESCRIPTOR_HANDLE currentGpuHandle(m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart());
 
 	for (UINT i = 0; i < STRUCTURED_CNT; i++)
 	{
+		m_structuredBufferSrvCpuHandle[i] = currentCpuHandle;
+		currentCpuHandle.Offset(1, m_cbvSrvUavSize);
 		m_structuredBufferSrvGpuHandle[i] = currentGpuHandle;
 		currentGpuHandle.Offset(1, m_cbvSrvUavSize);
+	}
+
+	for (UINT i = 0; i < STRUCTURED_CNT; i++)
+	{
+		m_structuredBufferUavCpuHandle[i] = currentCpuHandle;
+		currentCpuHandle.Offset(1, m_cbvSrvUavSize);
 		m_structuredBufferUavGpuHandle[i] = currentGpuHandle;
 		currentGpuHandle.Offset(1, m_cbvSrvUavSize);
 	}
@@ -89,38 +126,38 @@ void SphSimCustom::GenerateEmitterParticles()
 	const UINT numParticlesRing2 = 16;
 	const UINT batchSize = 1 + numParticlesRing1 + numParticlesRing2;
 
-	m_simParamsData.currentTime = 0.0f;
-	for (UINT i = 0; i < m_numParticles; ++i)
-	{
-		UINT groupIdx = i / batchSize;
-		UINT subIdx = i % batchSize;
+	//m_simParamsData.currentTime = 0.0f;
+	//for (UINT i = 0; i < m_numParticles; ++i)
+	//{
+	//	UINT groupIdx = i / batchSize;
+	//	UINT subIdx = i % batchSize;
 
-		m_particles[i].spawnTime = (groupIdx + 1) * m_simParamsData.deltaTime * 2.0f;
+	//	m_particles[i].spawnTime = (groupIdx) * m_simParamsData.deltaTime * 1.5f;
 
-		if (subIdx == 0) {
-			m_particles[i].position = centerPos;
-		}
-		else if (0 < subIdx && subIdx < 1 + numParticlesRing1)
-		{
-			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing1);
-			float angle = static_cast<float>(i) * angleStep;
-			float x = centerPos.x;
-			float y = centerPos.y + radius1 * cosf(angle);
-			float z = centerPos.z + radius1 * sinf(angle);
-			m_particles[i].position = XMFLOAT3(x, y, z);
-		}
-		else if (1 + numParticlesRing1 <= subIdx && subIdx < batchSize)
-		{
-			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing2);
-			float angle = static_cast<float>(i) * angleStep;
-			float x = centerPos.x;
-			float y = centerPos.y + radius2 * cosf(angle);
-			float z = centerPos.z + radius2 * sinf(angle);
-			m_particles[i].position = XMFLOAT3( x, y, z );
-		}
+	//	if (subIdx == 0) {
+	//		m_particles[i].position = centerPos;
+	//	}
+	//	else if (0 < subIdx && subIdx < 1 + numParticlesRing1)
+	//	{
+	//		const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing1);
+	//		float angle = static_cast<float>(i) * angleStep;
+	//		float x = centerPos.x;
+	//		float y = centerPos.y + radius1 * cosf(angle);
+	//		float z = centerPos.z + radius1 * sinf(angle);
+	//		m_particles[i].position = XMFLOAT3{ x, y, z };
+	//	}
+	//	else if (1 + numParticlesRing1 <= subIdx && subIdx < batchSize)
+	//	{
+	//		const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing2);
+	//		float angle = static_cast<float>(i) * angleStep;
+	//		float x = centerPos.x;
+	//		float y = centerPos.y + radius2 * cosf(angle);
+	//		float z = centerPos.z + radius2 * sinf(angle);
+	//		m_particles[i].position = XMFLOAT3{ x, y, z };
+	//	}
 
-		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
-	}
+	//	XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
+	//}
 }
 
 void SphSimCustom::GenerateDamParticles()
@@ -152,11 +189,11 @@ void SphSimCustom::GenerateDamParticles()
 					m_nX * y +
 					m_nX * m_nY * z;
 
-				m_particles[index].position.x = -m_maxBoundsX + m_dp + m_dp * x;
-				m_particles[index].position.y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
-				m_particles[index].position.z = -m_maxBoundsZ + m_dp + m_dp * z;
-				m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
-				m_particles[index].spawnTime = -1.0f;
+				m_positions[index].x = -m_maxBoundsX + m_dp + m_dp * x;
+				m_positions[index].y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
+				m_positions[index].z = -m_maxBoundsZ + m_dp + m_dp * z;
+				//m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
+				//m_particles[index].spawnTime = -1.0f;
 			}
 		}
 	}
@@ -172,11 +209,11 @@ void SphSimCustom::GenerateDamParticles()
 					m_nX * y +
 					m_nX * m_nY * z;
 
-				m_particles[index].position.x = m_maxBoundsX - m_dp * m_nX + m_dp * x;
-				m_particles[index].position.y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
-				m_particles[index].position.z = m_maxBoundsZ - m_dp * m_nZ + m_dp + m_dp * z;
-				m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
-				m_particles[index].spawnTime = -1.0f;
+				m_positions[index].x = m_maxBoundsX - m_dp * m_nX + m_dp * x;
+				m_positions[index].y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
+				m_positions[index].z = m_maxBoundsZ - m_dp * m_nZ + m_dp + m_dp * z;
+				//m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
+				//m_particles[index].spawnTime = -1.0f;
 			}
 		}
 	}
@@ -215,212 +252,258 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 		GenerateDamParticles();
 		UINT totalDataSize = sizeof(Particle) * m_numParticles;
 		D3D12_SUBRESOURCE_DATA uploadData = {};
-		uploadData.pData = m_particles.data();
+		uploadData.pData = m_positions.data();
 		uploadData.RowPitch = totalDataSize;
 		uploadData.SlicePitch = totalDataSize;
 
-		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
 
-		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_particleAIndex].Get(), m_particlesUploadBuffer.Get(), 0, 0, 1, &uploadData);
+		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_positionIndex].Get(), m_positionUploadBuffer.Get(), 0, 0, 1, &uploadData);
+		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_positionIndex].Get(), m_positionUploadBuffer.Get(), 0, 0, 1, &uploadData);
 
-		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		FLOAT clearValues[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+		commandList->ClearUnorderedAccessViewFloat(
+			m_structuredBufferUavGpuHandle[m_velocityIndex], // GPU 핸들
+			m_structuredBufferUavCpuHandle[m_velocityIndex], // CPU 핸들
+			m_structuredBuffer[m_velocityIndex].Get(),      // 리소스 포인터
+			clearValues,                                // 초기화 값 (0.0f)
+			0,                                          // NumRects = 0 (버퍼)
+			nullptr                                     // pRects = nullptr (버퍼)
+		);
+		commandList->ClearUnorderedAccessViewFloat(
+			m_structuredBufferUavGpuHandle[m_predictedVelocityIndex], // GPU 핸들
+			m_structuredBufferUavCpuHandle[m_predictedVelocityIndex], // CPU 핸들
+			m_structuredBuffer[m_velocityIndex].Get(),      // 리소스 포인터
+			clearValues,                                // 초기화 값 (0.0f)
+			0,                                          // NumRects = 0 (버퍼)
+			nullptr                                     // pRects = nullptr (버퍼)
+		);
+		commandList->ClearUnorderedAccessViewFloat(
+			m_structuredBufferUavGpuHandle[m_predictedPositionIndex], // GPU 핸들
+			m_structuredBufferUavCpuHandle[m_predictedPositionIndex], // CPU 핸들
+			m_structuredBuffer[m_velocityIndex].Get(),      // 리소스 포인터
+			clearValues,                                // 초기화 값 (0.0f)
+			0,                                          // NumRects = 0 (버퍼)
+			nullptr                                     // pRects = nullptr (버퍼)
+		);
 	}
-	else if (reset == 2)
+	//else if (reset == 2)
+	//{
+	//	reset = 0;
+	//	GenerateEmitterParticles();
+	//	UINT totalDataSize = sizeof(Particle) * m_numParticles;
+	//	D3D12_SUBRESOURCE_DATA uploadData = {};
+	//	uploadData.pData = m_particles.data();
+	//	uploadData.RowPitch = totalDataSize;
+	//	uploadData.SlicePitch = totalDataSize;
+
+	//	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+	//		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	//	UpdateSubresources(commandList.Get(), m_structuredBuffer[m_particleAIndex].Get(), m_positionUploadBuffer.Get(), 0, 0, 1, &uploadData);
+
+	//	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+	//		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	//}
 	{
-		reset = 0;
-		GenerateEmitterParticles();
-		UINT totalDataSize = sizeof(Particle) * m_numParticles;
-		D3D12_SUBRESOURCE_DATA uploadData = {};
-		uploadData.pData = m_particles.data();
-		uploadData.RowPitch = totalDataSize;
-		uploadData.SlicePitch = totalDataSize;
+		commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
 
-		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+		ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
+		commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
 
-		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_particleAIndex].Get(), m_particlesUploadBuffer.Get(), 0, 0, 1, &uploadData);
-
-		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
-			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
+		commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[0]); // SRV
+		commandList->SetComputeRootDescriptorTable(1, m_structuredBufferUavGpuHandle[0]); // UAV
+		commandList->SetComputeRootDescriptorTable(2, m_simParamsCbvGpuHandle); // SimParams CBV
 	}
-	commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
-
-	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
-	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
-
-	commandList->SetComputeRootDescriptorTable(8, m_simParamsCbvGpuHandle); // SimParams CBV
-
-	// Update External Forces
-	commandList->SetPipelineState(Graphics::sphExternalCSPSO.Get());
-
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : SRV -> UAV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
 
 	UINT dispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
-	commandList->Dispatch(dispatchX, 1, 1);
+
+	// Update External Forces
+	{
+		commandList->SetPipelineState(Graphics::sphExternalCSPSO.Get());
+
+		commandList->Dispatch(dispatchX, 1, 1);
+
+		SetUAVBarrier(commandList, m_structuredBuffer[m_predictedPositionIndex]); // PredictedPosition : UAV -> UAV
+		SetUAVBarrier(commandList, m_structuredBuffer[m_predictedVelocityIndex]); // PredictedVelocity : UAV -> UAV
+	}
 
 	// Clear CellCount
-	commandList->SetPipelineState(Graphics::sphClearCountCellCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphClearCountCellCSPSO.Get());
 
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0
+		UINT clearDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
+		commandList->Dispatch(clearDispatchX, 1, 1);
 
-	UINT clearDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
-	commandList->Dispatch(clearDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
+	}
 
 	// CellCount
-	commandList->SetPipelineState(Graphics::sphCountCellCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCountCellCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> UAV
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_predictedPositionIndex],  // predictedPosition : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellCountIndex]); // UAV 0
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellOffsetIndex]); // UAV 1
+		UINT countDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 
-	UINT countDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
+		commandList->Dispatch(countDispatchX, 1, 1);
 
-	commandList->Dispatch(countDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex]); // CellOffset
+	}
 
 	// Scan
-	commandList->SetPipelineState(Graphics::sphCellLocalScanCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCellLocalScanCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellCountIndex]); // CellCount : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],   // CellCount : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellCountIndex]); // SRV 0 
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 0
-	commandList->SetComputeRootDescriptorTable(5, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 1
+		UINT scanDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 
-	UINT scanDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
+		commandList->Dispatch(scanDispatchX, 1, 1);
 
-	commandList->Dispatch(scanDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // partialSum
+	}
 
 	// ScanBlock
-	commandList->SetPipelineState(Graphics::sphCellLocalScanBlockCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCellLocalScanBlockCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // CellStartPartialSum : UAV -> UAV
+		UINT scanBlockDispatchX = ((m_cellCnt + m_groupSizeX - 1) / m_groupSizeX + m_groupSizeX - 1) / m_groupSizeX;
 
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartPartialSumIndex]); // UAV 0
+		commandList->Dispatch(scanBlockDispatchX, 1, 1);
 
-	UINT scanBlockDispatchX = ((m_cellCnt + m_groupSizeX - 1) / m_groupSizeX + m_groupSizeX - 1) / m_groupSizeX;
-
-	commandList->Dispatch(scanBlockDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // partialSum
+	}
 
 	// FinalAddition
-	commandList->SetPipelineState(Graphics::sphCellFinalAdditionCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCellFinalAdditionCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex]); // CellStartPartialSum : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> UAV
+		SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],  // CellStartPartialSum : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellStartPartialSumIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellStartIndex]); // UAV 0
+		UINT finalAddtionDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
 
-	UINT finalAddtionDispatchX = (m_cellCnt + m_groupSizeX - 1) / m_groupSizeX;
+		commandList->Dispatch(finalAddtionDispatchX, 1, 1);
 
-	commandList->Dispatch(finalAddtionDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> UAV
+	}
 
 	// CellScatter
-	commandList->SetPipelineState(Graphics::sphCellScatterCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCellScatterCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellStartIndex]); // LocalScan : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex]); // CellOffset : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],  // LocalScan : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex], // CellOffset : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_cellStartIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(1, m_structuredBufferSrvGpuHandle[m_cellOffsetIndex]); // SRV 1
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_cellScatterIndex]); // UAV 0
+		UINT cellScatterDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
 
-	UINT cellScatterDispatchX = (m_numParticles + m_groupSizeX - 1) / m_groupSizeX;
+		commandList->Dispatch(cellScatterDispatchX, 1, 1);
 
-	commandList->Dispatch(cellScatterDispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_cellScatterIndex]); 
+	}
 
 	// Density
-	commandList->SetPipelineState(Graphics::sphCalcDensityCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCalcDensityCSPSO.Get());
 
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex], // ParticleA : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	SetUAVBarrier(commandList, m_structuredBuffer[m_cellScatterIndex]); // CellScatter : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex], // CellScatter : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(1, m_structuredBufferSrvGpuHandle[m_cellStartIndex]); // SRV 1
-	commandList->SetComputeRootDescriptorTable(2, m_structuredBufferSrvGpuHandle[m_cellCountIndex]); // SRV 2
-	commandList->SetComputeRootDescriptorTable(3, m_structuredBufferSrvGpuHandle[m_cellScatterIndex]); // SRV 3
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
+		commandList->Dispatch(dispatchX, 1, 1);
 
-	commandList->Dispatch(dispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_densityIndex]);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_nearDensityIndex]);
+	}
 
 	// PressureForce, Viscosity
-	commandList->SetPipelineState(Graphics::sphCalcPressureForceCSPSO.Get());
+	{
+		commandList->SetPipelineState(Graphics::sphCalcPressureForceCSPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],	  // ParticleB : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_predictedVelocityIndex], // PredictedVelocity : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_densityIndex], // Density : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_nearDensityIndex], // NearDensity : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_velocityIndex],    // Velocity : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleBIndex]); // UAV 0
+		commandList->Dispatch(dispatchX, 1, 1);
 
-	commandList->Dispatch(dispatchX, 1, 1);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_velocityIndex]);
 
-	SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],    // CellCount : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],    // CellOffset : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],    // CellStart : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],    // CellStartPartialSum : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],    // ScatterIndex : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	}
 
 	// 위치 업데이트, 경계조건 처리
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleBIndex]); // ParticleB : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleBIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],     // ParticleA : SRV -> UAV
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	{
+		commandList->SetPipelineState(Graphics::sphCSPSO.Get());
 
-	commandList->SetPipelineState(Graphics::sphCSPSO.Get());
+		commandList->Dispatch(dispatchX, 1, 1);
 
-	commandList->SetComputeRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleBIndex]); // SRV 0
-	commandList->SetComputeRootDescriptorTable(4, m_structuredBufferUavGpuHandle[m_particleAIndex]); // UAV 0
+		SetUAVBarrier(commandList, m_structuredBuffer[m_positionIndex]);
+		SetUAVBarrier(commandList, m_structuredBuffer[m_velocityIndex]);
+	}
 
-	commandList->Dispatch(dispatchX, 1, 1);
+	{
+		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],    // Position : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_velocityIndex],    // Velocity : UAV -> SRV
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		SetBarrier(commandList, m_structuredBuffer[m_predictedPositionIndex], // PredictedPosition: SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_predictedVelocityIndex], // PredictedVelocity : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_densityIndex],   // Density: SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_nearDensityIndex],  // NearDensity : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		SetBarrier(commandList, m_structuredBuffer[m_cellCountIndex],    // CellCount : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_cellOffsetIndex],    // CellOffset : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_cellStartIndex],    // CellStart : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_cellStartPartialSumIndex],    // CellStartPartialSum : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		SetBarrier(commandList, m_structuredBuffer[m_cellScatterIndex],    // ScatterIndex : SRV -> UAV
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	}
+
 }
 
 void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
@@ -429,14 +512,14 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 	commandList->SetPipelineState(Graphics::sphPSO.Get());
 
-	SetUAVBarrier(commandList, m_structuredBuffer[m_particleAIndex]); // ParticleA : UAV -> SRV
-	SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	//SetUAVBarrier(commandList, m_structuredBuffer[m_positionIndex]); // ParticleA : UAV -> SRV
+	//SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
-	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_particleAIndex]); // SRV 0
+	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_positionIndex]); // SRV 0
 	commandList->SetGraphicsRootConstantBufferView(1, globalConstsUploadHeap->GetGPUVirtualAddress()); // CBV
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
@@ -444,7 +527,7 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 }
 
 void SphSimCustom::CreateStructuredBufferWithViews(
-	ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName)
+	ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT dataSize, UINT dataCnt, wstring dataName)
 {
 	UINT particleDataSize = static_cast<UINT>(dataSize * dataCnt);
 
@@ -471,7 +554,7 @@ void SphSimCustom::CreateStructuredBufferWithViews(
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
 	// SRV 버퍼 설정
-	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * srvIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * bufferIndex);
 
 	device->CreateShaderResourceView(
 		m_structuredBuffer[bufferIndex].Get(),
@@ -479,7 +562,7 @@ void SphSimCustom::CreateStructuredBufferWithViews(
 	);
 
 	// UAV 버퍼 설정
-	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * uavIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * (STRUCTURED_CNT + bufferIndex));
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -511,7 +594,7 @@ void SphSimCustom::UploadAndCopyData(ComPtr<ID3D12Device> device,
 	uploadBuffer->SetName(dataName.c_str());
 
 	D3D12_SUBRESOURCE_DATA uploadData = {};
-	uploadData.pData = m_particles.data();
+	uploadData.pData = m_positions.data();
 	uploadData.RowPitch = totalDataSize;
 	uploadData.SlicePitch = totalDataSize;
 

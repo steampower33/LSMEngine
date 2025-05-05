@@ -1,8 +1,8 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<uint> CellCount : register(t0);
-RWStructuredBuffer<uint> LocalScan : register(u0);
-RWStructuredBuffer<uint> PartialSum : register(u1);
+StructuredBuffer<uint> CellCount : register(t7);
+RWStructuredBuffer<uint> LocalScan : register(u9);
+RWStructuredBuffer<uint> PartialSum : register(u10);
 
 groupshared uint shMem[GROUP_SIZE_X];
 

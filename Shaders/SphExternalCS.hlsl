@@ -1,8 +1,10 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<Particle> ParticlesInput : register(t0);
+StructuredBuffer<float3> positions : register(t0);
+StructuredBuffer<float3> velocities : register(t2);
 
-RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+RWStructuredBuffer<float3> predPositions : register(u1);
+RWStructuredBuffer<float3> predVelocities : register(u3);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -12,13 +14,14 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= numParticles) return;
 
-	Particle p_i = ParticlesInput[index];
+	float3 pos = positions[index];
+	float3 vel = velocities[index];
 
-	if (currentTime < p_i.spawnTime)
-	{
-		ParticlesOutput[index] = p_i;
-		return;
-	}
+	//if (currentTime < p_i.spawnTime)
+	//{
+	//	ParticlesOutput[index] = p_i;
+	//	return;
+	//}
 
 	float3 gravityAcceleration = float3(0, -9.8, 0) * gravityCoeff;
 	
@@ -31,8 +34,8 @@ void main(uint tid : SV_GroupThreadID,
 		}
 	}
 
-	p_i.velocity += (gravityAcceleration + externalForce) * deltaTime;
-	p_i.predictedPosition = p_i.position + p_i.velocity * deltaTime;
+	vel += (gravityAcceleration + externalForce) * deltaTime;
 
-	ParticlesOutput[index] = p_i;
+	predVelocities[index] = vel;
+	predPositions[index] = pos + vel * deltaTime;
 }

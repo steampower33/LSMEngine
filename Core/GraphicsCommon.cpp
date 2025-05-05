@@ -249,28 +249,15 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 	}
 
 	// SRV, UAV, CBV, SRV
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[9];
-	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[3];
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 12, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 12, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[10];
-	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]); // SRV
-	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]); // SRV
-	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]); // SRV
-	rootParameters[3].InitAsDescriptorTable(1, &ranges[3]); // SRV
-	rootParameters[4].InitAsDescriptorTable(1, &ranges[4]); // UAV
-	rootParameters[5].InitAsDescriptorTable(1, &ranges[5]); // UAV
-	rootParameters[6].InitAsDescriptorTable(1, &ranges[6]); // UAV
-	rootParameters[7].InitAsDescriptorTable(1, &ranges[7]); // UAV
-	rootParameters[8].InitAsDescriptorTable(1, &ranges[8]); // CBV
-	rootParameters[9].InitAsConstants(2, 1, 0, D3D12_SHADER_VISIBILITY_ALL);
+	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
+	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
+	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(

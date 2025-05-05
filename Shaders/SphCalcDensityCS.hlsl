@@ -1,11 +1,12 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<Particle> ParticlesInput : register(t0);
-StructuredBuffer<uint> CellStart : register(t1);
-StructuredBuffer<uint> CellCount : register(t2);
-StructuredBuffer<uint> SortedIdx : register(t3);
+StructuredBuffer<float3> PredictedPositions : register(t1);
+StructuredBuffer<uint> CellStart : register(t9);
+StructuredBuffer<uint> CellCount : register(t7);
+StructuredBuffer<uint> SortedIdx : register(t11);
 
-RWStructuredBuffer<Particle> ParticlesOutput : register(u0);
+RWStructuredBuffer<float> Densities : register(u4);
+RWStructuredBuffer<float> NearDensities : register(u5);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
@@ -15,15 +16,13 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= numParticles) return;
 
-	Particle p_i = ParticlesInput[index];
+	//if (currentTime < p_i.spawnTime)
+	//{
+	//	ParticlesOutput[index] = p_i;
+	//	return;
+	//}
 
-	if (currentTime < p_i.spawnTime)
-	{
-		ParticlesOutput[index] = p_i;
-		return;
-	}
-
-	float3 pos_pred_i = p_i.predictedPosition;
+	float3 pos_pred_i = PredictedPositions[index];
 
 	int3 cellID = floor((pos_pred_i - minBounds) / smoothingRadius);
 
@@ -43,11 +42,11 @@ void main(uint tid : SV_GroupThreadID,
 
 		for (int n = startIndex; n < endIndex; ++n)
 		{
-			uint particleIndexB = SortedIdx[n];
+			uint j = SortedIdx[n];
 
-			Particle p_j = ParticlesInput[particleIndexB];
+			float3 pos_pred_j = PredictedPositions[j];
 
-			float3 x_ij_pred = p_j.predictedPosition - pos_pred_i;
+			float3 x_ij_pred = pos_pred_j - pos_pred_i;
 
 			float sqrDist = dot(x_ij_pred, x_ij_pred);
 
@@ -55,12 +54,10 @@ void main(uint tid : SV_GroupThreadID,
 
 			float r = sqrt(sqrDist);
 			density += mass * DensityKernel(r, smoothingRadius);
-			nearDensity += mass *NearDensityKernel(r, smoothingRadius);
+			nearDensity += mass * NearDensityKernel(r, smoothingRadius);
 		}
 	}
 
-	p_i.density = density;
-	p_i.nearDensity = nearDensity;
-
-	ParticlesOutput[index] = p_i;
+	Densities[index] = density;
+	NearDensities[index] = nearDensity;
 }

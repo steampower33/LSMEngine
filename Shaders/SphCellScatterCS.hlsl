@@ -1,9 +1,9 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<uint> CellStart : register(t0);
-StructuredBuffer<uint2> CellOffset : register(t1);
+StructuredBuffer<uint> CellStart : register(t9);
+StructuredBuffer<uint2> CellOffset : register(t8);
 
-RWStructuredBuffer<uint> SortedIdx : register(u0);
+RWStructuredBuffer<uint> SortedIdx : register(u11);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid       : SV_GroupThreadID,

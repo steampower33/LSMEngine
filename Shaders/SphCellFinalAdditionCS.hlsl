@@ -1,8 +1,8 @@
 #include "SphCommon.hlsli"
 
-StructuredBuffer<uint> PartialSum : register(t0);
+StructuredBuffer<uint> PartialSum : register(t10);
 
-RWStructuredBuffer<uint> LocalScan : register(u0);
+RWStructuredBuffer<uint> LocalScan : register(u9);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid       : SV_GroupThreadID,

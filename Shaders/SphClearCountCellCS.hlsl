@@ -1,6 +1,6 @@
 #include "SphCommon.hlsli"
 
-RWStructuredBuffer<uint>  CellCount : register(u0);
+RWStructuredBuffer<uint>  CellCount : register(u7);
 
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,

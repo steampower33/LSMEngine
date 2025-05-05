@@ -15,7 +15,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 7
+#define STRUCTURED_CNT 12
 #define CONSTANT_CNT 2
 
 class SphSimCustom
@@ -98,7 +98,7 @@ public:
 	const UINT m_nY = 32;
 	const UINT m_nZ = 32;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
-	UINT m_cellCnt = m_numParticles;
+	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
 
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
@@ -108,20 +108,21 @@ public:
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:
-	const UINT m_particleDataSize = sizeof(Particle);
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
 	const UINT m_compactCellDataCnt = m_cellCnt;
 
-	vector<Particle> m_particles;
+	vector<XMFLOAT3> m_positions;
 
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
 	UINT m_cbvSrvUavSize = 0;
 
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
-	ComPtr<ID3D12Resource> m_particlesUploadBuffer;
+	ComPtr<ID3D12Resource> m_positionUploadBuffer;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_structuredBufferSrvCpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_structuredBufferUavCpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferUavGpuHandle[STRUCTURED_CNT];
 
 	ComPtr<ID3D12Resource> m_simParamsConstantBuffer;
@@ -130,19 +131,26 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
 
-	UINT m_particleAIndex = 0;
-	UINT m_particleBIndex = 1;
-	UINT m_cellCountIndex = 2;
-	UINT m_cellOffsetIndex = 3;
-	UINT m_cellStartIndex = 4;
-	UINT m_cellStartPartialSumIndex = 5;
-	UINT m_cellScatterIndex = 6;
+	UINT m_positionIndex = 0;
+	UINT m_predictedPositionIndex = 1;
+	UINT m_velocityIndex = 2;
+	UINT m_predictedVelocityIndex = 3;
+	UINT m_densityIndex = 4;
+	UINT m_nearDensityIndex = 5;
+
+	UINT m_spawnTimeIndex = 6;
+
+	UINT m_cellCountIndex = 7;
+	UINT m_cellOffsetIndex = 8;
+	UINT m_cellStartIndex = 9;
+	UINT m_cellStartPartialSumIndex = 10;	
+	UINT m_cellScatterIndex = 11;
 
 	void CreateConstantBuffer(ComPtr<ID3D12Device> device);
 	void GenerateEmitterParticles();
 	void GenerateDamParticles();
 	void CreateStructuredBufferWithViews(
-		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT srvIndex, UINT uavIndex, UINT dataSize, UINT dataCnt, wstring dataName);
+		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT dataSize, UINT dataCnt, wstring dataName);
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
 };
