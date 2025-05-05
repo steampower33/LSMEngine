@@ -179,7 +179,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::UpdateCustom(float dt, UINT& forceKey)
+void SphSimCustom::Update(float dt, UINT& forceKey)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -204,7 +204,7 @@ void SphSimCustom::UpdateCustom(float dt, UINT& forceKey)
 	//m_particleBIndex = !m_particleBIndex;
 }
 
-void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
+void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
 {
 	if (reset)
 	{
@@ -401,7 +401,7 @@ void SphSimCustom::ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	commandList->Dispatch(dispatchX, 1, 1);
 }
 
-void SphSimCustom::RenderCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
+void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());

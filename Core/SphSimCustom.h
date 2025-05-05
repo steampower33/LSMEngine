@@ -103,9 +103,9 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
-	void UpdateCustom(float dt, UINT& forceKey);
-	void ComputeCustom(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
-	void RenderCustom(ComPtr<ID3D12GraphicsCommandList>& commandList,
+	void Update(float dt, UINT& forceKey);
+	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
+	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:
 	const UINT m_particleDataSize = sizeof(Particle);
