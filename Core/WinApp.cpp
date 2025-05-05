@@ -158,7 +158,11 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		}
 		if (wParam == 'R')
 		{
-			pEngine->m_reset = true;
+			pEngine->m_reset = 1;
+		}
+		if (wParam == 'T')
+		{
+			pEngine->m_reset = 2;
 		}
 		pEngine->m_camera->KeyDown(wParam);
 		break;

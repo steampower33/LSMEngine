@@ -91,7 +91,7 @@ public:
 	bool m_dragStartFlag = false;
 	bool m_lightRot = false;
 	UINT m_forceKey = 0;
-	bool m_reset = false;
+	UINT m_reset = 0;
 
 	ImVec2 m_sceneControllerPos;
 	ImVec2 m_sceneControllerSize;

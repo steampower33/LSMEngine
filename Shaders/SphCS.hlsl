@@ -24,7 +24,7 @@ void main(uint tid : SV_GroupThreadID,
 		return;
 	}
 
-	float3 pos = p_i.position;
+	float3 pos = p_i.predictedPosition;
 	float3 vel = p_i.velocity;
 	float3 Fb = float3(0, 0, 0);
 
@@ -33,14 +33,16 @@ void main(uint tid : SV_GroupThreadID,
 	if (pen > 0)
 	{
 		Fb.x += boundaryStiffness * pen;
-		vel.x -= boundaryDamping * vel.x;
+		if (dot(vel, float3(-minBounds.x, 0.0, 0.0)) < 0.0)
+			vel.x -= boundaryDamping * vel.x;
 	}
 	// X+ 면
 	pen = pos.x - (maxBounds.x - radius);
 	if (pen > 0)
 	{
 		Fb.x -= boundaryStiffness * pen;
-		vel.x -= boundaryDamping * vel.x;
+		if (dot(vel, float3(minBounds.x, 0.0, 0.0)) < 0.0)
+			vel.x -= boundaryDamping * vel.x;
 	}
 
 	// Y- 면
@@ -48,14 +50,16 @@ void main(uint tid : SV_GroupThreadID,
 	if (pen > 0)
 	{
 		Fb.y += boundaryStiffness * pen;
-		vel.y -= boundaryDamping * vel.y;
+		if (dot(vel, float3(0.0, -minBounds.y, 0.0)) < 0.0)
+			vel.y -= boundaryDamping * vel.y;
 	}
 	// Y+ 면
 	pen = pos.y - (maxBounds.y - radius);
 	if (pen > 0)
 	{
-		Fb.y -= 5000.0f * pen;
-		vel.y -= 2.0f * vel.y;
+		Fb.y -= boundaryStiffness * pen;
+		if (dot(vel, float3(0.0, minBounds.y, 0.0)) < 0.0)
+			vel.y -= boundaryDamping * vel.y;
 	}
 
 	// Z- 면
@@ -63,14 +67,16 @@ void main(uint tid : SV_GroupThreadID,
 	if (pen > 0)
 	{
 		Fb.z += boundaryStiffness * pen;
-		vel.z -= boundaryDamping * vel.z;
+		if (dot(vel, float3(0.0, 0.0, -minBounds.z)) < 0.0)
+			vel.z -= boundaryDamping * vel.z;
 	}
 	// Z+ 면
 	pen = pos.z - (maxBounds.z - radius);
 	if (pen > 0)
 	{
 		Fb.z -= boundaryStiffness * pen;
-		vel.z -= boundaryDamping * vel.z;
+		if (dot(vel, float3(0.0, 0.0, minBounds.z)) < 0.0)
+			vel.z -= boundaryDamping * vel.z;
 	}
 
 	p_i.velocity = vel + (Fb / mass) * deltaTime;

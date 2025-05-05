@@ -89,12 +89,13 @@ void SphSimCustom::GenerateEmitterParticles()
 	const UINT numParticlesRing2 = 16;
 	const UINT batchSize = 1 + numParticlesRing1 + numParticlesRing2;
 
+	m_simParamsData.currentTime = 0.0f;
 	for (UINT i = 0; i < m_numParticles; ++i)
 	{
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_particles[i].spawnTime = (groupIdx + 1) * m_simParamsData.deltaTime * 4.0f;
+		m_particles[i].spawnTime = (groupIdx + 1) * m_simParamsData.deltaTime * 2.0f;
 
 		if (subIdx == 0) {
 			m_particles[i].position = centerPos;
@@ -106,7 +107,7 @@ void SphSimCustom::GenerateEmitterParticles()
 			float x = centerPos.x;
 			float y = centerPos.y + radius1 * cosf(angle);
 			float z = centerPos.z + radius1 * sinf(angle);
-			m_particles[i].position = XMFLOAT3{ x, y, z };
+			m_particles[i].position = XMFLOAT3(x, y, z);
 		}
 		else if (1 + numParticlesRing1 <= subIdx && subIdx < batchSize)
 		{
@@ -115,7 +116,7 @@ void SphSimCustom::GenerateEmitterParticles()
 			float x = centerPos.x;
 			float y = centerPos.y + radius2 * cosf(angle);
 			float z = centerPos.z + radius2 * sinf(angle);
-			m_particles[i].position = XMFLOAT3{ x, y, z };
+			m_particles[i].position = XMFLOAT3( x, y, z );
 		}
 
 		XMStoreFloat3(&m_particles[i].velocity, XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
@@ -154,6 +155,7 @@ void SphSimCustom::GenerateDamParticles()
 				m_particles[index].position.x = -m_maxBoundsX + m_dp + m_dp * x;
 				m_particles[index].position.y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
 				m_particles[index].position.z = -m_maxBoundsZ + m_dp + m_dp * z;
+				m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
 				m_particles[index].spawnTime = -1.0f;
 			}
 		}
@@ -173,6 +175,7 @@ void SphSimCustom::GenerateDamParticles()
 				m_particles[index].position.x = m_maxBoundsX - m_dp * m_nX + m_dp * x;
 				m_particles[index].position.y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
 				m_particles[index].position.z = m_maxBoundsZ - m_dp * m_nZ + m_dp + m_dp * z;
+				m_particles[index].velocity = XMFLOAT3(0.0, 0.0, 0.0);
 				m_particles[index].spawnTime = -1.0f;
 			}
 		}
@@ -204,11 +207,11 @@ void SphSimCustom::Update(float dt, UINT& forceKey)
 	//m_particleBIndex = !m_particleBIndex;
 }
 
-void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset)
+void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset)
 {
-	if (reset)
+	if (reset == 1)
 	{
-		reset = false;
+		reset = 0;
 		GenerateDamParticles();
 		UINT totalDataSize = sizeof(Particle) * m_numParticles;
 		D3D12_SUBRESOURCE_DATA uploadData = {};
@@ -223,6 +226,25 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool&
 
 		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	}
+	else if (reset == 2)
+	{
+		reset = 0;
+		GenerateEmitterParticles();
+		UINT totalDataSize = sizeof(Particle) * m_numParticles;
+		D3D12_SUBRESOURCE_DATA uploadData = {};
+		uploadData.pData = m_particles.data();
+		uploadData.RowPitch = totalDataSize;
+		uploadData.SlicePitch = totalDataSize;
+
+		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+
+		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_particleAIndex].Get(), m_particlesUploadBuffer.Get(), 0, 0, 1, &uploadData);
+
+		SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
 	}
 	commandList->SetComputeRootSignature(Graphics::sphComputeRootSignature.Get());
 

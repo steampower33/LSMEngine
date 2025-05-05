@@ -69,12 +69,12 @@ public:
 		float density0 = 1000.0f;
 		float pressureCoeff = 30.0f;
 		float nearPressureCoeff = 2.0f;
-		float viscosity = 0.4f;
+		float viscosity = 0.3f;
 		
 		float mass = 0.3f;
 		float radius = 0.0f;
-		float boundaryStiffness = 1000.0f;
-		float boundaryDamping = 1.5f;
+		float boundaryStiffness = 500.0f;
+		float boundaryDamping = 1.0f;
 
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
@@ -104,7 +104,7 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
 	void Update(float dt, UINT& forceKey);
-	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, bool& reset);
+	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 private:
