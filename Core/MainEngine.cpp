@@ -705,7 +705,7 @@ void MainEngine::Update(float dt)
 	
 	if (!m_isPaused)
 	{
-		m_sphSimCustom->Update(dt, m_forceKey);
+		m_sphSimCustom->Update(dt, m_forceKey, m_reset);
 	}
 
 	// Update BoundsBox

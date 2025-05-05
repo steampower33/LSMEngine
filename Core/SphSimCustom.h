@@ -68,12 +68,12 @@ public:
 		
 		float density0 = 1000.0f;
 		float pressureCoeff = 30.0f;
-		float nearPressureCoeff = 2.0f;
-		float viscosity = 0.3f;
+		float nearPressureCoeff = 6.0f;
+		float viscosity = 0.1f;
 		
-		float mass = 0.3f;
+		float mass = 0.2f;
 		float radius = 0.0f;
-		float boundaryStiffness = 500.0f;
+		float boundaryStiffness = 1500.0f;
 		float boundaryDamping = 1.0f;
 
 		float gravityCoeff = 1.0f;
@@ -86,7 +86,7 @@ public:
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.1f;
 	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius * 0.8f;
+	const float m_dp = m_smoothingRadius * 0.5f;
 	float m_maxBoundsX = 2.0f;
 	float m_maxBoundsY = 2.0f;
 	float m_maxBoundsZ = 2.0f;
@@ -103,7 +103,7 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
-	void Update(float dt, UINT& forceKey);
+	void Update(float dt, UINT& forceKey, UINT& reset);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
@@ -112,7 +112,9 @@ private:
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
 	const UINT m_compactCellDataCnt = m_cellCnt;
 
-	vector<XMFLOAT3> m_positions;
+	vector<XMFLOAT3> m_position;
+	vector<XMFLOAT3> m_velocity;
+	vector<float> m_spawnTime;
 
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
@@ -120,6 +122,8 @@ private:
 
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_positionUploadBuffer;
+	ComPtr<ID3D12Resource> m_velocityUploadBuffer;
+	ComPtr<ID3D12Resource> m_spawnTimeUploadBuffer;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_structuredBufferSrvCpuHandle[STRUCTURED_CNT];
 	CD3DX12_GPU_DESCRIPTOR_HANDLE m_structuredBufferSrvGpuHandle[STRUCTURED_CNT];
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_structuredBufferUavCpuHandle[STRUCTURED_CNT];
@@ -151,6 +155,8 @@ private:
 	void GenerateDamParticles();
 	void CreateStructuredBufferWithViews(
 		ComPtr<ID3D12Device>& device, UINT bufferIndex, UINT dataSize, UINT dataCnt, wstring dataName);
+
+	template <typename T>
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
+		ComPtr<ID3D12GraphicsCommandList> commandList, vector<T>& data, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
 };

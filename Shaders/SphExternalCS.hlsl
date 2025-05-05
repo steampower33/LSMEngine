@@ -2,6 +2,7 @@
 
 StructuredBuffer<float3> positions : register(t0);
 StructuredBuffer<float3> velocities : register(t2);
+StructuredBuffer<float> spawnTimes : register(t6);
 
 RWStructuredBuffer<float3> predPositions : register(u1);
 RWStructuredBuffer<float3> predVelocities : register(u3);
@@ -17,11 +18,10 @@ void main(uint tid : SV_GroupThreadID,
 	float3 pos = positions[index];
 	float3 vel = velocities[index];
 
-	//if (currentTime < p_i.spawnTime)
-	//{
-	//	ParticlesOutput[index] = p_i;
-	//	return;
-	//}
+	if (currentTime < spawnTimes[index])
+	{
+		return;
+	}
 
 	float3 gravityAcceleration = float3(0, -9.8, 0) * gravityCoeff;
 	
@@ -30,7 +30,7 @@ void main(uint tid : SV_GroupThreadID,
 		float t = currentTime;
 		if (t >= startTime && t < startTime + duration)
 		{
-			externalForce.x = -5.0;
+			externalForce.x = -4.0;
 		}
 	}
 

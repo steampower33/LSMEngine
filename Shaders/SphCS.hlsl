@@ -2,6 +2,8 @@
 
 StructuredBuffer<float3> PredictedPositions : register(t1);
 
+StructuredBuffer<float> spawnTimes : register(t6);
+
 RWStructuredBuffer<float3> Positions: register(u0);
 RWStructuredBuffer<float3> Velocities : register(u2);
 
@@ -16,11 +18,10 @@ void main(uint tid : SV_GroupThreadID,
 		return;
 	}
 
-	//if (currentTime < p_i.spawnTime)
-	//{
-	//	ParticlesOutput[index] = p_i;
-	//	return;
-	//}
+	if (currentTime < spawnTimes[index])
+	{
+		return;
+	}
 
 	float3 pos = PredictedPositions[index];
 	float3 vel = Velocities[index];

@@ -5,6 +5,8 @@ StructuredBuffer<uint> CellStart : register(t9);
 StructuredBuffer<uint> CellCount : register(t7);
 StructuredBuffer<uint> SortedIdx : register(t11);
 
+StructuredBuffer<float> spawnTimes : register(t6);
+
 RWStructuredBuffer<float> Densities : register(u4);
 RWStructuredBuffer<float> NearDensities : register(u5);
 
@@ -16,11 +18,10 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= numParticles) return;
 
-	//if (currentTime < p_i.spawnTime)
-	//{
-	//	ParticlesOutput[index] = p_i;
-	//	return;
-	//}
+	if (currentTime < spawnTimes[index])
+	{
+		return;
+	}
 
 	float3 pos_pred_i = PredictedPositions[index];
 
