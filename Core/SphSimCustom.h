@@ -67,14 +67,14 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 30.0f;
-		float nearPressureCoeff = 6.0f;
+		float pressureCoeff = 40.0f;
+		float nearPressureCoeff = 20.0f;
 		float viscosity = 0.1f;
 		
-		float mass = 0.2f;
+		float mass = 1.5f;
 		float radius = 0.0f;
-		float boundaryStiffness = 1500.0f;
-		float boundaryDamping = 1.0f;
+		float boundaryStiffness = 1000.0f;
+		float boundaryDamping = 1.5f;
 
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
@@ -82,21 +82,22 @@ public:
 		float p3;
 	};
 	
+
 	SimParams m_simParamsData;
 	const UINT m_groupSizeX = 512;
-	float m_smoothingRadius = 0.1f;
+	float m_smoothingRadius = 0.2f;
 	const float m_radius = m_smoothingRadius * 0.5f;
 	const float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 2.0f;
-	float m_maxBoundsY = 2.0f;
-	float m_maxBoundsZ = 2.0f;
+	float m_maxBoundsX = 10.0f;
+	float m_maxBoundsY = 4.0f;
+	float m_maxBoundsZ = 3;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	const UINT m_nX = 32;
-	const UINT m_nY = 32;
-	const UINT m_nZ = 32;
+	const UINT m_nX = 40;
+	const UINT m_nY = 40;
+	const UINT m_nZ = 40;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
 

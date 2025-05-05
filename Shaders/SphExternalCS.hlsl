@@ -30,7 +30,7 @@ void main(uint tid : SV_GroupThreadID,
 		float t = currentTime;
 		if (t >= startTime && t < startTime + duration)
 		{
-			externalForce.x = -4.0;
+			externalForce.x = -5.0;
 		}
 	}
 

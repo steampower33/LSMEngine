@@ -191,8 +191,8 @@ void SphSimCustom::GenerateDamParticles()
 					m_nX * y +
 					m_nX * m_nY * z;
 
-				m_position[index].x = -m_maxBoundsX + m_dp + m_dp * x;
-				m_position[index].y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
+				m_position[index].x = -m_maxBoundsX + m_dp * 10.0f + m_dp * x;
+				m_position[index].y = (-m_maxBoundsY + midY * 0.5f + m_dp * 10.0f) + m_dp * y;
 				m_position[index].z = -m_maxBoundsZ + m_dp + m_dp * z;
 
 				m_velocity[index] = XMFLOAT3{ 0.0f, 0.0f, 0.0f };
@@ -213,9 +213,9 @@ void SphSimCustom::GenerateDamParticles()
 					m_nX * y +
 					m_nX * m_nY * z;
 
-				m_position[index].x = m_maxBoundsX - m_dp * m_nX + m_dp * x;
-				m_position[index].y = m_maxBoundsY - m_dp * m_nY + m_dp * y;
-				m_position[index].z = m_maxBoundsZ - m_dp * m_nZ + m_dp + m_dp * z;
+				m_position[index].x = m_maxBoundsX - m_dp * 10.0f - m_dp * x;
+				m_position[index].y = (-m_maxBoundsY + midY * 0.5f + m_dp * 10.0f) + m_dp * y;
+				m_position[index].z = m_maxBoundsZ - m_dp - m_dp * z;
 
 				m_velocity[index] = XMFLOAT3{ 0.0f, 0.0f, 0.0f };
 
@@ -232,6 +232,7 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset)
 	m_simParamsData.gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	m_simParamsData.gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	m_simParamsData.gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
+	m_simParamsData.smoothingRadius = m_smoothingRadius;
 
 	m_simParamsData.currentTime += m_simParamsData.deltaTime;
 
