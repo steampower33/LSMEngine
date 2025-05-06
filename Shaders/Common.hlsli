@@ -72,7 +72,7 @@ cbuffer GlobalConstants : register(b0)
     
     uint fogSRVIndex;
     uint isEnvEnabled;
-    float d01;
+    uint frameIndex;
     float d02;
     
     float4x4 d03;

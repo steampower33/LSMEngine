@@ -10,6 +10,7 @@ namespace Graphics
 	ComPtr<ID3D12RootSignature> blurComputeRootSignature;
 	ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 	ComPtr<ID3D12RootSignature> sphRenderRootSignature;
+	ComPtr<ID3D12RootSignature> sphSSFRSignature;
 
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
@@ -51,6 +52,7 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
 	ComPtr<IDxcBlob> sphPS;
+	ComPtr<IDxcBlob> sphSmoothingCS;
 
 	ComPtr<IDxcBlob> boundsBoxVS;
 	ComPtr<IDxcBlob> boundsBoxPS;
@@ -107,6 +109,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
+	ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 
 	ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
@@ -215,13 +218,15 @@ void Graphics::InitSphRenderRootSignature(ComPtr<ID3D12Device>& device)
 	}
 
 	// Structured / Constant
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
 	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+	CD3DX12_ROOT_PARAMETER1 rootParameters[4];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
-	rootParameters[1].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	rootParameters[2].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
+	rootParameters[2].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[3].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
@@ -250,8 +255,8 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 
 	// SRV, UAV, CBV, SRV
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[3];
-	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 12, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 12, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 13, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 13, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
@@ -272,6 +277,42 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
 	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphComputeRootSignature)));
 	sphComputeRootSignature->SetName(L"SphComputeRootSignature");
+}
+
+void Graphics::InitSphSSFRSignature(ComPtr<ID3D12Device>& device)
+{
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+	{
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	//ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
+	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
+	//rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),
+		rootParameters,
+		0,
+		nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> signatureBlob;
+	ComPtr<ID3DBlob> errorBlob;
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
+	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphSSFRSignature)));
+	sphSSFRSignature->SetName(L"SphSSFRSignature");
+
 }
 
 void Graphics::InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device)
@@ -389,6 +430,7 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
 	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
 	CreateShader(device, L"SphPS.hlsl", L"ps_6_0", sphPS);
+	CreateShader(device, L"SphSmoothingCS.hlsl", L"cs_6_0", sphSmoothingCS);
 
 	// BoundsBox
 	CreateShader(device, L"BoundsBoxVS.hlsl", L"vs_6_0", boundsBoxVS);
@@ -803,14 +845,27 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphCSPSODesc, IID_PPV_ARGS(&sphCSPSO)));
 
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSmoothingCSPSODesc = {};
+	sphSmoothingCSPSODesc.pRootSignature = sphSSFRSignature.Get();
+	sphSmoothingCSPSODesc.CS = { sphSmoothingCS->GetBufferPointer(), sphSmoothingCS->GetBufferSize() };
+	sphSmoothingCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphSmoothingCSPSODesc, IID_PPV_ARGS(&sphSmoothingCSPSO)));
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC sphPSODesc = basicSolidPSODesc;
 	sphPSODesc.pRootSignature = sphRenderRootSignature.Get();
 	sphPSODesc.InputLayout = { sphIE, _countof(sphIE) };
 	sphPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	sphPSODesc.BlendState = disabledBlend;
 	sphPSODesc.VS = { sphVS->GetBufferPointer(), sphVS->GetBufferSize() };
 	sphPSODesc.GS = { sphGS->GetBufferPointer(), sphGS->GetBufferSize() };
 	sphPSODesc.PS = { sphPS->GetBufferPointer(), sphPS->GetBufferSize() };
+	sphPSODesc.BlendState = disabledBlend;
+	sphPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	sphPSODesc.SampleDesc.Count = 1;
+	sphPSODesc.SampleDesc.Quality = 0;
+	sphPSODesc.SampleMask = UINT_MAX;
+	sphPSODesc.NumRenderTargets = 2;
+	sphPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sphPSODesc.RTVFormats[1] = DXGI_FORMAT_R32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphPSODesc, IID_PPV_ARGS(&sphPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC boundsBoxPSODesc = sphPSODesc;
@@ -827,6 +882,7 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 	InitBasicRootSignature(device);
 	InitSphRenderRootSignature(device);
 	InitSphComputeRootSignature(device);
+	InitSphSSFRSignature(device);
 	//InitPostProcessComputeRootSignature(device);
 
 	//InitShaders(device);

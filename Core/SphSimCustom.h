@@ -15,8 +15,8 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 12
-#define CONSTANT_CNT 2
+#define STRUCTURED_CNT 13
+#define CONSTANT_CNT 1
 
 class SphSimCustom
 {
@@ -62,8 +62,8 @@ public:
 	
 		float mass = 0.7f;
 		float radius = 0.0f;
-		float boundaryStiffness = 3000.0f;
-		float boundaryDamping = 1.0f;
+		float boundaryStiffness = 1000.0f;
+		float boundaryDamping = 1.4f;
 		
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
@@ -83,9 +83,9 @@ public:
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	const UINT m_nX = 40;
-	const UINT m_nY = 40;
-	const UINT m_nZ = 40;
+	const UINT m_nX = 32;
+	const UINT m_nY = 32;
+	const UINT m_nZ = 32;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
 
@@ -96,6 +96,30 @@ public:
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
+
+	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float width, float height);
+
+	UINT m_renderSRVCnt = 3;
+	UINT m_rednerUAVCnt = 1;
+	UINT m_renderHeapCnt = m_renderSRVCnt + m_rednerUAVCnt + Graphics::imguiTextureSize;
+	
+	ComPtr<ID3D12DescriptorHeap> m_renderHeap;
+
+	ComPtr<ID3D12Resource> m_particleRTVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_particleRTVHeap;
+	UINT m_fluidRenderSRVIndex = 0;
+	ComPtr<ID3D12Resource> m_particleDepthOutputTexture;
+	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
+	UINT m_particleDepthOutputSRVIndex = 1;
+	ComPtr<ID3D12Resource> m_particleDSVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_fluidDSVHeap;
+	UINT m_particleDepthSRVIndex = 2;
+	
+	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
+	UINT m_sceneSRVIndex = 3;
+	UINT m_sceneUAVIndex = m_renderSRVCnt;
+
 private:
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
 	const UINT m_compactCellDataSize = sizeof(CompactCell);
@@ -107,7 +131,9 @@ private:
 
 	ComPtr<ID3D12DescriptorHeap> m_cbvSrvUavHeap;
 	ComPtr<ID3D12DescriptorHeap> m_clearHeap;
+	UINT m_rtvSize = 0;
 	UINT m_cbvSrvUavSize = 0;
+	UINT m_dsvSize = 0;
 
 	ComPtr<ID3D12Resource> m_structuredBuffer[STRUCTURED_CNT];
 	ComPtr<ID3D12Resource> m_positionUploadBuffer;
@@ -138,6 +164,11 @@ private:
 	UINT m_cellStartIndex = 9;
 	UINT m_cellStartPartialSumIndex = 10;	
 	UINT m_cellScatterIndex = 11;
+
+	UINT m_colorIndex = 12;
+
+	UINT m_width;
+	UINT m_height;
 
 	void CreateConstantBuffer(ComPtr<ID3D12Device> device);
 	void GenerateEmitterParticles();

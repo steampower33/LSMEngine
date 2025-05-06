@@ -18,6 +18,7 @@
 #include "Helpers.h"
 #include "TextureManager.h"
 #include "FrameResource.h"
+#include "SphSimCustom.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -63,6 +64,7 @@ public:
 
 	shared_ptr<TextureManager> m_textureManager;
 
+	shared_ptr<SphSimCustom> m_sphSimCustom;
 	shared_ptr<Camera> m_camera;
 
 	UINT m_rtvSize = 0;

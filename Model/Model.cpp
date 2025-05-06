@@ -137,7 +137,7 @@ void Model::RenderBoundsBox(
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
-	commandList->SetGraphicsRootConstantBufferView(2, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(3, m_meshConstsUploadHeap.Get()->GetGPUVirtualAddress());
 
 	for (const auto& mesh : m_meshes)
 	{

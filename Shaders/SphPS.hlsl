@@ -38,16 +38,22 @@ float3 LinearToneMapping(float3 color)
 	return color;
 }
 
+
 struct PSInput
 {
 	float4 clipPos : SV_POSITION;
 	float2 texCoord : TEXCOORD;
-	float3 color : COLOR;
 	float radius : PSIZE1;
 	uint primID : SV_PrimitiveID;
 };
 
-float4 main(PSInput input) : SV_TARGET
+struct PS_OUTPUT
+{
+	float4 color : SV_Target0;
+	float customDepth : SV_Target1;
+};
+
+PS_OUTPUT main(PSInput input)
 {
 	float2 offset = (float2(0.5, 0.5) - input.texCoord) * 2.0;
 	float sqrDst = dot(offset, offset);
@@ -58,7 +64,14 @@ float4 main(PSInput input) : SV_TARGET
 	
 	float3 lightDir = normalize(float3(0, 0, 1));
 	float  NdotL = saturate(dot(normal, lightDir));
-	float3 color = input.color * NdotL;
+	float3 color = float3(1.0, 1.0, 1.0) * NdotL;
 
-	return float4(LinearToneMapping(color), 1);
+	//return float4(LinearToneMapping(color), 1);
+	//return float4(color, 1);
+
+	PS_OUTPUT output;
+
+	output.color = float4(color, 1.0);
+	output.customDepth = input.clipPos.z / input.clipPos.w;
+	return output;
 }

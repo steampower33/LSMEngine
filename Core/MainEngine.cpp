@@ -17,12 +17,11 @@ void MainEngine::Initialize()
 	ThrowIfFailed(m_pCurrFR->m_cmdAlloc->Reset());
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Reset(m_pCurrFR->m_cmdAlloc.Get(), nullptr));
 
-	m_textureManager->Initialize(m_device, m_pCurrFR->m_cmdList);
+	//m_textureManager->Initialize(m_device, m_pCurrFR->m_cmdList);
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
 	// SphSimPDF
-	m_sphSimCustom = make_shared<SphSimCustom>();
 	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
 	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY * 0.5f;
 	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY);
@@ -599,7 +598,8 @@ void MainEngine::UpdateGUI()
 
 		ImVec2 availSize = ImGui::GetContentRegionAvail();
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneBufferIndex);
+		//CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneRTVBufferIndex);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_sphSimCustom->m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize * m_sphSimCustom->m_sceneSRVIndex);
 		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
 
 		ImGui::EndChild();
@@ -704,6 +704,8 @@ void MainEngine::UpdateGUI()
 void MainEngine::Update(float dt)
 {
 	m_camera->Update(m_mouseDeltaX, m_mouseDeltaY, dt, m_isMouseMove);
+
+	m_globalConstsData.frameIndex = m_frameIndex;
 
 	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
 	
@@ -814,7 +816,7 @@ void MainEngine::SphRenderPass()
 	SetBarrier(m_pCurrFR->m_cmdList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
+	//m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
 
 	//ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
 	//m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -823,40 +825,32 @@ void MainEngine::SphRenderPass()
 	m_pCurrFR->m_cmdList->RSSetScissorRects(1, &m_sceneScissorRect);
 
 	// Sph Render
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_floatRTVHeap->GetCPUDescriptorHandleForHeapStart());
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_pCurrFR->m_floatDSVHeap->GetCPUDescriptorHandleForHeapStart());
-	m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-	const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
-	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
 	m_sphSimCustom->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
 
-	m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
-	m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(1, m_pCurrFR->m_globalConstsUploadHeap->GetGPUVirtualAddress());
-	m_boundsBox->RenderBoundsBox(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
+	//m_pCurrFR->m_cmdList->SetPipelineState(Graphics::boundsBoxPSO.Get());
+	//m_boundsBox->RenderBoundsBox(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);
 
-	// Resolve
-	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 
-	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+	//// Resolve
+	//SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
+	//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 
-	m_pCurrFR->m_cmdList->ResolveSubresource(
-		m_pCurrFR->m_sceneBuffer.Get(),   // Resolve 대상 (단일 샘플 텍스처)
-		0,                      // 대상 서브리소스 인덱스
-		m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
-		0,                      // 소스 서브리소스 인덱스
-		m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
-	);
+	//SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
+	//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE	, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 
-	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
-		D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	//m_pCurrFR->m_cmdList->ResolveSubresource(
+	//	m_pCurrFR->m_sceneRTVBuffer.Get(),   // Resolve 대상 (단일 샘플 텍스처)
+	//	0,                      // 대상 서브리소스 인덱스
+	//	m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
+	//	0,                      // 소스 서브리소스 인덱스
+	//	m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
+	//);
 
-	SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
-		D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	//SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
+	//	D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	//SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_floatBuffers,
+	//	D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void MainEngine::UpdateLight(float dt)
@@ -1350,18 +1344,18 @@ void MainEngine::ResolvePass()
 	// PostEffects, PostProcess 둘다 False
 	if (!m_guiState.isPostEffectsEnabled && !m_guiState.isPostProcessEnabled)
 	{
-		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RESOLVE_DEST);
 
 		m_pCurrFR->m_cmdList->ResolveSubresource(
-			m_pCurrFR->m_sceneBuffer.Get(),   // Resolve 대상 (단일 샘플 텍스처)
+			m_pCurrFR->m_sceneRTVBuffer.Get(),   // Resolve 대상 (단일 샘플 텍스처)
 			0,                      // 대상 서브리소스 인덱스
 			m_pCurrFR->m_floatBuffers.Get(),       // Resolve 소스 (MSAA 텍스처)
 			0,                      // 소스 서브리소스 인덱스
 			m_pCurrFR->m_floatBuffers->GetDesc().Format // Resolve 포맷
 		);
 
-		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	else
@@ -1409,7 +1403,7 @@ void MainEngine::PostEffectsPass()
 			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_pCurrFR->m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
 			m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_depthOnlyDSBuffer,
@@ -1420,7 +1414,7 @@ void MainEngine::PostEffectsPass()
 			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_depthOnlyDSBuffer,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+			SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 	}
@@ -1436,16 +1430,16 @@ void MainEngine::PostProcessPass()
 		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_fogBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		// PostProcess
 		{
-			m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+			m_pCurrFR->m_postProcess->Render(m_device, m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 				m_pCurrFR->m_sceneRTVHeap, m_textureManager->m_textureHeap, m_dsvHeap, m_frameIndex);
 		}
 
-		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneBuffer,
+		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_sceneRTVBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 		SetBarrier(m_pCurrFR->m_cmdList, m_pCurrFR->m_fogBuffer,
@@ -1468,7 +1462,7 @@ void MainEngine::ImGUIPass()
 	m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, color, 0, nullptr);
 	m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+	ID3D12DescriptorHeap* ppHeaps[] = { m_sphSimCustom->m_renderHeap.Get() };
 	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pCurrFR->m_cmdList.Get());
 

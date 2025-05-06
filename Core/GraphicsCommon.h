@@ -28,7 +28,7 @@ namespace Graphics
 	extern ComPtr<ID3D12RootSignature> blurComputeRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
-	extern ComPtr<ID3D12RootSignature> sphRenderRootSignature;
+	extern ComPtr<ID3D12RootSignature> sphSSFRSignature;
 
 	// SHADER 
 	extern ComPtr<IDxcBlob> basicVS;
@@ -71,6 +71,7 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
 	extern ComPtr<IDxcBlob> sphPS;
+	extern ComPtr<IDxcBlob> sphSmoothingCS;
 
 	extern ComPtr<IDxcBlob> boundsBoxVS;
 	extern ComPtr<IDxcBlob> boundsBoxPS;
@@ -131,11 +132,7 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
-
-	// PDF CS
-
-	// PDF PSO
-
+	extern ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
@@ -150,6 +147,7 @@ namespace Graphics
 	void InitSphRenderRootSignature(ComPtr<ID3D12Device>& device);
 	void InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device);
 	void InitSphComputeRootSignature(ComPtr<ID3D12Device>& device);
+	void InitSphSSFRSignature(ComPtr<ID3D12Device>& device);
 	void InitShaders(ComPtr<ID3D12Device>& device);
 	void InitSphShaders(ComPtr<ID3D12Device>& device);
 	void InitRasterizerStates();

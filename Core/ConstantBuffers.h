@@ -55,7 +55,7 @@ __declspec(align(256)) struct GlobalConstants // 0
 
 	UINT fogSRVIndex = 0;
 	UINT isEnvEnabled = 0;
-	float d01;
+	UINT frameIndex = 0;
 	float d02;
 	
 	XMFLOAT4X4 d03;
