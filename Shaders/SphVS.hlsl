@@ -1,4 +1,36 @@
 
+cbuffer SimParams : register(b1) {
+    float deltaTime;
+    uint numParticles;
+    float smoothingRadius;
+    uint cellCnt;
+
+    float3 minBounds;
+    float currentTime;
+    float3 maxBounds;
+    float endTime;
+
+    int gridDimX;
+    int gridDimY;
+    int gridDimZ;
+    uint forceKey;
+
+    float density0;
+    float pressureCoeff;
+    float nearPressureCoeff;
+    float viscosity;
+
+    float mass;
+    float radius;
+    float boundaryStiffness;
+    float boundaryDamping;
+
+    float gravityCoeff;
+    float duration;
+    float startTime;
+    float p3;
+};
+
 cbuffer GlobalConstants : register(b0)
 {
     float4x4 view;
@@ -61,7 +93,7 @@ GSInput main(uint vertexID : SV_VertexID)
     output.viewPos = mul(float4(pos, 1.0), view);
 
     output.color = float3(0.0, 0.0, 0.0);
-    output.radius = 0.1;
+    output.radius = radius;
 
     return output;
 }

@@ -18,10 +18,7 @@ void main(uint tid : SV_GroupThreadID,
 	float3 pos = positions[index];
 	float3 vel = velocities[index];
 
-	if (currentTime < spawnTimes[index])
-	{
-		return;
-	}
+	if (currentTime < spawnTimes[index]) return;
 
 	float3 gravityAcceleration = float3(0, -9.8, 0) * gravityCoeff;
 	

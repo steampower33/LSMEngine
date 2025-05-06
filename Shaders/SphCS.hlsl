@@ -14,14 +14,9 @@ void main(uint tid : SV_GroupThreadID,
 {
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 
-	if (index >= numParticles) {
-		return;
-	}
+	if (index >= numParticles) return;
 
-	if (currentTime < spawnTimes[index])
-	{
-		return;
-	}
+	if (currentTime < spawnTimes[index]) return;
 
 	float3 pos = PredictedPositions[index];
 	float3 vel = Velocities[index];
@@ -52,14 +47,14 @@ void main(uint tid : SV_GroupThreadID,
 		if (dot(vel, float3(0.0, -minBounds.y, 0.0)) < 0.0)
 			vel.y -= boundaryDamping * vel.y;
 	}
-	// Y+ ¸é
-	pen = pos.y - (maxBounds.y - radius);
-	if (pen > 0)
-	{
-		Fb.y -= boundaryStiffness * pen;
-		if (dot(vel, float3(0.0, minBounds.y, 0.0)) < 0.0)
-			vel.y -= boundaryDamping * vel.y;
-	}
+	//// Y+ ¸é
+	//pen = pos.y - (maxBounds.y - radius);
+	//if (pen > 0)
+	//{
+	//	Fb.y -= boundaryStiffness * pen;
+	//	if (dot(vel, float3(0.0, minBounds.y, 0.0)) < 0.0)
+	//		vel.y -= boundaryDamping * vel.y;
+	//}
 
 	// Z- ¸é
 	pen = (minBounds.z + radius) - pos.z;

@@ -24,17 +24,6 @@ public:
 	SphSimCustom();
 	~SphSimCustom();
 
-	// 입자 구조
-	struct Particle {
-		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 predictedPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		float density = 0.0f;
-		float nearDensity = 0.0f;
-		float spawnTime = -1.0f;
-		float p;
-	};
-
 	struct ParticleHash
 	{
 		UINT particleID = 0; // 원래 파티클 인덱스
@@ -68,29 +57,28 @@ public:
 		
 		float density0 = 1000.0f;
 		float pressureCoeff = 40.0f;
-		float nearPressureCoeff = 20.0f;
+		float nearPressureCoeff = 15.0f;
 		float viscosity = 0.1f;
-		
-		float mass = 1.5f;
+	
+		float mass = 0.7f;
 		float radius = 0.0f;
-		float boundaryStiffness = 1000.0f;
-		float boundaryDamping = 1.5f;
-
+		float boundaryStiffness = 3000.0f;
+		float boundaryDamping = 1.0f;
+		
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
 		float startTime;
 		float p3;
 	};
-	
 
 	SimParams m_simParamsData;
 	const UINT m_groupSizeX = 512;
-	float m_smoothingRadius = 0.2f;
-	const float m_radius = m_smoothingRadius * 0.5f;
-	const float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 10.0f;
+	float m_smoothingRadius = 0.15f;
+	float m_radius = m_smoothingRadius * 0.5f;
+	float m_dp = m_smoothingRadius * 0.5f;
+	float m_maxBoundsX = 4.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 3;
+	float m_maxBoundsZ = 4.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));

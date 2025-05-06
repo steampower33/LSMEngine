@@ -18,10 +18,7 @@ void main(uint tid : SV_GroupThreadID,
 	uint index = groupIdx.x * GROUP_SIZE_X + tid;
 	if (index >= numParticles) return;
 
-	if (currentTime < spawnTimes[index])
-	{
-		return;
-	}
+	if (currentTime < spawnTimes[index]) return;
 
 	float3 pos_pred_i = PredictedPositions[index];
 
@@ -59,6 +56,6 @@ void main(uint tid : SV_GroupThreadID,
 		}
 	}
 
-	Densities[index] = density;
-	NearDensities[index] = nearDensity;
+	Densities[index] = max(density, 1e-6f);
+	NearDensities[index] = max(nearDensity, 1e-6f);
 }

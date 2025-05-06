@@ -564,6 +564,10 @@ void MainEngine::UpdateGUI()
 						return ImGui::DragFloat("##SmoothingRadius", &m_sphSimCustom->m_smoothingRadius, dragValue, minValue, maxValue, "%.3f");
 						});
 
+					flag += DrawTableRow("Radius", [&]() {
+						return ImGui::DragFloat("##Radius", &m_sphSimCustom->m_radius, dragValue, minValue, maxValue, "%.3f");
+						});
+
 					flag += DrawTableRow("Gravity", [&]() {
 						return ImGui::DragFloat("##Gravity", &m_sphSimCustom->m_simParamsData.gravityCoeff, dragValue, minValue, maxValue, "%.3f");
 						});
@@ -812,8 +816,8 @@ void MainEngine::SphRenderPass()
 
 	m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
-	m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	//ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+	//m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	m_pCurrFR->m_cmdList->RSSetViewports(1, &m_sceneViewport);
 	m_pCurrFR->m_cmdList->RSSetScissorRects(1, &m_sceneScissorRect);

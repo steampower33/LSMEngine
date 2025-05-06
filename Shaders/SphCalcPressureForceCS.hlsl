@@ -21,10 +21,7 @@ void main(uint tid : SV_GroupThreadID,
 
 	if (index >= numParticles) return;
 
-	if (currentTime < spawnTimes[index])
-	{
-		return;
-	}
+	if (currentTime < spawnTimes[index]) return;
 
 	float density_i = Densities[index];
 	float near_density_i = NearDensities[index];

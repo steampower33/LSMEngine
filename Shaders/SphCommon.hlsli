@@ -1,16 +1,6 @@
 
 #define PI 3.1415926535
 
-struct Particle {
-	float3 position;
-	float3 velocity;
-	float3 predictedPosition;
-	float density;
-	float nearDensity;
-	float spawnTime;
-	float p;
-};
-
 struct ParticleHash
 {
 	uint particleID;

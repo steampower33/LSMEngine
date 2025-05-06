@@ -118,45 +118,66 @@ void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 
 void SphSimCustom::GenerateEmitterParticles()
 {
-	float midX = (m_maxBoundsX + -m_maxBoundsX) * 0.5f;
-	float midY = (m_maxBoundsY + -m_maxBoundsY) * 0.5f;
-	float midZ = (m_maxBoundsZ + -m_maxBoundsZ) * 0.5f;
+	XMFLOAT3 centerPos = { 0.0f, m_maxBoundsY * 1.5f, 0.0f };
 
-	XMFLOAT3 centerPos = { midX, midY + m_maxBoundsY * 0.5f, midZ };
+	const UINT num1 = 8, num2 = 16, num3 = 24, num4 = 32;
 	const float radius1 = m_dp * 2.0f;
-	const UINT numParticlesRing1 = 8;
 	const float radius2 = m_dp * 4.0f;
-	const UINT numParticlesRing2 = 16;
-	const UINT batchSize = 1 + numParticlesRing1 + numParticlesRing2;
+	const float radius3 = m_dp * 6.0f;
+	const float radius4 = m_dp * 8.0f;
+	const UINT batchSize = 1 + num1 + num2 + num3 + num4;
 
 	for (UINT i = 0; i < m_numParticles; ++i)
 	{
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = (groupIdx) * m_simParamsData.deltaTime * 4.0f;
+		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 4.0f;
 
 		if (subIdx == 0) {
 			m_position[i] = centerPos;
 		}
-		else if (0 < subIdx && subIdx < 1 + numParticlesRing1)
+		else if (subIdx < 1 + num1)
 		{
-			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing1);
-			float angle = static_cast<float>(i) * angleStep;
-			float x = centerPos.x;
-			float y = centerPos.y + radius1 * cosf(angle);
-			float z = centerPos.z + radius1 * sinf(angle);
-			m_position[i]= XMFLOAT3{ x, y, z };
+			int idx = subIdx - 1;
+			float angle = idx * (2 * XM_PI / num1);
+			m_position[i] = {
+			  centerPos.x,
+			  centerPos.y + radius1 * cosf(angle),
+			  centerPos.z + radius1 * sinf(angle)
+			};
 		}
-		else if (1 + numParticlesRing1 <= subIdx && subIdx < batchSize)
+		else if (subIdx < 1 + num1 + num2)
 		{
-			const float angleStep = 2.0f * XM_PI / static_cast<float>(numParticlesRing2);
-			float angle = static_cast<float>(i) * angleStep;
-			float x = centerPos.x;
-			float y = centerPos.y + radius2 * cosf(angle);
-			float z = centerPos.z + radius2 * sinf(angle);
-			m_position[i]= XMFLOAT3{ x, y, z };
+			int idx = subIdx - 1 - num1;
+			float angle = idx * (2 * XM_PI / num2);
+			m_position[i] = {
+			  centerPos.x,
+			  centerPos.y + radius2 * cosf(angle),
+			  centerPos.z + radius2 * sinf(angle)
+			};
 		}
+		else if (subIdx < 1 + num1 + num2 + num3)
+		{
+			int idx = subIdx - 1 - num1 - num2;
+			float angle = idx * (2 * XM_PI / num3);
+			m_position[i] = {
+			  centerPos.x,
+			  centerPos.y + radius3 * cosf(angle),
+			  centerPos.z + radius3 * sinf(angle)
+			};
+		}
+		else
+		{
+			int idx = subIdx - 1 - num1 - num2 - num3;
+			float angle = idx * (2 * XM_PI / num4);
+			m_position[i] = {
+			  centerPos.x,
+			  centerPos.y + radius4 * cosf(angle),
+			  centerPos.z + radius4 * sinf(angle)
+			};
+		}
+
 
 		XMStoreFloat3(&m_velocity[i], XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
 	}
@@ -233,6 +254,7 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset)
 	m_simParamsData.gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	m_simParamsData.gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
+	m_simParamsData.radius = m_radius;
 
 	m_simParamsData.currentTime += m_simParamsData.deltaTime;
 
@@ -560,15 +582,12 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 	commandList->SetPipelineState(Graphics::sphPSO.Get());
 
-	//SetUAVBarrier(commandList, m_structuredBuffer[m_positionIndex]); // ParticleA : UAV -> SRV
-	//SetBarrier(commandList, m_structuredBuffer[m_particleAIndex],
-	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
 	ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
+
 	commandList->SetGraphicsRootDescriptorTable(0, m_structuredBufferSrvGpuHandle[m_positionIndex]); // SRV 0
 	commandList->SetGraphicsRootConstantBufferView(1, globalConstsUploadHeap->GetGPUVirtualAddress()); // CBV
+	commandList->SetGraphicsRootConstantBufferView(2, m_simParamsConstantBuffer->GetGPUVirtualAddress()); // CBV
 
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	commandList->DrawInstanced(m_numParticles, 1, 0, 0);
