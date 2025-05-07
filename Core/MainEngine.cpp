@@ -578,6 +578,62 @@ void MainEngine::UpdateGUI()
 						return ImGui::DragFloat("##BoundaryDamping", &m_sphSimCustom->m_simParamsData.boundaryDamping, dragValue, minValue, maxValue, "%.3f");
 						});
 
+					flag += DrawTableRow("Particle", [&]() {
+						return ImGui::Checkbox("##Particle", &m_sphSimCustom->m_particleRender);
+						});
+					if (m_sphSimCustom->m_particleRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_particleRenderSRVIndex;
+
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
+
+					flag += DrawTableRow("ParticleDepth", [&]() {
+						return ImGui::Checkbox("##ParticleDepth", &m_sphSimCustom->m_particleDepthRender);
+						});
+					if (m_sphSimCustom->m_particleDepthRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_particleDepthOutputSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
+
+					flag += DrawTableRow("SmoothingDepth", [&]() {
+						return ImGui::Checkbox("##SmoothingDepth", &m_sphSimCustom->m_smoothingDepthRender);
+						});
+					if (m_sphSimCustom->m_smoothingDepthRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_smoothedDepthSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
+					flag += DrawTableRow("FilterRadius", [&]() {
+						return ImGui::DragInt("##FilterRadius", &m_sphSimCustom->m_renderParamsData.filterRadius, 0.1f, minValue, maxValue);
+						});
+					flag += DrawTableRow("SigmaSpatial", [&]() {
+						return ImGui::DragFloat("##SigmaSpatial", &m_sphSimCustom->m_renderParamsData.sigmaSpatial, 0.1f, minValue, maxValue, "%.1f");
+						});
+					flag += DrawTableRow("SigmaDepth", [&]() {
+						return ImGui::DragInt("##SigmaDepth", &m_sphSimCustom->m_renderParamsData.sigmaDepth, 0.1f, minValue, maxValue);
+						});
+
+					flag += DrawTableRow("LastScene", [&]() {
+						return ImGui::Checkbox("##LastScene", &m_sphSimCustom->m_finalSceneRender);
+						});
+					if (m_sphSimCustom->m_finalSceneRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_sceneSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+					}
 					ImGui::EndTable();
 				}
 
@@ -598,8 +654,7 @@ void MainEngine::UpdateGUI()
 
 		ImVec2 availSize = ImGui::GetContentRegionAvail();
 
-		//CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize* m_pCurrFR->m_sceneRTVBufferIndex);
-		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_sphSimCustom->m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize * m_sphSimCustom->m_sceneSRVIndex);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_sphSimCustom->m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvSize * m_sphSimCustom->m_finalSRVIndex);
 		ImGui::Image((ImTextureID)srvHandle.ptr, availSize);
 
 		ImGui::EndChild();

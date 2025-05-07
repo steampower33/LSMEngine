@@ -60,7 +60,7 @@ public:
 		float nearPressureCoeff = 15.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 0.7f;
+		float mass = 0.8f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -71,7 +71,15 @@ public:
 		float p3;
 	};
 
+	// Render Param
+	__declspec(align(256)) struct RenderParams {
+		int filterRadius = 10;
+		float sigmaSpatial = 5.0f;
+		int sigmaDepth = 1.0f;
+	};
+
 	SimParams m_simParamsData;
+	RenderParams m_renderParamsData;
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
@@ -99,26 +107,40 @@ public:
 
 	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float width, float height);
 
-	UINT m_renderSRVCnt = 3;
-	UINT m_rednerUAVCnt = 1;
-	UINT m_renderHeapCnt = m_renderSRVCnt + m_rednerUAVCnt + Graphics::imguiTextureSize;
+	UINT m_renderSRVCnt = 4;
+	UINT m_rednerUAVCnt = 2;
+	UINT m_rednerCBVCnt = 1;
+	UINT m_renderHeapCnt = m_renderSRVCnt + m_rednerUAVCnt + m_rednerCBVCnt + Graphics::imguiTextureSize;
 	
 	ComPtr<ID3D12DescriptorHeap> m_renderHeap;
 
 	ComPtr<ID3D12Resource> m_particleRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleRTVHeap;
-	UINT m_fluidRenderSRVIndex = 0;
-	ComPtr<ID3D12Resource> m_particleDepthOutputTexture;
+	UINT m_particleRenderSRVIndex = 0;
+	ComPtr<ID3D12Resource> m_particleDSVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_particleDSVHeap;
+
+	ComPtr<ID3D12Resource> m_particleDepthOutputBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
 	UINT m_particleDepthOutputSRVIndex = 1;
-	ComPtr<ID3D12Resource> m_particleDSVBuffer;
-	ComPtr<ID3D12DescriptorHeap> m_fluidDSVHeap;
-	UINT m_particleDepthSRVIndex = 2;
-	
+
+	ComPtr<ID3D12Resource> m_smoothedDepthBuffer;
+	UINT m_smoothedDepthSRVIndex = 2;
+	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt;
+
 	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
 	UINT m_sceneSRVIndex = 3;
-	UINT m_sceneUAVIndex = m_renderSRVCnt;
+	UINT m_sceneUAVIndex = m_renderSRVCnt + 1;
+
+	UINT m_finalSRVIndex = m_smoothedDepthSRVIndex;
+
+	UINT m_renderCBVIndex = m_renderSRVCnt + m_rednerUAVCnt;
+
+	bool m_particleRender = false;
+	bool m_particleDepthRender = false;
+	bool m_smoothingDepthRender = false;
+	bool m_finalSceneRender = true;
 
 private:
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
@@ -149,6 +171,12 @@ private:
 	UINT m_simParamsConstantBufferSize = (sizeof(SimParams) + 255) & ~255;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_simParamsCbvCpuHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_simParamsCbvGpuHandle;
+
+	ComPtr<ID3D12Resource> m_renderParamsConstantBuffer;
+	UINT8* m_renderParamsConstantBufferDataBegin = nullptr;
+	UINT m_renderParamsConstantBufferSize = (sizeof(RenderParams) + 255) & ~255;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_renderParamsCbvCpuHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_renderParamsCbvGpuHandle;
 
 	UINT m_positionIndex = 0;
 	UINT m_predictedPositionIndex = 1;

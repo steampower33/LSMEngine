@@ -72,6 +72,6 @@ PS_OUTPUT main(PSInput input)
 	PS_OUTPUT output;
 
 	output.color = float4(color, 1.0);
-	output.customDepth = input.clipPos.z / input.clipPos.w;
+	output.customDepth = 1.0 - input.clipPos.z / input.clipPos.w;
 	return output;
 }
