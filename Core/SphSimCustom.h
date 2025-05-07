@@ -56,26 +56,29 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 40.0f;
-		float nearPressureCoeff = 15.0f;
+		float pressureCoeff = 90.0f;
+		float nearPressureCoeff = 10.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 0.8f;
+		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
 		
 		float gravityCoeff = 1.0f;
-		float duration = 1.0f;
+		float duration = 1.5f;
 		float startTime;
 		float p3;
 	};
 
 	// Render Param
 	__declspec(align(256)) struct RenderParams {
-		int filterRadius = 10;
-		float sigmaSpatial = 5.0f;
-		int sigmaDepth = 1.0f;
+		int filterRadius = 16;
+		float sigmaSpatial = 8.0f;
+		float sigmaDepth = 0.05f;
+		UINT width;
+
+		UINT height;
 	};
 
 	SimParams m_simParamsData;
@@ -84,9 +87,9 @@ public:
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 4.0f;
+	float m_maxBoundsX = 5.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 4.0f;
+	float m_maxBoundsZ = 3.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
@@ -105,12 +108,12 @@ public:
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
-	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float width, float height);
+	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height);
 
-	UINT m_renderSRVCnt = 4;
-	UINT m_rednerUAVCnt = 2;
-	UINT m_rednerCBVCnt = 1;
-	UINT m_renderHeapCnt = m_renderSRVCnt + m_rednerUAVCnt + m_rednerCBVCnt + Graphics::imguiTextureSize;
+	UINT m_renderSRVCnt = 5;
+	UINT m_renderUAVCnt = 3;
+	UINT m_renderCBVCnt = 1;
+	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
 	
 	ComPtr<ID3D12DescriptorHeap> m_renderHeap;
 
@@ -128,18 +131,23 @@ public:
 	UINT m_smoothedDepthSRVIndex = 2;
 	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt;
 
+	ComPtr<ID3D12Resource> m_normalBuffer;
+	UINT m_normalSRVIndex = 3;
+	UINT m_normalUAVIndex = m_renderSRVCnt + 1;
+
 	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
-	UINT m_sceneSRVIndex = 3;
-	UINT m_sceneUAVIndex = m_renderSRVCnt + 1;
+	UINT m_sceneSRVIndex = 4;
+	UINT m_sceneUAVIndex = m_renderSRVCnt + 2;
 
 	UINT m_finalSRVIndex = m_smoothedDepthSRVIndex;
 
-	UINT m_renderCBVIndex = m_renderSRVCnt + m_rednerUAVCnt;
+	UINT m_renderCBVIndex = m_renderSRVCnt + m_renderUAVCnt;
 
 	bool m_particleRender = false;
 	bool m_particleDepthRender = false;
 	bool m_smoothingDepthRender = false;
+	bool m_normalRender = false;
 	bool m_finalSceneRender = true;
 
 private:

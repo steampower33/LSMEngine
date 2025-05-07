@@ -1,70 +1,88 @@
 
-Texture2D<float> DepthTexture : register(t1);
+#define GROUP_SIZE_X 16
+#define GROUP_SIZE_Y 16
+#define MAX_RADIUS 16
 
-RWTexture2D<float> SmoothingDepthTexture : register(u0);
+static const uint TILE_W = GROUP_SIZE_X + 2 * MAX_RADIUS;
+static const uint TILE_H = GROUP_SIZE_Y + 2 * MAX_RADIUS;
 
-cbuffer RenderParams : register(b0) {
-    int filterRadius;
+Texture2D<float> DepthTexture   : register(t1);
+
+RWTexture2D<float> SmoothingDepth : register(u0);
+RWTexture2D<float4> SceneTexture : register(u2);
+
+cbuffer RenderParams : register(b0)
+{
+    int   filterRadius;
     float sigmaSpatial;
-    int sigmaDepth;
+    float sigmaDepth;
+    uint  width;
+
+    uint  height;
 };
 
-[numthreads(16, 16, 1)]
-void main(uint tid : SV_GroupThreadID,
-	uint3 gtid : SV_DispatchThreadID,
-	uint groupIdx : SV_GroupID)
+groupshared float sharedDepth[TILE_H][TILE_W];
+
+[numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
+void main(uint3 gid : SV_GroupID,
+    uint3 gtid : SV_GroupThreadID,
+    uint3 dtid : SV_DispatchThreadID)
 {
-	uint width, height;
-	SmoothingDepthTexture.GetDimensions(width, height);
+    int2 center = int2(dtid.xy);
+    bool isValid = (center.x < int(width) && center.y < int(height));
 
-	uint2 centerCoord = gtid.xy;
+    int2 tileOrigin = int2(int(gid.x) * GROUP_SIZE_X,
+        int(gid.y) * GROUP_SIZE_Y)
+        - int2(filterRadius, filterRadius);
 
-	if (centerCoord.x >= width || centerCoord.y >= height)
-		return;
-
-	float centerDepth = DepthTexture.Load(int3(centerCoord, 0));
-
-	float totalWeightedDepth = 0.0f;
-	float totalWeight = 0.0f;
-    // 주변 픽셀 순회 (사각형 영역)
-    for (int y = -filterRadius; y <= filterRadius; ++y)
+    for (uint y = gtid.y; y < TILE_H; y += GROUP_SIZE_Y)
     {
-        for (int x = -filterRadius; x <= filterRadius; ++x)
+        for (uint x = gtid.x; x < TILE_W; x += GROUP_SIZE_X)
         {
-            int2 neighborCoord = int2(centerCoord)+int2(x, y);
+            int2 pos = tileOrigin + int2(x, y);
 
-            // 텍스처 범위 체크
-            if (neighborCoord.x < 0 || neighborCoord.x >= width || neighborCoord.y < 0 || neighborCoord.y >= height)
+            // 범위 밖이면 far(1.0)로 채우기
+            if (pos.x < 0 || pos.x >= int(width) ||
+                pos.y < 0 || pos.y >= int(height))
             {
-                continue;
+                sharedDepth[y][x] = 1.0f;
             }
-
-            // 이웃 깊이 값 로드
-            float neighborDepth = DepthTexture.Load(int3(neighborCoord, 0));
-
-            // 공간 가중치 계산
-            float distSq = float(x * x + y * y);
-            float weightSpatial = exp(-distSq / (2.0f * sigmaSpatial * sigmaSpatial));
-
-            // 깊이 가중치 계산
-            float depthDiff = centerDepth - neighborDepth;
-            float weightDepth = exp(-(depthDiff * depthDiff) / (2.0f * sigmaDepth * sigmaDepth));
-
-            // 최종 가중치
-            float finalWeight = weightSpatial * weightDepth;
-
-            totalWeightedDepth += neighborDepth * finalWeight;
-            totalWeight += finalWeight;
+            else
+            {
+                sharedDepth[y][x] = DepthTexture.Load(int3(pos, 0));
+            }
         }
     }
 
-    // 최종 값 계산 (0으로 나누기 방지)
-    float smoothedDepth = centerDepth; // 기본값은 원본 깊이
-    if (totalWeight > 1e-6f) // 임계값보다 클 때만 계산
+    GroupMemoryBarrierWithGroupSync();
+
+    float centerD = sharedDepth[gtid.y + filterRadius]
+        [gtid.x + filterRadius];
+    float sumD = 0.0f;
+    float sumW = 0.0f;
+    for (int oy = -filterRadius; oy <= filterRadius; oy++)
     {
-        smoothedDepth = totalWeightedDepth / totalWeight;
+        for (int ox = -filterRadius; ox <= filterRadius; ox++)
+        {
+            float neighD = sharedDepth[gtid.y + filterRadius + oy]
+                [gtid.x + filterRadius + ox];
+            float dist2 = float(ox * ox + oy * oy);
+            float wS = exp(-dist2 / (2.0f * sigmaSpatial * sigmaSpatial));
+            float diff = centerD - neighD;
+            float wD = exp(-(diff * diff) / (2.0f * sigmaDepth * sigmaDepth));
+            float w = wS * wD;
+            sumD += neighD * w;
+            sumW += w;
+        }
     }
 
-    // 결과 쓰기
-    SmoothingDepthTexture[centerCoord] = smoothedDepth;
+    float outD = (sumW > 1e-6f) ? sumD / sumW : centerD;
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if (isValid)
+    {
+        SmoothingDepth[center] = outD;
+        SceneTexture[center] = float4(outD, outD, outD, 1);
+    }
 }

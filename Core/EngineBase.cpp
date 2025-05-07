@@ -69,7 +69,7 @@ void EngineBase::LoadPipeline()
 	}
 
 	m_sphSimCustom = make_shared<SphSimCustom>();
-	m_sphSimCustom->InitializeDesciptorHeaps(m_device, m_sceneSize.x, m_sceneSize.y);
+	m_sphSimCustom->InitializeDesciptorHeaps(m_device, static_cast<UINT>(m_sceneSize.x), static_cast<UINT>(m_sceneSize.y));
 	m_srvAlloc.Create(m_device.Get(), m_sphSimCustom->m_renderHeap.Get());
 }
 

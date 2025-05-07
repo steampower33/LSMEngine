@@ -579,6 +579,7 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
+	// Particle, Depth
 	{
 		SetBarrier(commandList, m_particleRTVBuffer,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
@@ -621,11 +622,8 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 
+	// Smoothing Depth
 	{
-		SetBarrier(commandList, m_particleDepthOutputBuffer,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
 		SetBarrier(commandList, m_smoothedDepthBuffer,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -648,15 +646,14 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 		commandList->Dispatch(dispatchX, dispatchY, 1);
 
+		SetUAVBarrier(commandList, m_sceneRTVBuffer);
+
 		SetUAVBarrier(commandList, m_smoothedDepthBuffer);
 		SetBarrier(commandList, m_smoothedDepthBuffer,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-		SetBarrier(commandList, m_particleDepthOutputBuffer,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_RENDER_TARGET);
 	}
+
 }
 
 void SphSimCustom::CreateStructuredBufferWithViews(
@@ -774,6 +771,9 @@ void SphSimCustom::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 
 	// SimRenderParams
 	{
+		m_renderParamsData.width = m_width;
+		m_renderParamsData.height = m_height;
+
 		CreateConstUploadBuffer(device, m_renderParamsConstantBuffer, m_renderParamsData, m_renderParamsConstantBufferDataBegin);
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
@@ -788,7 +788,7 @@ void SphSimCustom::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 	}
 }
 
-void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float width, float height)
+void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height)
 {
 	m_rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	m_cbvSrvUavSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -861,6 +861,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 		device->CreateDepthStencilView(m_particleDSVBuffer.Get(), &dsvDesc, m_particleDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
 	}
 
 	// Particle Depth Output Buffer (R32_FLOAT for custom depth)
@@ -875,8 +876,8 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 		auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		auto texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 			DXGI_FORMAT_R32_FLOAT,
-			static_cast<UINT>(width),
-			static_cast<UINT>(height),
+			width,
+			height,
 			1,
 			1,
 			1,
@@ -895,7 +896,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 			&heapProps,
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&clearValue,
 			IID_PPV_ARGS(&m_particleDepthOutputBuffer)
 		));
@@ -921,7 +922,6 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 		srvDesc.Texture2D.MipLevels = 1;
 		device->CreateShaderResourceView(m_particleDepthOutputBuffer.Get(), &srvDesc, srvHandle);
 	}
-
 
 	// Smoothed Depth Buffer
 	{
@@ -974,6 +974,58 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 			nullptr, &textureUavDesc, uavHandle);
 	}
 
+
+	// Normal Buffer
+	{
+		auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+		auto texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R8G8B8A8_UNORM,     // 텍스처 포맷
+			width,                          // 화면 너비
+			height,                         // 화면 높이
+			1,                              // arraySize
+			1,                              // mipLevels
+			1,                              // sampleCount
+			0,                              // sampleQuality
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS | D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+		);
+
+		D3D12_CLEAR_VALUE clearValue = {};
+		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearValue.Color[0] = 1.0f;
+
+		ThrowIfFailed(device->CreateCommittedResource(
+			&heapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&texDesc,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			&clearValue,
+			IID_PPV_ARGS(&m_normalBuffer)
+		));
+		m_normalBuffer->SetName(L"m_normalBuffer");
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_normalSRVIndex);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		device->CreateShaderResourceView(m_normalBuffer.Get(), &srvDesc, srvHandle);
+
+		// UAV 버퍼 설정
+		CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_normalUAVIndex);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC textureUavDesc = {};
+		textureUavDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureUavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		textureUavDesc.Texture2D.MipSlice = 0;
+
+		device->CreateUnorderedAccessView(
+			m_normalBuffer.Get(),
+			nullptr, &textureUavDesc, uavHandle);
+	}
+
 	// Scene Buffer
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -1007,7 +1059,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, float 
 			&heapProps,
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			&clearValue,
 			IID_PPV_ARGS(&m_sceneRTVBuffer)
 		));

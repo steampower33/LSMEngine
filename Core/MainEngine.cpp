@@ -22,9 +22,9 @@ void MainEngine::Initialize()
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
 	// SphSimPDF
-	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, m_width, m_height);
+	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, static_cast<UINT>(m_sceneSize.x), static_cast<UINT>(m_sceneSize.y));
 	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY * 0.5f;
-	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY);
+	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY) * 1.5f;
 
 	m_camera->m_pitch = 0.3f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
@@ -587,6 +587,7 @@ void MainEngine::UpdateGUI()
 
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
@@ -599,6 +600,7 @@ void MainEngine::UpdateGUI()
 
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
@@ -611,17 +613,31 @@ void MainEngine::UpdateGUI()
 
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 					flag += DrawTableRow("FilterRadius", [&]() {
-						return ImGui::DragInt("##FilterRadius", &m_sphSimCustom->m_renderParamsData.filterRadius, 0.1f, minValue, maxValue);
+						return ImGui::DragInt("##FilterRadius", &m_sphSimCustom->m_renderParamsData.filterRadius, 1, 0, 16);
 						});
 					flag += DrawTableRow("SigmaSpatial", [&]() {
 						return ImGui::DragFloat("##SigmaSpatial", &m_sphSimCustom->m_renderParamsData.sigmaSpatial, 0.1f, minValue, maxValue, "%.1f");
 						});
 					flag += DrawTableRow("SigmaDepth", [&]() {
-						return ImGui::DragInt("##SigmaDepth", &m_sphSimCustom->m_renderParamsData.sigmaDepth, 0.1f, minValue, maxValue);
+						return ImGui::DragFloat("##SigmaDepth", &m_sphSimCustom->m_renderParamsData.sigmaDepth, 0.01f, 0.0f, 10.0f);
 						});
+
+					flag += DrawTableRow("Normal", [&]() {
+						return ImGui::Checkbox("##Normal", &m_sphSimCustom->m_normalRender);
+						});
+					if (m_sphSimCustom->m_normalRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_normalSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
 
 					flag += DrawTableRow("LastScene", [&]() {
 						return ImGui::Checkbox("##LastScene", &m_sphSimCustom->m_finalSceneRender);
@@ -633,7 +649,9 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
 					}
+
 					ImGui::EndTable();
 				}
 
