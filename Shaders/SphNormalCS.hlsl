@@ -1,7 +1,7 @@
 #define GROUP_SIZE_X 16
 #define GROUP_SIZE_Y 16
 
-Texture2D<float> SmoothedDepth : register(t2);
+Texture2D<float> SmoothedDepth : register(t3);
 
 RWTexture2D<float4> NormalTexture : register(u1);
 //RWTexture2D<float4> SceneTexture : register(u2);

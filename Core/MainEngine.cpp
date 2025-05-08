@@ -596,7 +596,7 @@ void MainEngine::UpdateGUI()
 						});
 					if (m_sphSimCustom->m_particleDepthRender)
 					{
-						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_particleDepthSRVIndex;
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_particleDepthOutputSRVIndex;
 
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;

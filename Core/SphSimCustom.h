@@ -116,7 +116,7 @@ public:
 
 	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height);
 
-	UINT m_renderSRVCnt = 5;
+	UINT m_renderSRVCnt = 6;
 	UINT m_renderUAVCnt = 3;
 	UINT m_renderCBVCnt = 1;
 	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
@@ -132,19 +132,19 @@ public:
 
 	ComPtr<ID3D12Resource> m_particleDepthOutputBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
-	UINT m_particleDepthOutputSRVIndex = -1;
+	UINT m_particleDepthOutputSRVIndex = 2;
 
 	ComPtr<ID3D12Resource> m_smoothedDepthBuffer;
-	UINT m_smoothedDepthSRVIndex = 2;
+	UINT m_smoothedDepthSRVIndex = 3;
 	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt;
 
 	ComPtr<ID3D12Resource> m_normalBuffer;
-	UINT m_normalSRVIndex = 3;
+	UINT m_normalSRVIndex = 4;
 	UINT m_normalUAVIndex = m_renderSRVCnt + 1;
 
 	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
-	UINT m_sceneSRVIndex = 4;
+	UINT m_sceneSRVIndex = 5;
 	UINT m_sceneUAVIndex = m_renderSRVCnt + 2;
 
 	UINT m_finalSRVIndex = m_sceneUAVIndex;
