@@ -42,36 +42,36 @@ float3 LinearToneMapping(float3 color)
 struct PSInput
 {
 	float4 clipPos : SV_POSITION;
-	float2 texCoord : TEXCOORD;
+	float2 texCoord : TEXCOORD0;
+	float3 viewCenter : TEXCOORD1;
 	float radius : PSIZE1;
 	uint primID : SV_PrimitiveID;
 };
 
-struct PS_OUTPUT
+struct PSOutput
 {
 	float4 color : SV_Target0;
-	float customDepth : SV_Target1;
+	//float customDepth : SV_Target1;
+	float depth : SV_Depth;
 };
 
-PS_OUTPUT main(PSInput input)
+PSOutput main(PSInput input)
 {
-	float2 offset = (float2(0.5, 0.5) - input.texCoord) * 2.0;
-	float sqrDst = dot(offset, offset);
+	PSOutput o;
 
-	if (sqrDst > 1) discard;
+	float2 ofs = input.texCoord * 2 - 1;
+	if (dot(ofs, ofs) > 1) discard;
 
-	float3 normal = normalize(float3(offset.x, offset.y, sqrt(1 - sqrDst)));
-	
-	float3 lightDir = normalize(float3(0, 0, 1));
-	float  NdotL = saturate(dot(normal, lightDir));
-	float3 color = float3(1.0, 1.0, 1.0) * NdotL;
+	float3 N = float3(ofs, -sqrt(1 - dot(ofs, ofs)));
+	float3 viewPos = input.viewCenter + N * input.radius;
 
-	//return float4(LinearToneMapping(color), 1);
-	//return float4(color, 1);
+	// 3) Z (원근 방향 거리) → 정규화
+	float linearZ = viewPos.z;
+	float dNorm = saturate((linearZ - 0.1) / (1000.0 - 0.1));
 
-	PS_OUTPUT output;
+	// 4) 깊이 & 컬러
+	o.depth = dNorm;                  // SV_Depth
+	o.color = float4(dNorm, dNorm, dNorm, 1);
+	return o;
 
-	output.color = float4(color, 1.0);
-	output.customDepth = 1.0 - input.clipPos.z / input.clipPos.w;
-	return output;
 }

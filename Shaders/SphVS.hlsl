@@ -64,7 +64,7 @@ cbuffer SimParams : register(b1) {
 struct GSInput
 {
     float4 viewPos : SV_POSITION;
-    float radius : PSIZE1;
+    float radius : PSIZE0;
 };
 
 StructuredBuffer<float3> Positions : register(t0);

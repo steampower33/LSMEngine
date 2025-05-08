@@ -249,7 +249,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset)
+void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -274,6 +274,10 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset)
 	}
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
+
+	XMMATRIX proj = camera->GetProjectionMatrix();
+	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
+	XMStoreFloat4x4(&m_renderParamsData.invProj, XMMatrixTranspose(invProj));
 
 	memcpy(m_renderParamsConstantBufferDataBegin, &m_renderParamsData, sizeof(m_renderParamsData));
 }
@@ -579,8 +583,13 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	ComPtr<ID3D12Resource>& globalConstsUploadHeap)
 {
-	// Particle, Depth
+	// Particle, Depth Render
 	{
+		
+		SetBarrier(commandList, m_particleDSVBuffer,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
 		SetBarrier(commandList, m_particleRTVBuffer,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -588,17 +597,17 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 		commandList->SetPipelineState(Graphics::sphPSO.Get());
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandles[1];
 		rtvHandles[0] = m_particleRTVHeap->GetCPUDescriptorHandleForHeapStart();
-		rtvHandles[1] = m_particleDepthOutputRTVHeap->GetCPUDescriptorHandleForHeapStart();
+		//rtvHandles[1] = m_particleDepthOutputRTVHeap->GetCPUDescriptorHandleForHeapStart();
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_particleDSVHeap->GetCPUDescriptorHandleForHeapStart());
-		commandList->OMSetRenderTargets(2, rtvHandles, FALSE, &dsvHandle);
+		commandList->OMSetRenderTargets(1, rtvHandles, FALSE, &dsvHandle);
 
 		const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		commandList->ClearRenderTargetView(rtvHandles[0], color, 0, nullptr);
 
-		const float depthClearValue[] = { 1.0f, 0.0, 0.0, 0.0f };
-		commandList->ClearRenderTargetView(rtvHandles[1], depthClearValue, 0, nullptr);
+		//const float depthClearValue[] = { 1.0f, 0.0f, 0.0f, 0.0f };
+		//commandList->ClearRenderTargetView(rtvHandles[1], depthClearValue, 0, nullptr);
 
 		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
@@ -620,16 +629,15 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		SetBarrier(commandList, m_particleRTVBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		SetBarrier(commandList, m_particleDSVBuffer,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 
-	// Smoothing Depth
+	// SSFR
 	{
-		SetBarrier(commandList, m_smoothedDepthBuffer,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
 		commandList->SetComputeRootSignature(Graphics::sphSSFRSignature.Get());
-		commandList->SetPipelineState(Graphics::sphSmoothingCSPSO.Get());
 
 		ID3D12DescriptorHeap* ppHeap[] = { m_renderHeap.Get() };
 		commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
@@ -644,16 +652,31 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		UINT dispatchX = (m_width + 15) / 16;
 		UINT dispatchY = (m_height + 15) / 16;
 
+		// Smoothing
+		commandList->SetPipelineState(Graphics::sphSmoothingCSPSO.Get());
+
+		SetBarrier(commandList, m_smoothedDepthBuffer,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 		commandList->Dispatch(dispatchX, dispatchY, 1);
 
 		SetUAVBarrier(commandList, m_sceneRTVBuffer);
+
+		//SetBarrier(commandList, m_particleDepthOutputBuffer,
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		//	D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		SetUAVBarrier(commandList, m_smoothedDepthBuffer);
 		SetBarrier(commandList, m_smoothedDepthBuffer,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	}
 
+		// Normal
+		commandList->SetPipelineState(Graphics::sphNormalCSPSO.Get());
+
+		commandList->Dispatch(dispatchX, dispatchY, 1);
+	}
 }
 
 void SphSimCustom::CreateStructuredBufferWithViews(
@@ -772,7 +795,9 @@ void SphSimCustom::CreateConstantBuffer(ComPtr<ID3D12Device> device)
 	// SimRenderParams
 	{
 		m_renderParamsData.width = m_width;
+		m_renderParamsData.invWidth = 1 / static_cast<float>(m_width);
 		m_renderParamsData.height = m_height;
+		m_renderParamsData.invHeight = 1 / static_cast<float>(m_height);
 
 		CreateConstUploadBuffer(device, m_renderParamsConstantBuffer, m_renderParamsData, m_renderParamsConstantBufferDataBegin);
 
@@ -848,7 +873,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 			&defaultHeapProps,
 			D3D12_HEAP_FLAG_NONE,
 			&depthStencilDesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			&clearValue,
 			IID_PPV_ARGS(&m_particleDSVBuffer)
 		));
@@ -862,57 +887,9 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 		device->CreateDepthStencilView(m_particleDSVBuffer.Get(), &dsvDesc, m_particleDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
-	}
-
-	// Particle Depth Output Buffer (R32_FLOAT for custom depth)
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = 1;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_particleDepthOutputRTVHeap)));
-		m_particleDepthOutputRTVHeap->SetName(L"m_particleDepthOutputRTVHeap");
-
-		auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		auto texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_R32_FLOAT,
-			width,
-			height,
-			1,
-			1,
-			1,
-			0,
-			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-		);
-
-		D3D12_CLEAR_VALUE clearValue = {};
-		clearValue.Format = DXGI_FORMAT_R32_FLOAT;
-		clearValue.Color[0] = 1.0f;
-		clearValue.Color[1] = 0.0f;
-		clearValue.Color[2] = 0.0f;
-		clearValue.Color[3] = 0.0f;
-
-		ThrowIfFailed(device->CreateCommittedResource(
-			&heapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&texDesc,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			&clearValue,
-			IID_PPV_ARGS(&m_particleDepthOutputBuffer)
-		));
-		m_particleDepthOutputBuffer->SetName(L"m_particleDepthOutputBuffer");
-
-		// RTV 积己
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_particleDepthOutputRTVHeap->GetCPUDescriptorHandleForHeapStart());
-		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rtvDesc.Texture2D.MipSlice = 0;
-		device->CreateRenderTargetView(m_particleDepthOutputBuffer.Get(), &rtvDesc, rtvHandle);
-
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
 			m_renderHeap->GetCPUDescriptorHandleForHeapStart(),
-			m_cbvSrvUavSize * m_particleDepthOutputSRVIndex
+			m_cbvSrvUavSize * m_particleDepthSRVIndex
 		);
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -920,8 +897,67 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
-		device->CreateShaderResourceView(m_particleDepthOutputBuffer.Get(), &srvDesc, srvHandle);
+		device->CreateShaderResourceView(m_particleDSVBuffer.Get(), &srvDesc, srvHandle);
 	}
+
+	//// Particle Depth Output Buffer (R32_FLOAT for custom depth)
+	//{
+	//	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+	//	rtvHeapDesc.NumDescriptors = 1;
+	//	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	//	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	//	ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_particleDepthOutputRTVHeap)));
+	//	m_particleDepthOutputRTVHeap->SetName(L"m_particleDepthOutputRTVHeap");
+
+	//	auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	//	auto texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+	//		DXGI_FORMAT_R32_FLOAT,
+	//		width,
+	//		height,
+	//		1,
+	//		1,
+	//		1,
+	//		0,
+	//		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+	//	);
+
+	//	D3D12_CLEAR_VALUE clearValue = {};
+	//	clearValue.Format = DXGI_FORMAT_R32_FLOAT;
+	//	clearValue.Color[0] = 1.0f;
+	//	clearValue.Color[1] = 0.0f;
+	//	clearValue.Color[2] = 0.0f;
+	//	clearValue.Color[3] = 0.0f;
+
+	//	ThrowIfFailed(device->CreateCommittedResource(
+	//		&heapProps,
+	//		D3D12_HEAP_FLAG_NONE,
+	//		&texDesc,
+	//		D3D12_RESOURCE_STATE_RENDER_TARGET,
+	//		&clearValue,
+	//		IID_PPV_ARGS(&m_particleDepthOutputBuffer)
+	//	));
+	//	m_particleDepthOutputBuffer->SetName(L"m_particleDepthOutputBuffer");
+
+	//	// RTV 积己
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_particleDepthOutputRTVHeap->GetCPUDescriptorHandleForHeapStart());
+	//	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	//	rtvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	//	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	//	rtvDesc.Texture2D.MipSlice = 0;
+	//	device->CreateRenderTargetView(m_particleDepthOutputBuffer.Get(), nullptr, rtvHandle);
+
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
+	//		m_renderHeap->GetCPUDescriptorHandleForHeapStart(),
+	//		m_cbvSrvUavSize * m_particleDepthOutputSRVIndex
+	//	);
+
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	//	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	//	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//	srvDesc.Texture2D.MipLevels = 1;
+	//	device->CreateShaderResourceView(m_particleDepthOutputBuffer.Get(), &srvDesc, srvHandle);
+	//}
 
 	// Smoothed Depth Buffer
 	{
@@ -952,7 +988,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		));
 		m_smoothedDepthBuffer->SetName(L"m_smoothedDepthBuffer");
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_smoothedDepthSRVIndex);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize* m_smoothedDepthSRVIndex);
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -962,7 +998,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		device->CreateShaderResourceView(m_smoothedDepthBuffer.Get(), &srvDesc, srvHandle);
 
 		// UAV 滚欺 汲沥
-		CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_smoothedDepthUAVIndex);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize* m_smoothedDepthUAVIndex);
 
 		D3D12_UNORDERED_ACCESS_VIEW_DESC textureUavDesc = {};
 		textureUavDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -992,7 +1028,10 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 		D3D12_CLEAR_VALUE clearValue = {};
 		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		clearValue.Color[0] = 1.0f;
+		clearValue.Color[0] = 0.0f;
+		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;
+		clearValue.Color[3] = 0.0f;
 
 		ThrowIfFailed(device->CreateCommittedResource(
 			&heapProps,

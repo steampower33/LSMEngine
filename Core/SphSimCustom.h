@@ -10,6 +10,7 @@
 #include "Helpers.h"
 #include "ConstantBuffers.h"
 #include "GraphicsCommon.h"
+#include "Camera.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -75,10 +76,15 @@ public:
 	__declspec(align(256)) struct RenderParams {
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
-		float sigmaDepth = 0.05f;
-		UINT width;
+		float sigmaDepth = 0.1f;
+		float p;
 
+		UINT width;
+		float invWidth;
 		UINT height;
+		float invHeight;
+
+		XMFLOAT4X4 invProj;
 	};
 
 	SimParams m_simParamsData;
@@ -103,7 +109,7 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
-	void Update(float dt, UINT& forceKey, UINT& reset);
+	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
@@ -122,10 +128,11 @@ public:
 	UINT m_particleRenderSRVIndex = 0;
 	ComPtr<ID3D12Resource> m_particleDSVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDSVHeap;
+	UINT m_particleDepthSRVIndex = 1;
 
 	ComPtr<ID3D12Resource> m_particleDepthOutputBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
-	UINT m_particleDepthOutputSRVIndex = 1;
+	UINT m_particleDepthOutputSRVIndex = -1;
 
 	ComPtr<ID3D12Resource> m_smoothedDepthBuffer;
 	UINT m_smoothedDepthSRVIndex = 2;
@@ -140,7 +147,7 @@ public:
 	UINT m_sceneSRVIndex = 4;
 	UINT m_sceneUAVIndex = m_renderSRVCnt + 2;
 
-	UINT m_finalSRVIndex = m_smoothedDepthSRVIndex;
+	UINT m_finalSRVIndex = m_sceneUAVIndex;
 
 	UINT m_renderCBVIndex = m_renderSRVCnt + m_renderUAVCnt;
 

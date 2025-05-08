@@ -32,15 +32,16 @@ cbuffer GlobalConstants : register(b0)
 struct GSInput
 {
     float4 viewPos : SV_POSITION;
-    float radius : PSIZE1;
+    float radius : PSIZE0;
 };
 
 struct PSInput
 {
-	float4 clipPos : SV_POSITION;
-	float2 texCoord : TEXCOORD;
-	float radius : PSIZE1;
-	uint primID : SV_PrimitiveID;
+    float4 clipPos : SV_POSITION;
+    float2 texCoord : TEXCOORD0;
+    float3 viewCenter : TEXCOORD1;
+    float radius : PSIZE1;
+    uint primID : SV_PrimitiveID;
 };
 
 [maxvertexcount(4)]
@@ -58,6 +59,7 @@ void main(point GSInput input[1], uint primID : SV_PrimitiveID,
 
     output.primID = primID;
     output.radius = input[0].radius;
+    output.viewCenter = viewCenter.xyz;
 
     // 뷰 공간에서 꼭짓점 계산 후, 프로젝션 변환하여 클립 공간 좌표 얻기
     float3 cornerViewPos;

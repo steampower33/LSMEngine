@@ -55,6 +55,9 @@ public:
 	float m_yaw = 0.0f;
 	float m_pitch = 0.0f;
 
+	float m_nearZ = 0.1f;
+	float m_farZ = 100.0f;
+
 private:
 	XMFLOAT3 m_lookDir{ 0.0f, 0.0f, 1.0f };
 	XMFLOAT3 m_upDir{ 0.0f, 1.0f, 0.0f };
@@ -72,7 +75,5 @@ private:
 	bool m_isKeyMove = false;
 
 	float m_projFovAngleY = 90.0f;
-	float m_nearZ = 0.01f;
-	float m_farZ = 100.0f;
 	float m_aspectRatio;
 };
