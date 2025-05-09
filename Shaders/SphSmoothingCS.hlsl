@@ -9,7 +9,7 @@ static const uint TILE_H = GROUP_SIZE_Y + 2 * MAX_RADIUS;
 Texture2D<float> DepthTexture : register(t2);
 
 RWTexture2D<float> SmoothedDepth : register(u0);
-RWTexture2D<float4> SceneTexture : register(u2);
+//RWTexture2D<float4> SceneTexture : register(u2);
 
 cbuffer RenderParams : register(b0)
 {
@@ -24,6 +24,10 @@ cbuffer RenderParams : register(b0)
     float invHeight;
     
     float4x4 invProj;
+    float4x4 invView;
+
+    float3 eyeWorld;
+    float p1;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];
@@ -88,6 +92,6 @@ void main(uint3 gid : SV_GroupID,
     if (isValid)
     {
         SmoothedDepth[center] = outD;
-        SceneTexture[center] = float4(outD, outD, outD, 1);
+        //SceneTexture[center] = float4(outD, outD, outD, 1);
     }
 }

@@ -56,7 +56,7 @@ public:
 	float m_pitch = 0.0f;
 
 	float m_nearZ = 0.1f;
-	float m_farZ = 20.0f;
+	float m_farZ = 100.0f;
 
 private:
 	XMFLOAT3 m_lookDir{ 0.0f, 0.0f, 1.0f };

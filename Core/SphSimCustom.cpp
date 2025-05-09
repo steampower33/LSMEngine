@@ -275,9 +275,15 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 
+	XMMATRIX view = camera->GetViewMatrix();
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
+	XMStoreFloat4x4(&m_renderParamsData.invView, XMMatrixTranspose(invView));
+
 	XMMATRIX proj = camera->GetProjectionMatrix();
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_renderParamsData.invProj, XMMatrixTranspose(invProj));
+
+	m_renderParamsData.eyeWorld = camera->GetEyePos();
 
 	memcpy(m_renderParamsConstantBufferDataBegin, &m_renderParamsData, sizeof(m_renderParamsData));
 }
@@ -586,9 +592,9 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 	// Particle, Depth Render
 	{
 		
-		//SetBarrier(commandList, m_particleDSVBuffer,
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		//	D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		SetBarrier(commandList, m_particleDSVBuffer,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		SetBarrier(commandList, m_particleRTVBuffer,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
@@ -633,6 +639,10 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		SetBarrier(commandList, m_particleDepthOutputBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		SetBarrier(commandList, m_particleDSVBuffer,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 
 	// SSFR
@@ -674,6 +684,11 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 		// Normal
 		commandList->SetPipelineState(Graphics::sphNormalCSPSO.Get());
+
+		commandList->Dispatch(dispatchX, dispatchY, 1);
+
+		// Scene
+		commandList->SetPipelineState(Graphics::sphSceneCSPSO.Get());
 
 		commandList->Dispatch(dispatchX, dispatchY, 1);
 	}
@@ -864,7 +879,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		depthStencilDesc.Height = static_cast<UINT>(height); // 화면 높이
 		depthStencilDesc.DepthOrArraySize = 1;
 		depthStencilDesc.MipLevels = 1;
-		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		depthStencilDesc.SampleDesc.Count = sampleCount;
 		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -944,7 +959,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		rtvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
-		device->CreateRenderTargetView(m_particleDepthOutputBuffer.Get(), nullptr, rtvHandle);
+		device->CreateRenderTargetView(m_particleDepthOutputBuffer.Get(), &rtvDesc, rtvHandle);
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(
 			m_renderHeap->GetCPUDescriptorHandleForHeapStart(),

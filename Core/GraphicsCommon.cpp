@@ -54,6 +54,7 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphPS;
 	ComPtr<IDxcBlob> sphSmoothingCS;
 	ComPtr<IDxcBlob> sphNormalCS;
+	ComPtr<IDxcBlob> sphSceneCS;
 
 	ComPtr<IDxcBlob> boundsBoxVS;
 	ComPtr<IDxcBlob> boundsBoxPS;
@@ -112,6 +113,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphPSO;
 	ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 	ComPtr<ID3D12PipelineState> sphNormalCSPSO;
+	ComPtr<ID3D12PipelineState> sphSceneCSPSO;
 
 	ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
@@ -434,6 +436,7 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphPS.hlsl", L"ps_6_0", sphPS);
 	CreateShader(device, L"SphSmoothingCS.hlsl", L"cs_6_0", sphSmoothingCS);
 	CreateShader(device, L"SphNormalCS.hlsl", L"cs_6_0", sphNormalCS);
+	CreateShader(device, L"SphSceneCS.hlsl", L"cs_6_0", sphSceneCS);
 
 	// BoundsBox
 	CreateShader(device, L"BoundsBoxVS.hlsl", L"vs_6_0", boundsBoxVS);
@@ -876,6 +879,12 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphNormalCSPSODesc.CS = { sphNormalCS->GetBufferPointer(), sphNormalCS->GetBufferSize() };
 	sphNormalCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphNormalCSPSODesc, IID_PPV_ARGS(&sphNormalCSPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSceneCSPSODesc = {};
+	sphSceneCSPSODesc.pRootSignature = sphSSFRSignature.Get();
+	sphSceneCSPSODesc.CS = { sphSceneCS->GetBufferPointer(), sphSceneCS->GetBufferSize() };
+	sphSceneCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphSceneCSPSODesc, IID_PPV_ARGS(&sphSceneCSPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC boundsBoxPSODesc = sphPSODesc;
 	boundsBoxPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;

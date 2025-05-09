@@ -31,7 +31,6 @@ void Camera::Update(float deltaX, float deltaY, float dt, bool& isMouseMove)
 
 		//LogCameraState();
 	}
-
 }
 
 void Camera::LogCameraState()

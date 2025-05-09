@@ -57,17 +57,17 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 90.0f;
-		float nearPressureCoeff = 10.0f;
+		float pressureCoeff = 80.0f;
+		float nearPressureCoeff = 5.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 1.0f;
+		float mass = 0.8f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
 		
 		float gravityCoeff = 1.0f;
-		float duration = 1.5f;
+		float duration = 1.0f;
 		float startTime;
 		float p3;
 	};
@@ -76,7 +76,7 @@ public:
 	__declspec(align(256)) struct RenderParams {
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
-		float sigmaDepth = 0.1f;
+		float sigmaDepth = 0.4f;
 		float p;
 
 		UINT width;
@@ -85,6 +85,10 @@ public:
 		float invHeight;
 
 		XMFLOAT4X4 invProj;
+		XMFLOAT4X4 invView;
+		
+		XMFLOAT3 eyeWorld;
+		float p1;
 	};
 
 	SimParams m_simParamsData;

@@ -73,6 +73,7 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphPS;
 	extern ComPtr<IDxcBlob> sphSmoothingCS;
 	extern ComPtr<IDxcBlob> sphNormalCS;
+	extern ComPtr<IDxcBlob> sphSceneCS;
 
 	extern ComPtr<IDxcBlob> boundsBoxVS;
 	extern ComPtr<IDxcBlob> boundsBoxPS;
@@ -135,6 +136,7 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphPSO;
 	extern ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphNormalCSPSO;
+	extern ComPtr<ID3D12PipelineState> sphSceneCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> boundsBoxPSO;
 

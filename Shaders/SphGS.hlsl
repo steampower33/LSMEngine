@@ -32,7 +32,7 @@ cbuffer GlobalConstants : register(b0)
 struct GSInput
 {
     float4 viewPos : SV_POSITION;
-    float radius : PSIZE0;
+    float radius : PSIZE;
 };
 
 struct PSInput

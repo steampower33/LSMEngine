@@ -781,7 +781,7 @@ void MainEngine::Update(float dt)
 	m_globalConstsData.frameIndex = m_frameIndex;
 
 	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
-	
+
 	if (!m_isPaused)
 	{
 		m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera);

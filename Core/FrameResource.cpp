@@ -63,14 +63,14 @@ void FrameResource::UpdateGlobalConsts(
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_globalConstsData.invProj, XMMatrixTranspose(invProj));
 
-	m_globalConstsData.eyeWorld = camera->GetEyePos();
-	m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
-	m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
-	m_globalConstsData.envLodBias = globalConsts.envLodBias;
-	m_globalConstsData.light[0] = globalConsts.light[0];
-	m_globalConstsData.light[1] = globalConsts.light[1];
-	m_globalConstsData.isEnvEnabled = globalConsts.isEnvEnabled;
-	m_globalConstsData.frameIndex = globalConsts.frameIndex;
+	//m_globalConstsData.eyeWorld = camera->GetEyePos();
+	//m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
+	//m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
+	//m_globalConstsData.envLodBias = globalConsts.envLodBias;
+	//m_globalConstsData.light[0] = globalConsts.light[0];
+	//m_globalConstsData.light[1] = globalConsts.light[1];
+	//m_globalConstsData.isEnvEnabled = globalConsts.isEnvEnabled;
+	//m_globalConstsData.frameIndex = globalConsts.frameIndex;
 
 	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
 }

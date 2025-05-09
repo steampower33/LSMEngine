@@ -59,21 +59,24 @@ PSOutput main(PSInput input)
 {
 	PSOutput o;
 
-	float2 offset = input.texCoord * 2 - 1;
-	if (dot(offset, offset) > 1) discard;
+	float3 N;
+	N.xy = input.texCoord * 2.0 - 1.0;
+	float r2 = dot(N.xy, N.xy);
 
-	float3 N = float3(offset, -sqrt(1 - dot(offset, offset)));
-	float3 viewPos = input.viewPos + N * input.radius;
+	if (r2 > 1.0) discard;
 
-	float4 clipPos = mul(float4(viewPos, 1.0), proj);
+	N.z = -sqrt(1.0 - r2);
 
-	// GPU¿ë Depth
-	float depth = clipPos.z / clipPos.w;
+	float3 pixelPos = input.viewPos + N * input.radius;
+	float4 clipSpacePos = mul(float4(pixelPos, 1.0), proj);
+	float depth = pixelPos.z;
 
-	float linearZ = viewPos.z;
-	float dNorm = saturate((linearZ - 0.01) / (20.0 - 0.01));
-	o.linearDepth = dNorm;
+	float dNorm = (depth - 0.1) / (20.0f - 0.1);
+
 	o.color = float4(dNorm, dNorm, dNorm, 1.0);
-	o.depth = depth;
+	o.depth = clipSpacePos.z / clipSpacePos.w;
+
+	o.linearDepth = depth;
+
 	return o;
 }
