@@ -57,11 +57,11 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 80.0f;
+		float pressureCoeff = 60.0f;
 		float nearPressureCoeff = 5.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 0.8f;
+		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -89,6 +89,9 @@ public:
 		
 		XMFLOAT3 eyeWorld;
 		float p1;
+
+		XMFLOAT3 lightDir = XMFLOAT3(0.0f, 1.0f, 1.0f);
+		float shininess = 32.0f;
 	};
 
 	SimParams m_simParamsData;

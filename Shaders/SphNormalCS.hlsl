@@ -23,13 +23,16 @@ cbuffer RenderParams : register(b0)
 
     float3 eyeWorld;
     float p1;
+
+    float3 lightDir;
+    float shininess;
 };
 
 float3 ReconstructPosition(int2 p, float z) {
     float2 invScreen = float2(invWidth, invHeight);
 
     float2 uv = (float2(p) + 0.5) * invScreen;
-    float4 ndc = float4(uv * 2.0 - 1.0, 0.0, -1.0);
+    float4 ndc = float4(uv * 2.0 - 1.0, 0.0, 1.0);
     float4 vpos = mul(invProj, ndc);
     return (vpos.xyz / vpos.w) * z;
 }
@@ -39,10 +42,9 @@ void main(uint3 gid : SV_GroupID,
     uint3 gtid : SV_GroupThreadID,
     uint3 dtid : SV_DispatchThreadID)
 {
-    if (dtid.x >= width || dtid.y >= height)
-        return;
-
     uint2 pix = dtid.xy;
+    if (pix.x >= width || pix.y >= height)
+        return;
 
     float dC = SmoothedDepth.Load(int3(pix, 0));
     if (dC == 0) return;
@@ -61,14 +63,12 @@ void main(uint3 gid : SV_GroupID,
 
     float3 N = normalize(cross(dx, dy));
 
-    NormalTexture[dtid.xy] = float4(N * 0.5 + 0.5, 1);
+    NormalTexture[dtid.xy] = float4(N, 1);
 
-    float3 lightDir = float3(0.0, 1.0, 1.0);
     float3 V = normalize(eyeWorld - mul(invView, float4(centerPos, 1)).xyz);
     float3 L = normalize(lightDir); // or from position
     float3 H = normalize(V + L);
 
-    float shininess = 32.0;
     float diff = max(0, dot(N, L));
     float spec = pow(max(0, dot(N, H)), shininess);
 

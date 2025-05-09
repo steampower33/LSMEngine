@@ -65,7 +65,7 @@ PSOutput main(PSInput input)
 
 	if (r2 > 1.0) discard;
 
-	N.z = -sqrt(1.0 - r2);
+	N.z = sqrt(1.0 - r2);
 
 	float3 pixelPos = input.viewPos + N * input.radius;
 	float4 clipSpacePos = mul(float4(pixelPos, 1.0), proj);

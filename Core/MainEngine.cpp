@@ -651,7 +651,13 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
 					}
+					flag += DrawTableRow("LightDIr", [&]() {
+						return ImGui::DragFloat3("##LightDIr", &m_sphSimCustom->m_renderParamsData.lightDir.x, 0.01f, -5.0f, 5.0f);
+						});
 
+					flag += DrawTableRow("Shininess", [&]() {
+						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_renderParamsData.shininess, 0.01f, 0.0f, 100.0f);
+						});
 					ImGui::EndTable();
 				}
 

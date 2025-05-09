@@ -135,7 +135,7 @@ void SphSimCustom::GenerateEmitterParticles()
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 4.0f;
+		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 5.0f;
 
 		if (subIdx == 0) {
 			m_position[i] = centerPos;
