@@ -276,8 +276,6 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 
 	XMMATRIX view = camera->GetViewMatrix();
-	XMStoreFloat4x4(&m_renderParamsData.view, XMMatrixTranspose(view));
-
 	XMMATRIX proj = camera->GetProjectionMatrix();
 
 	XMMATRIX invView = XMMatrixInverse(nullptr, view);

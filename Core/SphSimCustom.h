@@ -69,25 +69,29 @@ public:
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
 		float startTime;
-		float p3;
+		float p1;
+
+		XMFLOAT4 p2;
+
+		XMMATRIX p3;
+		XMMATRIX p4;
 	};
 
 	// Render Param
 	__declspec(align(256)) struct RenderParams {
+		XMFLOAT4X4 invProj;
+		XMFLOAT4X4 invView;
+
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
 		float sigmaDepth = 0.5f;
-		float shininess = 2.0f;
+		float shininess = 32.0f;
 
 		UINT width;
 		float invWidth;
 		UINT height;
 		float invHeight;
 
-		XMFLOAT4X4 invProj;
-		XMFLOAT4X4 invView;
-		XMFLOAT4X4 view;
-		
 		XMFLOAT3 eyeWorld;
 		float p1;
 
@@ -102,6 +106,8 @@ public:
 
 		XMFLOAT3 specular = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		float p5;
+
+		XMFLOAT4 p6;
 	};
 
 	SimParams m_simParamsData;

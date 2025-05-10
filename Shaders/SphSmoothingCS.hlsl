@@ -13,6 +13,9 @@ RWTexture2D<float> SmoothedDepth : register(u0);
 
 cbuffer RenderParams : register(b0)
 {
+    float4x4 invProj;
+    float4x4 invView;
+
     int   filterRadius;
     float sigmaSpatial;
     float sigmaDepth;
@@ -23,21 +26,22 @@ cbuffer RenderParams : register(b0)
     uint height;
     float invHeight;
 
-    float4x4 invProj;
-    float4x4 invView;
-    float4x4 view;
-
     float3 eyeWorld;
     float p1;
 
     float3 lightPos;
     float p2;
+
     float3 ambient;
     float p3;
+
     float3 diffuse;
     float p4;
+
     float3 specular;
     float p5;
+
+    float4 p6;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];
