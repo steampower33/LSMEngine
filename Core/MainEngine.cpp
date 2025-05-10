@@ -651,13 +651,23 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
 					}
-					flag += DrawTableRow("LightDIr", [&]() {
-						return ImGui::DragFloat3("##LightDIr", &m_sphSimCustom->m_renderParamsData.lightDir.x, 0.01f, -5.0f, 5.0f);
+					flag += DrawTableRow("LightPos", [&]() {
+						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_renderParamsData.lightPos.x, 0.01f, -1.0f, 1.0f);
 						});
 
 					flag += DrawTableRow("Shininess", [&]() {
 						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_renderParamsData.shininess, 0.01f, 0.0f, 100.0f);
 						});
+					flag += DrawTableRow("Ambient", [&]() {
+						return ImGui::DragFloat3("##Ambient", &m_sphSimCustom->m_renderParamsData.ambient.x, 0.01f, 0.0f, 1.0f);
+						});
+					flag += DrawTableRow("Diffuse", [&]() {
+						return ImGui::DragFloat3("##Diffuse", &m_sphSimCustom->m_renderParamsData.diffuse.x, 0.01f, 0.0f, 1.0f);
+						});
+					flag += DrawTableRow("Specular", [&]() {
+						return ImGui::DragFloat3("##Specular", &m_sphSimCustom->m_renderParamsData.specular.x, 0.01f, 0.0f, 1.0f);
+						});
+
 					ImGui::EndTable();
 				}
 
@@ -1189,6 +1199,7 @@ UINT MainEngine::DrawTableRow(const char* label, std::function<UINT()> uiElement
 	ImGui::TableSetColumnIndex(0);
 	ImGui::Text("%s", label);
 	ImGui::TableSetColumnIndex(1);
+	ImGui::PushItemWidth(-1);
 	return uiElement();
 }
 

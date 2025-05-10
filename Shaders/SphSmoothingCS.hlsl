@@ -16,18 +16,28 @@ cbuffer RenderParams : register(b0)
     int   filterRadius;
     float sigmaSpatial;
     float sigmaDepth;
-    float p;
+    float shininess;
 
     uint width;
     float invWidth;
     uint height;
     float invHeight;
-    
+
     float4x4 invProj;
     float4x4 invView;
+    float4x4 view;
 
     float3 eyeWorld;
     float p1;
+
+    float3 lightPos;
+    float p2;
+    float3 ambient;
+    float p3;
+    float3 diffuse;
+    float p4;
+    float3 specular;
+    float p5;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];
@@ -54,7 +64,7 @@ void main(uint3 gid : SV_GroupID,
             if (pos.x < 0 || pos.x >= int(width) ||
                 pos.y < 0 || pos.y >= int(height))
             {
-                sharedDepth[y][x] = 1.0f;
+                sharedDepth[y][x] = 100.0;
             }
             else
             {
@@ -67,6 +77,12 @@ void main(uint3 gid : SV_GroupID,
 
     float centerD = sharedDepth[gtid.y + filterRadius]
         [gtid.x + filterRadius];
+
+    if (centerD >= 100.0f) {
+        SmoothedDepth[center] = centerD;
+        return;
+    }
+
     float sumD = 0.0f;
     float sumW = 0.0f;
     for (int oy = -filterRadius; oy <= filterRadius; oy++)

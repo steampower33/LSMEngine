@@ -18,9 +18,14 @@ cbuffer RenderParams : register(b0)
     float invHeight;
 
     float4x4 invProj;
-    
+    float4x4 invView;
+    float4x4 view;
+
     float3 eyeWorld;
     float p1;
+
+    float3 lightDir;
+    float shininess;
 };
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]

@@ -276,10 +276,13 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	memcpy(m_simParamsConstantBufferDataBegin, &m_simParamsData, sizeof(m_simParamsData));
 
 	XMMATRIX view = camera->GetViewMatrix();
+	XMStoreFloat4x4(&m_renderParamsData.view, XMMatrixTranspose(view));
+
+	XMMATRIX proj = camera->GetProjectionMatrix();
+
 	XMMATRIX invView = XMMatrixInverse(nullptr, view);
 	XMStoreFloat4x4(&m_renderParamsData.invView, XMMatrixTranspose(invView));
 
-	XMMATRIX proj = camera->GetProjectionMatrix();
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_renderParamsData.invProj, XMMatrixTranspose(invProj));
 
@@ -612,7 +615,7 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		const float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		commandList->ClearRenderTargetView(rtvHandles[0], color, 0, nullptr);
 
-		const float depthClearValue[] = { 1.0f, 0.0f, 0.0f, 0.0f };
+		const float depthClearValue[] = { 100.0f, 0.0f, 0.0f, 0.0f };
 		commandList->ClearRenderTargetView(rtvHandles[1], depthClearValue, 0, nullptr);
 
 		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
@@ -991,7 +994,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 		D3D12_CLEAR_VALUE clearValue = {};
 		clearValue.Format = DXGI_FORMAT_R32_FLOAT;
-		clearValue.Color[0] = 1.0f;
+		clearValue.Color[0] = 0.0f;
 
 		ThrowIfFailed(device->CreateCommittedResource(
 			&heapProps,

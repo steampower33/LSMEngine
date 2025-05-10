@@ -76,8 +76,8 @@ public:
 	__declspec(align(256)) struct RenderParams {
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
-		float sigmaDepth = 0.4f;
-		float p;
+		float sigmaDepth = 0.5f;
+		float shininess = 2.0f;
 
 		UINT width;
 		float invWidth;
@@ -86,12 +86,22 @@ public:
 
 		XMFLOAT4X4 invProj;
 		XMFLOAT4X4 invView;
+		XMFLOAT4X4 view;
 		
 		XMFLOAT3 eyeWorld;
 		float p1;
 
-		XMFLOAT3 lightDir = XMFLOAT3(0.0f, 1.0f, 1.0f);
-		float shininess = 32.0f;
+		XMFLOAT3 lightPos = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		float p2;
+
+		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.3f, 0.6f);
+		float p3;
+
+		XMFLOAT3 diffuse = XMFLOAT3(0.2f, 0.3f, 0.6f);
+		float p4;
+
+		XMFLOAT3 specular = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		float p5;
 	};
 
 	SimParams m_simParamsData;

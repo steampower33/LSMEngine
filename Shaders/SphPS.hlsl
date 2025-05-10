@@ -29,16 +29,6 @@ cbuffer GlobalConstants : register(b0)
 	float4x4 d05;
 }
 
-float3 LinearToneMapping(float3 color)
-{
-	float3 invGamma = float3(1, 1, 1) / 2.2;
-
-	color = clamp(1.0 * color, 0., 1.);
-	color = pow(color, invGamma);
-	return color;
-}
-
-
 struct PSInput
 {
 	float4 clipPos : SV_POSITION;
@@ -60,20 +50,25 @@ PSOutput main(PSInput input)
 	PSOutput o;
 
 	float3 N;
-	N.xy = input.texCoord * 2.0 - 1.0;
+	N.xy = input.texCoord.xy * 2.0 - 1.0;
+
 	float r2 = dot(N.xy, N.xy);
 
 	if (r2 > 1.0) discard;
 
-	N.z = sqrt(1.0 - r2);
+	N.z = -sqrt(1.0 - r2);
 
 	float3 pixelPos = input.viewPos + N * input.radius;
 	float4 clipSpacePos = mul(float4(pixelPos, 1.0), proj);
 	float depth = pixelPos.z;
 
-	float dNorm = (depth - 0.1) / (20.0f - 0.1);
+	N.y *= -1;
 
-	o.color = float4(dNorm, dNorm, dNorm, 1.0);
+	float dNorm = (depth - 0.1) / (100.0 - 0.1);
+
+	float3 NColor = N * 0.5 + 0.5;
+
+	o.color = float4(NColor, 1.0);
 	o.depth = clipSpacePos.z / clipSpacePos.w;
 
 	o.linearDepth = depth;

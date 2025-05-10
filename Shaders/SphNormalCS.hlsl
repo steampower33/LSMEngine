@@ -11,7 +11,7 @@ cbuffer RenderParams : register(b0)
     int   filterRadius;
     float sigmaSpatial;
     float sigmaDepth;
-    float p;
+    float shininess;
 
     uint width;
     float invWidth;
@@ -20,21 +20,38 @@ cbuffer RenderParams : register(b0)
 
     float4x4 invProj;
     float4x4 invView;
+    float4x4 view;
 
     float3 eyeWorld;
     float p1;
 
-    float3 lightDir;
-    float shininess;
+    float3 lightPos;
+    float p2;
+    float3 ambient;
+    float p3;
+    float3 diffuse;
+    float p4;
+    float3 specular;
+    float p5;
 };
+
+float3 LinearToneMapping(float3 color)
+{
+    float3 invGamma = float3(1, 1, 1) / 2.2;
+
+    color = clamp(1.0 * color, 0., 1.);
+    color = pow(color, invGamma);
+    return color;
+}
 
 float3 ReconstructPosition(int2 p, float z) {
     float2 invScreen = float2(invWidth, invHeight);
 
     float2 uv = (float2(p) + 0.5) * invScreen;
-    float4 ndc = float4(uv * 2.0 - 1.0, 0.0, 1.0);
-    float4 vpos = mul(invProj, ndc);
-    return (vpos.xyz / vpos.w) * z;
+    uv.y = 1.0 - uv.y;
+    float4 clip = float4(uv * 2.0 - 1.0, 0, 1.0);
+    float4 vpos = mul(invProj, clip);
+    return vpos.xyz / vpos.w * z;
 }
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
@@ -42,36 +59,58 @@ void main(uint3 gid : SV_GroupID,
     uint3 gtid : SV_GroupThreadID,
     uint3 dtid : SV_DispatchThreadID)
 {
-    uint2 pix = dtid.xy;
-    if (pix.x >= width || pix.y >= height)
-        return;
+    int2 pix = dtid.xy;
+    if (pix.x >= width || pix.y >= height) return;
 
     float dC = SmoothedDepth.Load(int3(pix, 0));
-    if (dC == 0) return;
+    if (dC >= 100.0 || dC <= 0.0)
+    {
+        NormalTexture[pix] = float4(0.5f, 0.5f, 1.0f, 1.0f);
+        SceneTexture[pix] = float4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
 
-    float3 centerPos = ReconstructPosition(pix, dC);
+    int2 pixR = pix + int2(1, 0);
+    int2 pixU = pix + int2(0, 1);
 
-    // dx 후보
-    float3 dx1 = centerPos - ReconstructPosition(pix + int2(-1, 0), SmoothedDepth.Load(int3(pix + int2(-1, 0), 0)));
-    float3 dx2 = ReconstructPosition(pix + int2(1, 0), SmoothedDepth.Load(int3(pix + int2(1, 0), 0))) - centerPos;
-    float3 dx = (abs(dx1.z) < abs(dx2.z)) ? dx1 : dx2;
+    if (pixR.x >= width || SmoothedDepth.Load(int3(pixR, 0)) >= 100.0f ||
+        pixU.y >= height || SmoothedDepth.Load(int3(pixU, 0)) >= 100.0f)
+    {
+        NormalTexture[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
+        return;
+    }
 
-    // dy 후보
-    float3 dy1 = centerPos - ReconstructPosition(pix + int2(0, -1), SmoothedDepth.Load(int3(pix + int2(0, -1), 0)));
-    float3 dy2 = ReconstructPosition(pix + int2(0, 1), SmoothedDepth.Load(int3(pix + int2(0, 1), 0))) - centerPos;
-    float3 dy = (abs(dy1.z) < abs(dy2.z)) ? dy1 : dy2;
+    float dR = SmoothedDepth.Load(int3(pixR, 0));
+    float dU = SmoothedDepth.Load(int3(pixU, 0));
 
-    float3 N = normalize(cross(dx, dy));
+    float3 posC = ReconstructPosition(pix, dC);
+    float3 posR = ReconstructPosition(pixR, dR);
+    float3 posU = ReconstructPosition(pixU, dU);
 
-    NormalTexture[dtid.xy] = float4(N, 1);
+    float3 ddx = posR - posC;
+    float3 ddy = posU - posC;
 
-    float3 V = normalize(eyeWorld - mul(invView, float4(centerPos, 1)).xyz);
-    float3 L = normalize(lightDir); // or from position
-    float3 H = normalize(V + L);
+    float3 N_view = normalize(cross(ddy, ddx));
 
-    float diff = max(0, dot(N, L));
-    float spec = pow(max(0, dot(N, H)), shininess);
+    float3 N_world = normalize(mul((float3x3)invView, N_view));
 
-    float3 color = diff * float3(1.0, 1.0, 1.0) + spec * float3(1.0, 1.0, 1.0);
-    SceneTexture[pix] = float4(color, 1);
+    float3 NColor = N_world * 0.5 + 0.5;
+
+    NormalTexture[pix] = float4(NColor, 1.0);
+
+    float3 worldPos = mul((float3x3)invView, posC);
+
+    float3 L = normalize(lightPos - worldPos);
+    float3 V = normalize(eyeWorld - worldPos);
+    float3 H = normalize(L + V);
+
+    float diffuseIntensity = saturate(dot(N_world, L));
+
+    float specularIntensity = pow(saturate(dot(N_world, H)), shininess);
+
+    float3 finalColor = ambient
+        + diffuse * diffuseIntensity
+        + specular * specularIntensity;
+
+    SceneTexture[pix] = float4(LinearToneMapping(finalColor), 1.0);
 }
