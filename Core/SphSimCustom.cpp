@@ -124,10 +124,10 @@ void SphSimCustom::GenerateEmitterParticles()
 	XMFLOAT3 centerPos = { 0.0f, m_maxBoundsY * 1.5f, 0.0f };
 
 	const UINT num1 = 8, num2 = 16, num3 = 24, num4 = 32;
-	const float radius1 = m_dp * 2.0f;
-	const float radius2 = m_dp * 4.0f;
-	const float radius3 = m_dp * 6.0f;
-	const float radius4 = m_dp * 8.0f;
+	const float radius1 = m_dp * 3.0f;
+	const float radius2 = m_dp * 6.0f;
+	const float radius3 = m_dp * 9.0f;
+	const float radius4 = m_dp * 12.0f;
 	const UINT batchSize = 1 + num1 + num2 + num3 + num4;
 
 	for (UINT i = 0; i < m_numParticles; ++i)
@@ -135,7 +135,7 @@ void SphSimCustom::GenerateEmitterParticles()
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 5.0f;
+		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 7.0f;
 
 		if (subIdx == 0) {
 			m_position[i] = centerPos;

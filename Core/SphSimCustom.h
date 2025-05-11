@@ -57,11 +57,11 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 60.0f;
-		float nearPressureCoeff = 5.0f;
+		float pressureCoeff = 80.0f;
+		float nearPressureCoeff = 10.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 1.0f;
+		float mass = 0.8f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -95,16 +95,16 @@ public:
 		XMFLOAT3 eyeWorld;
 		float p1;
 
-		XMFLOAT3 lightPos = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		XMFLOAT3 lightPos = XMFLOAT3(10.0f, 10.0f, 0.0f);
 		float p2;
 
-		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.3f, 0.6f);
+		XMFLOAT3 ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		float p3;
 
-		XMFLOAT3 diffuse = XMFLOAT3(0.2f, 0.3f, 0.6f);
+		XMFLOAT3 diffuse = XMFLOAT3(0.4f, 0.5f, 1.0f);
 		float p4;
 
-		XMFLOAT3 specular = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMFLOAT3 specular = XMFLOAT3(0.0f, 0.0f, 0.2f);
 		float p5;
 
 		XMFLOAT4 p6;
@@ -116,16 +116,16 @@ public:
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 5.0f;
+	float m_maxBoundsX = 6.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 3.0f;
+	float m_maxBoundsZ = 6.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
-	const UINT m_nX = 32;
-	const UINT m_nY = 32;
-	const UINT m_nZ = 32;
+	const UINT m_nX = 50;
+	const UINT m_nY = 40;
+	const UINT m_nZ = 50;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
 

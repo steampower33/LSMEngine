@@ -452,7 +452,7 @@ void Graphics::InitRasterizerStates()
 	solidRS.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
 	solidRS.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
 	solidRS.DepthClipEnable = TRUE;
-	solidRS.MultisampleEnable = TRUE;
+	solidRS.MultisampleEnable = FALSE;
 	solidRS.AntialiasedLineEnable = FALSE;
 	solidRS.ForcedSampleCount = 0;
 	solidRS.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
@@ -496,6 +496,7 @@ void Graphics::InitBlendStates()
 		disabledBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA 모두 쓰기 활성화
 
 		disabledBlend.RenderTarget[0] = disabledBlendDesc;
+		disabledBlend.RenderTarget[1] = disabledBlendDesc;
 	}
 
 	{

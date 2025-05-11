@@ -48,7 +48,12 @@ cbuffer SimParams : register(b0) {
 	float gravityCoeff;
 	float duration;
 	float startTime;
-	float p3;
+	float p1;
+
+	float4 p2;
+
+	float4x4 p3;
+	float4x4 p4;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)

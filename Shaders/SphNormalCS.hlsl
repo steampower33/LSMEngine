@@ -6,6 +6,16 @@ Texture2D<float> SmoothedDepth : register(t3);
 RWTexture2D<float4> NormalTexture : register(u1);
 RWTexture2D<float4> SceneTexture : register(u2);
 
+// Index of refraction for water
+#define IOR 1.333
+
+// Ratios of air and water IOR for refraction
+// Air to water
+#define ETA 1.0/IOR
+
+// Fresnel at 0¡Æ
+#define F0 0.02
+
 cbuffer RenderParams : register(b0)
 {
     float4x4 invProj;
@@ -94,13 +104,13 @@ void main(uint3 gid : SV_GroupID,
     float3 ddx = posR - posC;
     float3 ddy = posU - posC;
 
-    float3 N_view = normalize(cross(ddy, ddx));
+    float3 n = normalize(cross(ddy, ddx));
 
-    float3 N_world = normalize(mul((float3x3)invView, N_view));
+    float3 nWorld = normalize(mul((float3x3)invView, n));
 
-    float3 NColor = N_world * 0.5 + 0.5;
+    float3 nColor = nWorld * 0.5 + 0.5;
 
-    NormalTexture[pix] = float4(NColor, 1.0);
+    NormalTexture[pix] = float4(nColor, 1.0);
 
     float3 worldPos = mul((float3x3)invView, posC);
 
@@ -108,9 +118,9 @@ void main(uint3 gid : SV_GroupID,
     float3 V = normalize(eyeWorld - worldPos);
     float3 H = normalize(L + V);
 
-    float diffuseIntensity = saturate(dot(N_world, L));
+    float diffuseIntensity = saturate(dot(nWorld, L));
 
-    float specularIntensity = pow(saturate(dot(N_world, H)), shininess);
+    float specularIntensity = pow(saturate(dot(nWorld, H)), shininess);
 
     float3 finalColor = ambient
         + diffuse * diffuseIntensity

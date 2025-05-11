@@ -652,7 +652,7 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_normalRender = false;
 					}
 					flag += DrawTableRow("LightPos", [&]() {
-						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_renderParamsData.lightPos.x, 0.01f, -1.0f, 1.0f);
+						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_renderParamsData.lightPos.x, 0.01f, -20.0f, 20.0f);
 						});
 
 					flag += DrawTableRow("Shininess", [&]() {
