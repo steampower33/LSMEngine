@@ -18,9 +18,8 @@ cbuffer RenderParams : register(b0)
 
 struct GSInput
 {
-    float4 clipPos    : SV_POSITION;  // Åõ¿µµÈ Å¬¸³ ÁÂÇ¥
-    float3 viewPos  : TEXCOORD0;    // ºä °ø°£ ÁÂÇ¥
-    float  radius : PSIZE0;
+    float3 viewPos : POSITION;
+    float radius : PSIZE0;
 };
 
 struct PSInput
@@ -36,7 +35,6 @@ struct PSInput
 void main(point GSInput input[1], uint primID : SV_PrimitiveID,
 	inout TriangleStream<PSInput> outputStream)
 {
-
     float hw = input[0].radius; // halfWidth
     float3 viewCenter = input[0].viewPos;
 
@@ -51,22 +49,22 @@ void main(point GSInput input[1], uint primID : SV_PrimitiveID,
 
     // Bottom-Left (-right - up)
     output.clipPos = mul(float4(viewCenter - right - up, 1.0), proj);
-    output.texCoord = float2(0.0, 0.0);
+    output.texCoord = float2(0.0, 1.0);
     outputStream.Append(output);
 
     // Top-Left (-right + up)
     output.clipPos = mul(float4(viewCenter - right + up, 1.0), proj);
-    output.texCoord = float2(0.0, 1.0);
+    output.texCoord = float2(0.0, 0.0);
     outputStream.Append(output);
 
     // Bottom-Right (+right - up)
     output.clipPos = mul(float4(viewCenter + right - up, 1.0), proj);
-    output.texCoord = float2(1.0, 0.0);
+    output.texCoord = float2(1.0, 1.0);
     outputStream.Append(output);
 
     // Top-Right (+right + up)
     output.clipPos = mul(float4(viewCenter + right + up, 1.0), proj);
-    output.texCoord = float2(1.0, 1.0);
+    output.texCoord = float2(1.0, 0.0);
     outputStream.Append(output);
 
     outputStream.RestartStrip();

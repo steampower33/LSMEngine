@@ -58,9 +58,13 @@ float3 ReconstructPosition(int2 p, float z) {
     float2 invScreen = float2(invWidth, invHeight);
 
     float2 uv = (float2(p) + 0.5) * invScreen;
-    float4 clip = float4(uv * 2.0 - 1.0, 0.0, -1.0);
-    float3 vpos = normalize(mul(invProj, clip).xyz);
-    return vpos * z;
+    float2 ndc = uv * 2.0 - 1.0;
+    float4 clipPos = float4(ndc, 1.0, 1.0);
+
+    float4 viewPosHom = mul(invProj, clipPos);
+    float3 viewRay = viewPosHom.xyz / viewPosHom.w;
+
+    return viewRay * (z / viewRay.z);
 }
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
@@ -74,69 +78,86 @@ void main(uint3 gid : SV_GroupID,
     float dC = SmoothedDepthMap.Load(int3(pix, 0));
     if (dC >= 100.0 || dC <= 0.0)
     {
-        NormalMap[pix] = float4(0.0, 0.0, 0.0, 1.0f);
+        NormalMap[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
         LastScene[pix] = float4(0.0, 0.0, 0.0, 1.0);
         return;
     }
 
+    int2 pixL = pix + int2(-1, 0);
     int2 pixR = pix + int2(1, 0);
+    int2 pixD = pix + int2(0, 1);
     int2 pixU = pix + int2(0, -1);
 
-    if (pixR.x >= width || SmoothedDepthMap.Load(int3(pixR, 0)) >= 100.0f ||
-        pixU.y >= height || SmoothedDepthMap.Load(int3(pixU, 0)) >= 100.0f)
+    float dL = SmoothedDepthMap.Load(int3(pixL, 0));
+    float dR = SmoothedDepthMap.Load(int3(pixR, 0));
+    float dD = SmoothedDepthMap.Load(int3(pixD, 0));
+    float dU = SmoothedDepthMap.Load(int3(pixU, 0));
+
+    if (pixL.x < 0 || dL >= 100.0f ||
+        pixR.x >= width || dR >= 100.0f ||
+        pixD.y >= height || dD >= 100.0f ||
+        pixU.y < 0 || dU >= 100.0f)
     {
-        NormalMap[pix] = float4(0.0, 0.0, 0.0, 1.0);
+        NormalMap[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
         return;
     }
 
-    float dR = SmoothedDepthMap.Load(int3(pixR, 0));
-    float dU = SmoothedDepthMap.Load(int3(pixU, 0));
-
     float3 posC = ReconstructPosition(pix, dC);
+    float3 posL = ReconstructPosition(pixL, dL);
     float3 posR = ReconstructPosition(pixR, dR);
+    float3 posD = ReconstructPosition(pixD, dD);
     float3 posU = ReconstructPosition(pixU, dU);
 
     float3 ddx = posR - posC;
+    float3 ddx2 = posC - posL;
+    if (abs(ddx.z) > abs(ddx2.z))
+        ddx = ddx2;
+
     float3 ddy = posU - posC;
+    float3 ddy2 = posC - posD;
+    if (abs(ddy.z) > abs(ddy2.z))
+        ddy = ddy2;
 
-    float3 nView = normalize(cross(ddy, ddx));
+    float3 normalVS = normalize(cross(ddx, ddy));
+    normalVS.x *= -1;
 
-    float3x3 R = (float3x3)invView;
-    float3 nWorld = normalize(mul(R, nView)).xyz;
+    float4 outputNormal = float4(normalVS * 0.5 + 0.5, 1.0);
 
-    float3 nColor = nView * 0.5 + 0.5;
+    NormalMap[pix] = outputNormal;
 
-    NormalMap[pix] = float4(nColor, 1.0);
+    float3 nWorld = mul((float3x3)invView, normalVS);
 
     // Lighting
-    float3 worldPos = mul(invView, float4(posC, 1.0)).xyz;
+    float4 worldPos_h = mul(invView, float4(posC, 1.0));
+    float3 worldPos = worldPos_h.xyz / worldPos_h.w;
+
+    float3 N = normalize(nWorld);
 
     float3 L = normalize(lightPos - worldPos);
     float3 V = normalize(eyeWorld - worldPos);
     float3 H = normalize(L + V);
 
-    float NdotL = max(dot(nWorld, L), 0.0);
+    float NdotL = saturate(dot(nWorld, L));
     float NdotH = saturate(dot(nWorld, H));
 
-    float3 diff = diffuseColor * NdotL;
+    float3 ambient = ambientColor;
+    float3 diffuse = diffuseColor * NdotL;
+    float3 specular = specularColor * pow(NdotH, shininess);
+    float3 localLighting = ambient + diffuse + specular;
 
-    float3 spec = specularColor * pow(NdotH, shininess);
+    float thickness = ThicknessMap.Load(int3(pix, 0)).r;
 
-    float4 finalColor = float4(ambientColor + diff + spec, 1.0);
+    float3 beerTransmittance = exp(-waterDensity * thickness * (1.0 - ambientColor));
 
-    //// 흡수, 투과
-    //float thickness = ThicknessMap.Load(int3(pix, 0));
+    float cosTheta = saturate(dot(N, V));
+    float fresnel = fresnel0 + (1.0 - fresnel0) * pow(1.0 - cosTheta, fresnelPower);
+    fresnel = clamp(fresnel, 0.0f, fresnelClamp);
 
-    //float3 transmittance = exp(-waterDensity * thickness * (1.0 - waterColor));
+    float3 absorbedLocalLighting = localLighting * beerTransmittance;
 
-    //float cosTheta = saturate(dot(nWorld, V)); // Normal과 View Direction의 내적 (월드 공간)
-    //float fresnel = clamp(fresnel0 + (1.0 - fresnel0) * pow(1.0 - cosTheta, fresnelPower), 0.0, fresnelClamp);
+    float3 testReflectionColor = specularColor;
 
-    //float3 lighting = waterColor * NdotL + specular * specularIntensity; // Diffuse + Specular (Diffuse Color는 waterColor로 사용)
-    //float3 absorbedLighting = lighting * transmittance; // 라이팅된 표면색에 흡수 적용
-    //float3 testReflectionColor = float3(0.1f, 0.1f, 0.1f); // 흰색 반사 테스트
-    //float3 finalColor = lerp(absorbedLighting, testReflectionColor, fresnel); // 흡수된 색과 반사 테스트색을 프레넬로 혼합
-    //finalColor += ambient; // Ambient 더하기
+    float3 finalColor_rgb = lerp(absorbedLocalLighting, testReflectionColor, fresnel);
 
-    LastScene[pix] = finalColor;
+    LastScene[pix] = float4(finalColor_rgb, 1.0);
 }

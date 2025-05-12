@@ -50,25 +50,19 @@ cbuffer SimParams : register(b1) {
 
 struct GSInput
 {
-    float4 clipPos    : SV_POSITION;  // Åõ¿µµÈ Å¬¸³ ÁÂÇ¥
-    float3 viewPos  : TEXCOORD0;    // ºä °ø°£ ÁÂÇ¥
-    float  radius     : PSIZE0;
+    float3 viewPos : POSITION;
+    float radius : PSIZE0;
 };
 
 StructuredBuffer<float3> Positions : register(t0);
 
 GSInput main(uint vertexID : SV_VertexID)
 {
-    const float fadeLife = 0.2f;
-
     float3 pos = Positions[vertexID];
 
     GSInput output;
 
-    float4 viewPos = mul(float4(pos, 1.0), view);
-
-    output.clipPos = mul(viewPos, proj);
-    output.viewPos = viewPos.xyz;
+    output.viewPos = mul(float4(pos, 1.0), view).xyz;
     output.radius = radius;
 
     return output;

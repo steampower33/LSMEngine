@@ -93,7 +93,7 @@ public:
 		
 		XMFLOAT4X4 p7;
 	};
-
+	
 	// Compute Param
 	__declspec(align(256)) struct ComputeParams {
 		XMFLOAT4X4 invProj;
