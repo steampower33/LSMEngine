@@ -298,7 +298,7 @@
     <FxCompile Include="Shaders\SphNormalCS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\SphSceneCS.hlsl">
+    <FxCompile Include="Shaders\SphThicknessPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

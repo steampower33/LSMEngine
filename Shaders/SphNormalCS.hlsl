@@ -3,8 +3,8 @@
 
 Texture2D<float> SmoothedDepth : register(t3);
 
-RWTexture2D<float4> NormalTexture : register(u1);
-RWTexture2D<float4> SceneTexture : register(u2);
+RWTexture2D<float4> NormalTexture : register(u2);
+RWTexture2D<float4> SceneTexture : register(u3);
 
 // Index of refraction for water
 #define IOR 1.333
@@ -79,7 +79,7 @@ void main(uint3 gid : SV_GroupID,
     float dC = SmoothedDepth.Load(int3(pix, 0));
     if (dC >= 100.0 || dC <= 0.0)
     {
-        NormalTexture[pix] = float4(0.5f, 0.5f, 1.0f, 1.0f);
+        NormalTexture[pix] = float4(0.0, 0.0, 0.0, 1.0f);
         SceneTexture[pix] = float4(0.0, 0.0, 0.0, 1.0);
         return;
     }
@@ -90,7 +90,7 @@ void main(uint3 gid : SV_GroupID,
     if (pixR.x >= width || SmoothedDepth.Load(int3(pixR, 0)) >= 100.0f ||
         pixU.y >= height || SmoothedDepth.Load(int3(pixU, 0)) >= 100.0f)
     {
-        NormalTexture[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
+        NormalTexture[pix] = float4(0.0, 0.0, 0.0, 1.0);
         return;
     }
 

@@ -8,7 +8,7 @@ static const uint TILE_H = GROUP_SIZE_Y + 2 * MAX_RADIUS;
 
 Texture2D<float> DepthTexture : register(t2);
 
-RWTexture2D<float> SmoothedDepth : register(u0);
+RWTexture2D<float> SmoothedDepth : register(u1);
 //RWTexture2D<float4> SceneTexture : register(u2);
 
 cbuffer RenderParams : register(b0)

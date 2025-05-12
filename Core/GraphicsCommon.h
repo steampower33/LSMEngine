@@ -71,6 +71,7 @@ namespace Graphics
 	extern ComPtr<IDxcBlob> sphVS;
 	extern ComPtr<IDxcBlob> sphGS;
 	extern ComPtr<IDxcBlob> sphPS;
+	extern ComPtr<IDxcBlob> sphThicknessPS;
 	extern ComPtr<IDxcBlob> sphSmoothingCS;
 	extern ComPtr<IDxcBlob> sphNormalCS;
 	extern ComPtr<IDxcBlob> sphSceneCS;
@@ -91,6 +92,7 @@ namespace Graphics
 	extern D3D12_BLEND_DESC mirrorBlend;
 	extern D3D12_BLEND_DESC accumulateBlend;
 	extern D3D12_BLEND_DESC alphaBlend;
+	extern D3D12_BLEND_DESC additiveBlend;
 
 	// DEPTH_STENCIL
 	extern D3D12_DEPTH_STENCIL_DESC basicDS;
@@ -134,9 +136,9 @@ namespace Graphics
 	extern ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphPSO;
+	extern ComPtr<ID3D12PipelineState> sphThicknessPSO;
 	extern ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 	extern ComPtr<ID3D12PipelineState> sphNormalCSPSO;
-	extern ComPtr<ID3D12PipelineState> sphSceneCSPSO;
 
 	extern ComPtr<ID3D12PipelineState> boundsBoxPSO;
 

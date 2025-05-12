@@ -121,25 +121,30 @@ static void SetUAVBarrier(
 }
 
 static void CreateBuffer(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer,
-	UINT width, UINT height, UINT sampleCount,
-	DXGI_FORMAT format, D3D12_SRV_DIMENSION srvDimension, D3D12_RESOURCE_STATES initState,
-	ComPtr<ID3D12DescriptorHeap> rtvHeap, UINT rtvIndex, ComPtr<ID3D12DescriptorHeap> srvHeap, UINT srvIndex)
+	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer, 
+	DXGI_FORMAT format, UINT width, UINT height, UINT sampleCount, 
+	D3D12_RESOURCE_FLAGS bufferFlags, D3D12_RESOURCE_STATES initState,
+	ComPtr<ID3D12DescriptorHeap> rtvHeap, UINT rtvIndex, D3D12_CLEAR_VALUE clearValue,
+	ComPtr<ID3D12DescriptorHeap> srvHeap, UINT srvIndex, D3D12_SRV_DIMENSION srvDimension,
+	ComPtr<ID3D12DescriptorHeap> uavHeap = nullptr, UINT uavIndex = 0, D3D12_UAV_DIMENSION uavDimension = D3D12_UAV_DIMENSION_UNKNOWN)
 {
-	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels = {};
-	msaaLevels.Format = format;
-	msaaLevels.SampleCount = sampleCount;
-	msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
-	msaaLevels.NumQualityLevels = 0;
+	if (sampleCount > 1)
+	{
+		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels = {};
+		msaaLevels.Format = format;
+		msaaLevels.SampleCount = sampleCount;
+		msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+		msaaLevels.NumQualityLevels = 0;
 
-	ThrowIfFailed(device->CheckFeatureSupport(
-		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
-		&msaaLevels,
-		sizeof(msaaLevels)
-	));
+		ThrowIfFailed(device->CheckFeatureSupport(
+			D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
+			&msaaLevels,
+			sizeof(msaaLevels)
+		));
 
-	if (msaaLevels.NumQualityLevels == 0) {
-		throw std::runtime_error("The specified sample count is not supported for the given format.");
+		if (msaaLevels.NumQualityLevels == 0) {
+			throw std::runtime_error("The specified sample count is not supported for the given format.");
+		}
 	}
 
 	auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -152,15 +157,8 @@ static void CreateBuffer(
 		1,                              // mipLevels
 		sampleCount,                    // sampleCount
 		0,                              // sampleQuality
-		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET // RT로 사용할 예정이면 플래그 설정
+		bufferFlags // RT로 사용할 예정이면 플래그 설정
 	);
-
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = format; // 텍스처의 포맷
-	clearValue.Color[0] = 0.0f; // Red
-	clearValue.Color[1] = 0.0f; // Green
-	clearValue.Color[2] = 0.0f; // Blue
-	clearValue.Color[3] = 1.0f; // Alpha
 
 	ThrowIfFailed(device->CreateCommittedResource(
 		&heapProps,
@@ -198,6 +196,21 @@ static void CreateBuffer(
 			&srvDesc,
 			srvHandle
 		);
+	}
+
+	if (uavHeap)
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart(), srvSize * uavIndex);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC textureUavDesc = {};
+		textureUavDesc.Format = format;
+		textureUavDesc.ViewDimension = uavDimension;
+		textureUavDesc.Texture2D.MipSlice = 0;
+
+		device->CreateUnorderedAccessView(
+			buffer.Get(),
+			nullptr, &textureUavDesc, uavHandle);
+
 	}
 }
 

@@ -116,15 +116,15 @@ public:
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 6.0f;
+	float m_maxBoundsX = 4.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 6.0f;
+	float m_maxBoundsZ = 4.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	const UINT m_nX = 50;
-	const UINT m_nY = 40;
+	const UINT m_nY = 20;
 	const UINT m_nZ = 50;
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
@@ -140,7 +140,7 @@ public:
 	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height);
 
 	UINT m_renderSRVCnt = 6;
-	UINT m_renderUAVCnt = 3;
+	UINT m_renderUAVCnt = 4;
 	UINT m_renderCBVCnt = 1;
 	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
 	
@@ -151,7 +151,11 @@ public:
 	UINT m_particleRenderSRVIndex = 0;
 	ComPtr<ID3D12Resource> m_particleDSVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDSVHeap;
-	UINT m_particleDepthSRVIndex = 1;
+
+	ComPtr<ID3D12Resource> m_thicknessRTVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_thicknessRTVHeap;
+	UINT m_thicknessSRVIndex = 1;
+	UINT m_thicknessUAVIndex = m_renderSRVCnt;
 
 	ComPtr<ID3D12Resource> m_particleDepthOutputBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
@@ -159,16 +163,16 @@ public:
 
 	ComPtr<ID3D12Resource> m_smoothedDepthBuffer;
 	UINT m_smoothedDepthSRVIndex = 3;
-	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt;
+	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt + 1;
 
 	ComPtr<ID3D12Resource> m_normalBuffer;
 	UINT m_normalSRVIndex = 4;
-	UINT m_normalUAVIndex = m_renderSRVCnt + 1;
+	UINT m_normalUAVIndex = m_renderSRVCnt + 2;
 
 	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
 	UINT m_sceneSRVIndex = 5;
-	UINT m_sceneUAVIndex = m_renderSRVCnt + 2;
+	UINT m_sceneUAVIndex = m_renderSRVCnt + 3;
 
 	UINT m_finalSRVIndex = m_sceneUAVIndex;
 

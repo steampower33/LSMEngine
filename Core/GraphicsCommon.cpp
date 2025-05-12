@@ -52,9 +52,9 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphVS;
 	ComPtr<IDxcBlob> sphGS;
 	ComPtr<IDxcBlob> sphPS;
+	ComPtr<IDxcBlob> sphThicknessPS;
 	ComPtr<IDxcBlob> sphSmoothingCS;
 	ComPtr<IDxcBlob> sphNormalCS;
-	ComPtr<IDxcBlob> sphSceneCS;
 
 	ComPtr<IDxcBlob> boundsBoxVS;
 	ComPtr<IDxcBlob> boundsBoxPS;
@@ -70,6 +70,7 @@ namespace Graphics
 	D3D12_BLEND_DESC mirrorBlend;
 	D3D12_BLEND_DESC accumulateBlend;
 	D3D12_BLEND_DESC alphaBlend;
+	D3D12_BLEND_DESC additiveBlend;
 
 	D3D12_DEPTH_STENCIL_DESC basicDS;
 	D3D12_DEPTH_STENCIL_DESC disabledDS;
@@ -111,9 +112,9 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphCalcPressureForceCSPSO;
 	ComPtr<ID3D12PipelineState> sphCSPSO;
 	ComPtr<ID3D12PipelineState> sphPSO;
+	ComPtr<ID3D12PipelineState> sphThicknessPSO;
 	ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 	ComPtr<ID3D12PipelineState> sphNormalCSPSO;
-	ComPtr<ID3D12PipelineState> sphSceneCSPSO;
 
 	ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
@@ -295,7 +296,7 @@ void Graphics::InitSphSSFRSignature(ComPtr<ID3D12Device>& device)
 
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[3];
 	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
@@ -434,9 +435,9 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphVS.hlsl", L"vs_6_0", sphVS);
 	CreateShader(device, L"SphGS.hlsl", L"gs_6_0", sphGS);
 	CreateShader(device, L"SphPS.hlsl", L"ps_6_0", sphPS);
+	CreateShader(device, L"SphThicknessPS.hlsl", L"ps_6_0", sphThicknessPS);
 	CreateShader(device, L"SphSmoothingCS.hlsl", L"cs_6_0", sphSmoothingCS);
 	CreateShader(device, L"SphNormalCS.hlsl", L"cs_6_0", sphNormalCS);
-	CreateShader(device, L"SphSceneCS.hlsl", L"cs_6_0", sphSceneCS);
 
 	// BoundsBox
 	CreateShader(device, L"BoundsBoxVS.hlsl", L"vs_6_0", boundsBoxVS);
@@ -522,7 +523,6 @@ void Graphics::InitBlendStates()
 		mirrorBlend.RenderTarget[0] = rtBlendDesc;
 	}
 
-
 	{
 		D3D12_RENDER_TARGET_BLEND_DESC accumulateBSDesc = {};
 		accumulateBSDesc.BlendEnable = TRUE;                    // 블렌딩 활성화
@@ -558,6 +558,24 @@ void Graphics::InitBlendStates()
 		alphaBlend.AlphaToCoverageEnable = FALSE;
 		alphaBlend.IndependentBlendEnable = FALSE;
 		alphaBlend.RenderTarget[0] = alphaBlendDesc;
+	}
+
+	{
+		D3D12_RENDER_TARGET_BLEND_DESC additiveBlendDesc = {};
+		additiveBlendDesc.BlendEnable = TRUE;
+		additiveBlendDesc.LogicOpEnable = FALSE;
+		additiveBlendDesc.SrcBlend = D3D12_BLEND_ONE;
+		additiveBlendDesc.DestBlend = D3D12_BLEND_ONE;
+		additiveBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+		additiveBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		additiveBlendDesc.DestBlendAlpha = D3D12_BLEND_ONE;
+		additiveBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		additiveBlendDesc.LogicOp = D3D12_LOGIC_OP_CLEAR;
+		additiveBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		additiveBlend.AlphaToCoverageEnable = FALSE;
+		additiveBlend.IndependentBlendEnable = FALSE;
+		additiveBlend.RenderTarget[0] = additiveBlendDesc;
 	}
 }
 
@@ -869,6 +887,24 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphPSODesc.RTVFormats[1] = DXGI_FORMAT_R32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphPSODesc, IID_PPV_ARGS(&sphPSO)));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC sphThicknessPSODesc = basicSolidPSODesc;
+	sphThicknessPSODesc.pRootSignature = sphRenderRootSignature.Get();
+	sphThicknessPSODesc.InputLayout = { sphIE, _countof(sphIE) };
+	sphThicknessPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	sphThicknessPSODesc.VS = { sphVS->GetBufferPointer(), sphVS->GetBufferSize() };
+	sphThicknessPSODesc.GS = { sphGS->GetBufferPointer(), sphGS->GetBufferSize() };
+	sphThicknessPSODesc.PS = { sphThicknessPS->GetBufferPointer(), sphThicknessPS->GetBufferSize() };
+	sphThicknessPSODesc.BlendState = additiveBlend;
+	sphThicknessPSODesc.DepthStencilState = disabledDS;
+	sphThicknessPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	sphThicknessPSODesc.SampleDesc.Count = 1;
+	sphThicknessPSODesc.SampleDesc.Quality = 0;
+	sphThicknessPSODesc.SampleMask = UINT_MAX;
+	sphThicknessPSODesc.NumRenderTargets = 1;
+	sphThicknessPSODesc.RTVFormats[0] = DXGI_FORMAT_R32_FLOAT;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphThicknessPSODesc, IID_PPV_ARGS(&sphThicknessPSO)));
+
+
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSmoothingCSPSODesc = {};
 	sphSmoothingCSPSODesc.pRootSignature = sphSSFRSignature.Get();
 	sphSmoothingCSPSODesc.CS = { sphSmoothingCS->GetBufferPointer(), sphSmoothingCS->GetBufferSize() };
@@ -880,12 +916,6 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphNormalCSPSODesc.CS = { sphNormalCS->GetBufferPointer(), sphNormalCS->GetBufferSize() };
 	sphNormalCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(device->CreateComputePipelineState(&sphNormalCSPSODesc, IID_PPV_ARGS(&sphNormalCSPSO)));
-
-	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSceneCSPSODesc = {};
-	sphSceneCSPSODesc.pRootSignature = sphSSFRSignature.Get();
-	sphSceneCSPSODesc.CS = { sphSceneCS->GetBufferPointer(), sphSceneCS->GetBufferSize() };
-	sphSceneCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(device->CreateComputePipelineState(&sphSceneCSPSODesc, IID_PPV_ARGS(&sphSceneCSPSO)));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC boundsBoxPSODesc = sphPSODesc;
 	boundsBoxPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
