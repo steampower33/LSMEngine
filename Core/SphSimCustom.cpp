@@ -627,6 +627,10 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
+		SetBarrier(commandList, m_thicknessRTVBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET);
+
 		// Render ThicknessMap
 		commandList->SetPipelineState(Graphics::sphThicknessPSO.Get());
 
@@ -648,6 +652,11 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		SetBarrier(commandList, m_particleDepthOutputBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	}
+
+
+	{
+
 	}
 
 	// SSFR
@@ -689,10 +698,6 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		commandList->SetPipelineState(Graphics::sphNormalCSPSO.Get());
 
 		commandList->Dispatch(dispatchX, dispatchY, 1);
-
-		SetBarrier(commandList, m_thicknessRTVBuffer,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		SetUAVBarrier(commandList, m_sceneRTVBuffer);
 	}
@@ -948,7 +953,7 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 		CreateBuffer(device, m_thicknessRTVBuffer, L"m_thicknessRTVBuffer",
 			DXGI_FORMAT_R32_FLOAT, static_cast<UINT>(width), static_cast<UINT>(height), 1,
-			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			m_thicknessRTVHeap, 0, clearValue,
 			m_renderHeap, m_thicknessSRVIndex, D3D12_SRV_DIMENSION_TEXTURE2D, 
 			m_renderHeap, m_thicknessUAVIndex, D3D12_UAV_DIMENSION_TEXTURE2D);

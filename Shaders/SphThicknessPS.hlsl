@@ -18,10 +18,10 @@ cbuffer RenderParams : register(b0)
 
 struct PSInput
 {
-	float4 clipPos : SV_POSITION;
-	float2 texCoord : TEXCOORD0;
-	float3 viewPos : TEXCOORD1;
-	float radius : PSIZE1;
+	float4 clipPos  : SV_POSITION;   // 프로젝션된 쿼드 코너
+	float2 texCoord : TEXCOORD0;     // 쿼드 UV (0~1)
+	float3 viewPos  : TEXCOORD1;     // 뷰 공간에서의 입자 중심
+	float  radius : PSIZE1;        // 입자 반지름
 	uint primID : SV_PrimitiveID;
 };
 

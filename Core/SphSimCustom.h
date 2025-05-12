@@ -61,7 +61,7 @@ public:
 		float nearPressureCoeff = 10.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 0.8f;
+		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -82,7 +82,7 @@ public:
 		XMFLOAT4X4 view;
 		XMFLOAT4X4 proj;
 
-		float thicknessContributionScale = 0.0f;
+		float thicknessContributionScale = 0.01f;
 		float p1;
 		float p2;
 		float p3;
@@ -110,21 +110,22 @@ public:
 		float invHeight;
 
 		XMFLOAT3 eyeWorld;
-		float p1;
+		float refractionStrength = 0.0f;
 
-		XMFLOAT3 lightPos = XMFLOAT3(10.0f, 10.0f, 0.0f);
-		float p2;
+		XMFLOAT3 lightPos = XMFLOAT3(50.0f, 50.0f, -50.0f);
+		float p;
 
-		XMFLOAT3 ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		float p3;
+		XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		float waterDensity = 1.0f;
 
-		XMFLOAT3 diffuse = XMFLOAT3(0.4f, 0.5f, 1.0f);
-		float p4;
+		XMFLOAT3 ambientColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		float fresnel0 = 0.02f;
 
-		XMFLOAT3 specular = XMFLOAT3(0.0f, 0.0f, 0.2f);
-		float p5;
+		XMFLOAT3 diffuseColor = XMFLOAT3(0.4f, 0.5f, 1.0f);
+		float fresnelPower = 5.0f;
 
-		XMFLOAT4 p6;
+		XMFLOAT3 specularColor = XMFLOAT3(0.0f, 0.0f, 0.2f);
+		float fresnelClamp = 1.0f;
 	};
 
 	SimParams m_simParamsData;
@@ -160,6 +161,7 @@ public:
 	UINT m_renderSRVCnt = 6;
 	UINT m_renderUAVCnt = 4;
 	UINT m_renderCBVCnt = 2;
+	UINT m_renderCubemapSRVCnt = 4;
 	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
 	
 	ComPtr<ID3D12DescriptorHeap> m_renderHeap;

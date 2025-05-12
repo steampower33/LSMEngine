@@ -18,10 +18,10 @@ cbuffer RenderParams : register(b0)
 
 struct PSInput
 {
-	float4 clipPos : SV_POSITION;
-	float2 texCoord : TEXCOORD0;
-	float3 viewPos : TEXCOORD1;
-	float radius : PSIZE1;
+	float4 clipPos  : SV_POSITION;   // 프로젝션된 쿼드 코너
+	float2 texCoord : TEXCOORD0;     // 쿼드 UV (0~1)
+	float3 viewPos  : TEXCOORD1;     // 뷰 공간에서의 입자 중심
+	float  radius : PSIZE1;        // 입자 반지름
 	uint primID : SV_PrimitiveID;
 };
 
@@ -38,27 +38,22 @@ PSOutput main(PSInput input)
 
 	float3 N;
 	N.xy = input.texCoord.xy * 2.0 - 1.0;
-
 	float r2 = dot(N.xy, N.xy);
-
 	if (r2 > 1.0) discard;
 
 	N.z = -sqrt(1.0 - r2);
 
 	float3 pixelPos = input.viewPos + N * input.radius;
 	float4 clipSpacePos = mul(float4(pixelPos, 1.0), proj);
-	float depth = pixelPos.z;
+	o.depth = clipSpacePos.z / clipSpacePos.w;
 
-	N.y *= -1;
+	float depth = pixelPos.z;
+	o.linearDepth = depth;
 
 	float dNorm = (depth - 0.1) / (100.0 - 0.1);
 
 	float3 NColor = N * 0.5 + 0.5;
-
 	o.color = float4(NColor, 1.0);
-	o.depth = clipSpacePos.z / clipSpacePos.w;
-
-	o.linearDepth = depth;
 
 	return o;
 }

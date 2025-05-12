@@ -6,9 +6,9 @@
 static const uint TILE_W = GROUP_SIZE_X + 2 * MAX_RADIUS;
 static const uint TILE_H = GROUP_SIZE_Y + 2 * MAX_RADIUS;
 
-Texture2D<float> DepthTexture : register(t2);
+Texture2D<float> DepthMap : register(t2);
 
-RWTexture2D<float> SmoothedDepth : register(u1);
+RWTexture2D<float> SmoothedDepthMap : register(u1);
 
 cbuffer ComputeParams : register(b1)
 {
@@ -26,21 +26,22 @@ cbuffer ComputeParams : register(b1)
     float invHeight;
 
     float3 eyeWorld;
-    float p1;
+    float refractionStrength;
 
     float3 lightPos;
-    float p2;
+    float p;
 
-    float3 ambient;
-    float p3;
+    float3 lightColor;
+    float waterDensity;
 
-    float3 diffuse;
-    float p4;
+    float3 ambientColor;
+    float fresnel0;
 
-    float3 specular;
-    float p5;
+    float3 diffuseColor;
+    float fresnelPower;
 
-    float4 p6;
+    float3 specularColor;
+    float fresnelClamp;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];
@@ -71,7 +72,7 @@ void main(uint3 gid : SV_GroupID,
             }
             else
             {
-                sharedDepth[y][x] = DepthTexture.Load(int3(pos, 0));
+                sharedDepth[y][x] = DepthMap.Load(int3(pos, 0));
             }
         }
     }
@@ -82,7 +83,7 @@ void main(uint3 gid : SV_GroupID,
         [gtid.x + filterRadius];
 
     if (centerD >= 100.0f) {
-        SmoothedDepth[center] = centerD;
+        SmoothedDepthMap[center] = centerD;
         return;
     }
 
@@ -110,7 +111,7 @@ void main(uint3 gid : SV_GroupID,
 
     if (isValid)
     {
-        SmoothedDepth[center] = outD;
+        SmoothedDepthMap[center] = outD;
         //SceneTexture[center] = float4(outD, outD, outD, 1);
     }
 }

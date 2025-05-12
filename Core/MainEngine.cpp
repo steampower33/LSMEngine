@@ -592,6 +592,23 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
+					flag += DrawTableRow("Thickness", [&]() {
+						return ImGui::Checkbox("##Thickness", &m_sphSimCustom->m_thicknessRender);
+						});
+					if (m_sphSimCustom->m_thicknessRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_thicknessSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
+					flag += DrawTableRow("ThicknessContributionScale", [&]() {
+						return ImGui::DragFloat("##ThicknessContributionScale", &m_sphSimCustom->m_renderParamsData.thicknessContributionScale, 0.01f, 0.0f, 10.0f);
+						});
+
 					flag += DrawTableRow("ParticleDepth", [&]() {
 						return ImGui::Checkbox("##ParticleDepth", &m_sphSimCustom->m_particleDepthRender);
 						});
@@ -646,40 +663,44 @@ void MainEngine::UpdateGUI()
 					flag += DrawTableRow("LightPos", [&]() {
 						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_computeParamsData.lightPos.x, 0.01f, -20.0f, 20.0f);
 						});
-
 					flag += DrawTableRow("Shininess", [&]() {
 						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_computeParamsData.shininess, 0.01f, 0.0f, 100.0f);
 						});
+
+					flag += DrawTableRow("RefractionStrength", [&]() {
+						return ImGui::DragFloat("##RefractionStrength", &m_sphSimCustom->m_computeParamsData.refractionStrength, 0.01f, 0.0f, 100.0f);
+						});
+
+					flag += DrawTableRow("LightColor", [&]() {
+						return ImGui::DragFloat3("##LightColor", &m_sphSimCustom->m_computeParamsData.lightColor.x, 0.01f, 0.0f, 1.0f);
+						});
+					flag += DrawTableRow("waterDensity", [&]() {
+						return ImGui::DragFloat("##waterDensity", &m_sphSimCustom->m_computeParamsData.waterDensity, 0.01f, 0.0f, 100.0f);
+						});
+
 					flag += DrawTableRow("Ambient", [&]() {
-						return ImGui::DragFloat3("##Ambient", &m_sphSimCustom->m_computeParamsData.ambient.x, 0.01f, 0.0f, 1.0f);
+						return ImGui::DragFloat3("##Ambient", &m_sphSimCustom->m_computeParamsData.ambientColor.x, 0.01f, 0.0f, 1.0f);
 						});
 					flag += DrawTableRow("Diffuse", [&]() {
-						return ImGui::DragFloat3("##Diffuse", &m_sphSimCustom->m_computeParamsData.diffuse.x, 0.01f, 0.0f, 1.0f);
+						return ImGui::DragFloat3("##Diffuse", &m_sphSimCustom->m_computeParamsData.diffuseColor.x, 0.01f, 0.0f, 1.0f);
 						});
 					flag += DrawTableRow("Specular", [&]() {
-						return ImGui::DragFloat3("##Specular", &m_sphSimCustom->m_computeParamsData.specular.x, 0.01f, 0.0f, 1.0f);
+						return ImGui::DragFloat3("##Specular", &m_sphSimCustom->m_computeParamsData.specularColor.x, 0.01f, 0.0f, 1.0f);
 						});
-					
-					flag += DrawTableRow("Thickness", [&]() {
-						return ImGui::Checkbox("##Thickness", &m_sphSimCustom->m_thicknessRender);
+					flag += DrawTableRow("Fresnel0", [&]() {
+						return ImGui::DragFloat("##Fresnel0", &m_sphSimCustom->m_computeParamsData.fresnel0, 0.01f, 0.0f, 100.0f);
 						});
-					if (m_sphSimCustom->m_thicknessRender)
-					{
-						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_thicknessSRVIndex;
-
-						m_sphSimCustom->m_particleRender = false;
-						m_sphSimCustom->m_particleDepthRender = false;
-						m_sphSimCustom->m_smoothingDepthRender = false;
-						m_sphSimCustom->m_normalRender = false;
-						m_sphSimCustom->m_finalSceneRender = false;
-					}
-					flag += DrawTableRow("ThicknessContributionScale", [&]() {
-						return ImGui::DragFloat("##ThicknessContributionScale", &m_sphSimCustom->m_renderParamsData.thicknessContributionScale, 0.01f, 0.0f, 10.0f);
+					flag += DrawTableRow("FresnelPower", [&]() {
+						return ImGui::DragFloat("##FresnelPower", &m_sphSimCustom->m_computeParamsData.fresnelPower, 0.01f, 0.0f, 100.0f);
+						});
+					flag += DrawTableRow("FresnelClamp", [&]() {
+						return ImGui::DragFloat("##FresnelClamp", &m_sphSimCustom->m_computeParamsData.fresnelClamp, 0.01f, 0.0f, 100.0f);
 						});
 
 					flag += DrawTableRow("LastScene", [&]() {
 						return ImGui::Checkbox("##LastScene", &m_sphSimCustom->m_finalSceneRender);
 						});
+
 					if (m_sphSimCustom->m_finalSceneRender)
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_sceneSRVIndex;
