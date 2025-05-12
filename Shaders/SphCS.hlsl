@@ -7,8 +7,6 @@ StructuredBuffer<float> spawnTimes : register(t6);
 RWStructuredBuffer<float3> Positions: register(u0);
 RWStructuredBuffer<float3> Velocities : register(u2);
 
-RWStructuredBuffer<float3> Colors : register(u12);
-
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
 	uint3 gtid : SV_DispatchThreadID,
@@ -78,6 +76,4 @@ void main(uint tid : SV_GroupThreadID,
 	vel += (Fb / mass) * deltaTime;
 	Positions[index] += vel * deltaTime;
 	Velocities[index] = vel;
-
-	Colors[index] = float3(1.0, 1.0, 1.0);
 }

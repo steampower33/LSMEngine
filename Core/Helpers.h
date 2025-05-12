@@ -121,7 +121,7 @@ static void SetUAVBarrier(
 }
 
 static void CreateBuffer(
-	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer, 
+	ComPtr<ID3D12Device>& device, ComPtr<ID3D12Resource>& buffer, LPCTSTR bufferName,
 	DXGI_FORMAT format, UINT width, UINT height, UINT sampleCount, 
 	D3D12_RESOURCE_FLAGS bufferFlags, D3D12_RESOURCE_STATES initState,
 	ComPtr<ID3D12DescriptorHeap> rtvHeap, UINT rtvIndex, D3D12_CLEAR_VALUE clearValue,
@@ -168,6 +168,7 @@ static void CreateBuffer(
 		&clearValue,
 		IID_PPV_ARGS(&buffer)
 	));
+	buffer->SetName(bufferName);
 
 	UINT rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	UINT srvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

@@ -588,6 +588,7 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_thicknessRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
@@ -601,6 +602,7 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_thicknessRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
@@ -614,16 +616,17 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_thicknessRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 					flag += DrawTableRow("FilterRadius", [&]() {
-						return ImGui::DragInt("##FilterRadius", &m_sphSimCustom->m_renderParamsData.filterRadius, 1, 0, 16);
+						return ImGui::DragInt("##FilterRadius", &m_sphSimCustom->m_computeParamsData.filterRadius, 1, 0, 16);
 						});
 					flag += DrawTableRow("SigmaSpatial", [&]() {
-						return ImGui::DragFloat("##SigmaSpatial", &m_sphSimCustom->m_renderParamsData.sigmaSpatial, 0.1f, minValue, maxValue, "%.1f");
+						return ImGui::DragFloat("##SigmaSpatial", &m_sphSimCustom->m_computeParamsData.sigmaSpatial, 0.1f, minValue, maxValue, "%.1f");
 						});
 					flag += DrawTableRow("SigmaDepth", [&]() {
-						return ImGui::DragFloat("##SigmaDepth", &m_sphSimCustom->m_renderParamsData.sigmaDepth, 0.01f, 0.0f, 10.0f);
+						return ImGui::DragFloat("##SigmaDepth", &m_sphSimCustom->m_computeParamsData.sigmaDepth, 0.01f, 0.0f, 10.0f);
 						});
 
 					flag += DrawTableRow("Normal", [&]() {
@@ -636,8 +639,43 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_thicknessRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
+
+					flag += DrawTableRow("LightPos", [&]() {
+						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_computeParamsData.lightPos.x, 0.01f, -20.0f, 20.0f);
+						});
+
+					flag += DrawTableRow("Shininess", [&]() {
+						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_computeParamsData.shininess, 0.01f, 0.0f, 100.0f);
+						});
+					flag += DrawTableRow("Ambient", [&]() {
+						return ImGui::DragFloat3("##Ambient", &m_sphSimCustom->m_computeParamsData.ambient.x, 0.01f, 0.0f, 1.0f);
+						});
+					flag += DrawTableRow("Diffuse", [&]() {
+						return ImGui::DragFloat3("##Diffuse", &m_sphSimCustom->m_computeParamsData.diffuse.x, 0.01f, 0.0f, 1.0f);
+						});
+					flag += DrawTableRow("Specular", [&]() {
+						return ImGui::DragFloat3("##Specular", &m_sphSimCustom->m_computeParamsData.specular.x, 0.01f, 0.0f, 1.0f);
+						});
+					
+					flag += DrawTableRow("Thickness", [&]() {
+						return ImGui::Checkbox("##Thickness", &m_sphSimCustom->m_thicknessRender);
+						});
+					if (m_sphSimCustom->m_thicknessRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_thicknessSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
+					flag += DrawTableRow("ThicknessContributionScale", [&]() {
+						return ImGui::DragFloat("##ThicknessContributionScale", &m_sphSimCustom->m_renderParamsData.thicknessContributionScale, 0.01f, 0.0f, 10.0f);
+						});
 
 					flag += DrawTableRow("LastScene", [&]() {
 						return ImGui::Checkbox("##LastScene", &m_sphSimCustom->m_finalSceneRender);
@@ -650,24 +688,8 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_thicknessRender = false;
 					}
-					flag += DrawTableRow("LightPos", [&]() {
-						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_renderParamsData.lightPos.x, 0.01f, -20.0f, 20.0f);
-						});
-
-					flag += DrawTableRow("Shininess", [&]() {
-						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_renderParamsData.shininess, 0.01f, 0.0f, 100.0f);
-						});
-					flag += DrawTableRow("Ambient", [&]() {
-						return ImGui::DragFloat3("##Ambient", &m_sphSimCustom->m_renderParamsData.ambient.x, 0.01f, 0.0f, 1.0f);
-						});
-					flag += DrawTableRow("Diffuse", [&]() {
-						return ImGui::DragFloat3("##Diffuse", &m_sphSimCustom->m_renderParamsData.diffuse.x, 0.01f, 0.0f, 1.0f);
-						});
-					flag += DrawTableRow("Specular", [&]() {
-						return ImGui::DragFloat3("##Specular", &m_sphSimCustom->m_renderParamsData.specular.x, 0.01f, 0.0f, 1.0f);
-						});
-
 					ImGui::EndTable();
 				}
 

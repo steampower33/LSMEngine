@@ -16,7 +16,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using namespace std;
 
-#define STRUCTURED_CNT 13
+#define STRUCTURED_CNT 12
 #define CONSTANT_CNT 1
 
 class SphSimCustom
@@ -79,6 +79,23 @@ public:
 
 	// Render Param
 	__declspec(align(256)) struct RenderParams {
+		XMFLOAT4X4 view;
+		XMFLOAT4X4 proj;
+
+		float thicknessContributionScale = 0.0f;
+		float p1;
+		float p2;
+		float p3;
+
+		XMFLOAT4 p4;
+		XMFLOAT4 p5;
+		XMFLOAT4 p6;
+		
+		XMFLOAT4X4 p7;
+	};
+
+	// Compute Param
+	__declspec(align(256)) struct ComputeParams {
 		XMFLOAT4X4 invProj;
 		XMFLOAT4X4 invView;
 
@@ -112,6 +129,7 @@ public:
 
 	SimParams m_simParamsData;
 	RenderParams m_renderParamsData;
+	ComputeParams m_computeParamsData;
 	const UINT m_groupSizeX = 512;
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
@@ -141,7 +159,7 @@ public:
 
 	UINT m_renderSRVCnt = 6;
 	UINT m_renderUAVCnt = 4;
-	UINT m_renderCBVCnt = 1;
+	UINT m_renderCBVCnt = 2;
 	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
 	
 	ComPtr<ID3D12DescriptorHeap> m_renderHeap;
@@ -182,6 +200,7 @@ public:
 	bool m_particleDepthRender = false;
 	bool m_smoothingDepthRender = false;
 	bool m_normalRender = false;
+	bool m_thicknessRender = false;
 	bool m_finalSceneRender = true;
 
 private:
@@ -217,8 +236,10 @@ private:
 	ComPtr<ID3D12Resource> m_renderParamsConstantBuffer;
 	UINT8* m_renderParamsConstantBufferDataBegin = nullptr;
 	UINT m_renderParamsConstantBufferSize = (sizeof(RenderParams) + 255) & ~255;
-	D3D12_CPU_DESCRIPTOR_HANDLE m_renderParamsCbvCpuHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE m_renderParamsCbvGpuHandle;
+
+	ComPtr<ID3D12Resource> m_computeParamsConstantBuffer;
+	UINT8* m_computeParamsConstantBufferDataBegin = nullptr;
+	UINT m_computeParamsConstantBufferSize = (sizeof(ComputeParams) + 255) & ~255;
 
 	UINT m_positionIndex = 0;
 	UINT m_predictedPositionIndex = 1;
@@ -232,10 +253,8 @@ private:
 	UINT m_cellCountIndex = 7;
 	UINT m_cellOffsetIndex = 8;
 	UINT m_cellStartIndex = 9;
-	UINT m_cellStartPartialSumIndex = 10;	
+	UINT m_cellStartPartialSumIndex = 10;
 	UINT m_cellScatterIndex = 11;
-
-	UINT m_colorIndex = 12;
 
 	UINT m_width;
 	UINT m_height;

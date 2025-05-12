@@ -1,33 +1,20 @@
 
-cbuffer GlobalConstants : register(b0)
+cbuffer RenderParams : register(b0)
 {
 	float4x4 view;
 	float4x4 proj;
-	float4x4 viewProj;
-	float4x4 invProj;
 
-	float3 eyeWorld;
-	float strengthIBL;
+	float thicknessContributionScale;
+	float p1;
+	float p2;
+	float p3;
 
-	int choiceEnvMap;
-	float envLodBias;
-	int mode;
-	float depthScale;
+	float4 p4;
+	float4 p5;
+	float4 p6;
 
-	float fogStrength;
-	uint depthOnlySRVIndex;
-	uint shadowDepthOnlyStartIndex;
-	uint resolvedSRVIndex;
-
-	uint fogSRVIndex;
-	uint isEnvEnabled;
-	float d01;
-	float d02;
-
-	float4x4 d03;
-	float4x4 d04;
-	float4x4 d05;
-}
+	float4x4 p7;
+};
 
 struct PSInput
 {
@@ -54,9 +41,11 @@ PSOutput main(PSInput input)
 
 	if (r2 > 1.0) discard;
 
-	float contribution = exp(-r2 * 4.0) * 1.0;
+	float thicknessContribution = sqrt(1.0 - r2);
 
-	o.thicknessContribution = float4(contribution, 0.0, 0.0, 0.0);
+	thicknessContribution *= thicknessContributionScale;
+
+	o.thicknessContribution = float4(thicknessContribution, 0.0, 0.0, 0.0);
 
 	return o;
 }

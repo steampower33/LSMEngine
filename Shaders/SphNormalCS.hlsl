@@ -1,3 +1,4 @@
+
 #define GROUP_SIZE_X 16
 #define GROUP_SIZE_Y 16
 
@@ -16,7 +17,7 @@ RWTexture2D<float4> SceneTexture : register(u3);
 // Fresnel at 0¡Æ
 #define F0 0.02
 
-cbuffer RenderParams : register(b0)
+cbuffer ComputeParams : register(b1)
 {
     float4x4 invProj;
     float4x4 invView;
