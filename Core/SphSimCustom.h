@@ -58,10 +58,10 @@ public:
 		
 		float density0 = 1000.0f;
 		float pressureCoeff = 80.0f;
-		float nearPressureCoeff = 10.0f;
+		float nearPressureCoeff = 2.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 1.0f;
+		float mass = 0.8f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -82,7 +82,7 @@ public:
 		XMFLOAT4X4 view;
 		XMFLOAT4X4 proj;
 
-		float thicknessContributionScale = 0.01f;
+		float thicknessContributionScale = 0.1f;
 		float p1;
 		float p2;
 		float p3;
@@ -97,12 +97,12 @@ public:
 	// Compute Param
 	__declspec(align(256)) struct ComputeParams {
 		XMFLOAT4X4 invProj;
-		XMFLOAT4X4 view;
+		XMFLOAT4X4 invView;
 
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
-		float sigmaDepth = 0.5f;
-		float shininess = 32.0f;
+		float sigmaDepth = 1.0f;
+		float shininess = 1.0f;
 
 		UINT width;
 		float invWidth;
@@ -112,11 +112,11 @@ public:
 		XMFLOAT3 eyeWorld;
 		float refractionStrength = 0.0f;
 
-		XMFLOAT3 lightPos = XMFLOAT3(-5.0f, 5.0f, 0.0f);
+		XMFLOAT3 lightPos = XMFLOAT3(-5.0f, 5.0f, 5.0f);
 		float p;
 
 		XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		float waterDensity = 1.0f;
+		float waterDensity = 0.1f;
 
 		XMFLOAT3 ambientColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		float fresnel0 = 0.02f;
@@ -124,7 +124,7 @@ public:
 		XMFLOAT3 diffuseColor = XMFLOAT3(0.4f, 0.5f, 1.0f);
 		float fresnelPower = 5.0f;
 
-		XMFLOAT3 specularColor = XMFLOAT3(0.0f, 0.0f, 0.2f);
+		XMFLOAT3 specularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		float fresnelClamp = 1.0f;
 	};
 
@@ -135,9 +135,9 @@ public:
 	float m_smoothingRadius = 0.15f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 4.0f;
+	float m_maxBoundsX = 6.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 4.0f;
+	float m_maxBoundsZ = 6.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));

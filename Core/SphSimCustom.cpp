@@ -278,7 +278,8 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 
 	memcpy(m_renderParamsConstantBufferDataBegin, &m_renderParamsData, sizeof(m_renderParamsData));
 
-	XMStoreFloat4x4(&m_computeParamsData.view, XMMatrixTranspose(view));
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
+	XMStoreFloat4x4(&m_computeParamsData.invView, XMMatrixTranspose(invView));
 
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_computeParamsData.invProj, XMMatrixTranspose(invProj));

@@ -23,10 +23,12 @@ void MainEngine::Initialize()
 
 	// SphSimPDF
 	m_sphSimCustom->Initialize(m_device, m_pCurrFR->m_cmdList, static_cast<UINT>(m_sceneSize.x), static_cast<UINT>(m_sceneSize.y));
-	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY * 0.5f;
-	m_camera->m_pos.z = -max(m_sphSimCustom->m_maxBoundsX, m_sphSimCustom->m_maxBoundsY) * 1.5f;
+	m_camera->m_pos.x = m_sphSimCustom->m_maxBoundsX;
+	m_camera->m_pos.y = m_sphSimCustom->m_maxBoundsY;
+	m_camera->m_pos.z = -m_sphSimCustom->m_maxBoundsZ * 1.5f;
 
-	m_camera->m_pitch = 0.3f;
+	m_camera->m_yaw = -0.5f;
+	m_camera->m_pitch = 0.5f;
 	m_camera->UpdateMouse(m_mouseDeltaX, m_mouseDeltaY, 0.0);
 
 	{

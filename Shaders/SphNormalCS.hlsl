@@ -14,7 +14,7 @@ RWTexture2D<float4> LastScene : register(u3);
 cbuffer ComputeParams : register(b1)
 {
     float4x4 invProj;
-    float4x4 view;
+    float4x4 invView;
 
     int   filterRadius;
     float sigmaSpatial;
@@ -98,26 +98,19 @@ void main(uint3 gid : SV_GroupID,
     float3 posC = ReconstructPosition(pix, SmoothedDepthMap.Load(int3(pix, 0)));
 
     // 중앙 차분: 양쪽 차분을 합쳐서 진짜 기울기 계산
-    float3 ddx = posR - posC;
-    float3 ddy = posD - posC;
-
-    float3 ddx2 = posC - posL;
-    if (abs(ddx.z) > abs(ddx2.z))
-        ddx = ddx2;
-
-    float3 ddy2 = posC - posU;
-    if (abs(ddy.z) > abs(ddy2.z))
-        ddy = ddy2;
+    float3 ddx = (posR - posL) * 0.5;
+    float3 ddy = (posD - posU) * 0.5;
 
     float3 normalVS = normalize(cross(ddx, ddy));
-
     float4 outputNormal = float4(normalVS * 0.5 + 0.5, 1.0);
 
     NormalMap[pix] = outputNormal;
 
-    float3 N = normalVS;
-    float3 V = normalize(-posC);
-    float3 L = normalize(mul(float4(lightPos, 1.0), view).xyz - posC);
+    float3 worldPos = mul(float4(posC, 1.0), invView).xyz;
+
+    float3 L = normalize(lightPos - worldPos);
+    float3 V = normalize(eyeWorld - worldPos);
+    float3 N = normalize(mul(normalVS, (float3x3)invView).xyz);
     float3 H = normalize(L + V);
 
     float  NdotL = saturate(dot(N, L));
@@ -127,18 +120,14 @@ void main(uint3 gid : SV_GroupID,
     float3 diffuse = diffuseColor * NdotL;
     float3 specular = specularColor * pow(NdotH, shininess);
 
-    float3 localLighting = ambient + diffuse + specular;
-
     float  thickness = ThicknessMap.Load(int3(pix, 0)).r;
     float3 beerTrans = exp(-waterDensity * thickness * (1.0 - diffuseColor));
+    float3 colorNoSpec = (ambient + diffuse) * beerTrans;
 
-    float3 absorbed = localLighting * beerTrans;
-
-    float cosTheta = saturate(dot(N, V));
-    float fresnel = fresnel0 + (1 - fresnel0) * pow(1 - cosTheta, fresnelPower);
+    float fresnel = saturate(fresnel0 + (1 - fresnel0) * pow(1 - saturate(dot(N, V)), fresnelPower));
     fresnel = clamp(fresnel, 0, fresnelClamp);
 
-    float4 finalColor_rgb = float4(lerp(absorbed, specularColor, fresnel), 1.0);
+    float4 finalColor = float4(lerp(colorNoSpec, colorNoSpec + specular, fresnel), 1.0);
 
-    LastScene[pix] = float4(localLighting, 1.0);
+    LastScene[pix] = finalColor;
 }
