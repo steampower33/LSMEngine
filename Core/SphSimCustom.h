@@ -97,7 +97,7 @@ public:
 	// Compute Param
 	__declspec(align(256)) struct ComputeParams {
 		XMFLOAT4X4 invProj;
-		XMFLOAT4X4 invView;
+		XMFLOAT4X4 view;
 
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
@@ -112,7 +112,7 @@ public:
 		XMFLOAT3 eyeWorld;
 		float refractionStrength = 0.0f;
 
-		XMFLOAT3 lightPos = XMFLOAT3(50.0f, 50.0f, -50.0f);
+		XMFLOAT3 lightPos = XMFLOAT3(-5.0f, 5.0f, 0.0f);
 		float p;
 
 		XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
@@ -151,7 +151,7 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
 
-	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera);
+	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);

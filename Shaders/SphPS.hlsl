@@ -52,7 +52,8 @@ PSOutput main(PSInput input)
 
 	float dNorm = (depth - 0.1) / (100.0 - 0.1);
 
-	o.color = float4(dNorm, dNorm, dNorm, 1.0);
+	N = N * 0.5 + 0.5;
+	o.color = float4(N, 1.0);
 
 	return o;
 }

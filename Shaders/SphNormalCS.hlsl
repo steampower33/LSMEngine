@@ -14,7 +14,7 @@ RWTexture2D<float4> LastScene : register(u3);
 cbuffer ComputeParams : register(b1)
 {
     float4x4 invProj;
-    float4x4 invView;
+    float4x4 view;
 
     int   filterRadius;
     float sigmaSpatial;
@@ -30,7 +30,7 @@ cbuffer ComputeParams : register(b1)
     float refractionStrength;
 
     float3 lightPos;
-    float p;
+    float p1;
 
     float3 lightColor;
     float waterDensity;
@@ -54,14 +54,15 @@ float3 LinearToneMapping(float3 color)
     return color;
 }
 
-float3 ReconstructPosition(int2 p, float z) {
+float3 ReconstructPosition(int2 pix, float z) {
     float2 invScreen = float2(invWidth, invHeight);
 
-    float2 uv = (float2(p) + 0.5) * invScreen;
+    float2 uv = (float2(pix) + 0.5) * invScreen;
     float2 ndc = uv * 2.0 - 1.0;
+    
     float4 clipPos = float4(ndc, 1.0, 1.0);
 
-    float4 viewPosHom = mul(invProj, clipPos);
+    float4 viewPosHom = mul(clipPos, invProj);
     float3 viewRay = viewPosHom.xyz / viewPosHom.w;
 
     return viewRay * (z / viewRay.z);
@@ -83,81 +84,61 @@ void main(uint3 gid : SV_GroupID,
         return;
     }
 
-    int2 pixL = pix + int2(-1, 0);
-    int2 pixR = pix + int2(1, 0);
-    int2 pixD = pix + int2(0, 1);
-    int2 pixU = pix + int2(0, -1);
+    // 이웃 좌표는 화면 밖으로 나가지 않도록 clamp
+    int2 pixL = clamp(pix + int2(-1, 0), int2(0, 0), int2(width - 1, height - 1));
+    int2 pixR = clamp(pix + int2(1, 0), int2(0, 0), int2(width - 1, height - 1));
+    int2 pixU = clamp(pix + int2(0, -1), int2(0, 0), int2(width - 1, height - 1));
+    int2 pixD = clamp(pix + int2(0, 1), int2(0, 0), int2(width - 1, height - 1));
 
-    float dL = SmoothedDepthMap.Load(int3(pixL, 0));
-    float dR = SmoothedDepthMap.Load(int3(pixR, 0));
-    float dD = SmoothedDepthMap.Load(int3(pixD, 0));
-    float dU = SmoothedDepthMap.Load(int3(pixU, 0));
+    // 뎁스 읽어서 3D 위치 재구성
+    float3 posL = ReconstructPosition(pixL, SmoothedDepthMap.Load(int3(pixL, 0)));
+    float3 posR = ReconstructPosition(pixR, SmoothedDepthMap.Load(int3(pixR, 0)));
+    float3 posU = ReconstructPosition(pixU, SmoothedDepthMap.Load(int3(pixU, 0)));
+    float3 posD = ReconstructPosition(pixD, SmoothedDepthMap.Load(int3(pixD, 0)));
+    float3 posC = ReconstructPosition(pix, SmoothedDepthMap.Load(int3(pix, 0)));
 
-    if (pixL.x < 0 || dL >= 100.0f ||
-        pixR.x >= width || dR >= 100.0f ||
-        pixD.y >= height || dD >= 100.0f ||
-        pixU.y < 0 || dU >= 100.0f)
-    {
-        NormalMap[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
-        return;
-    }
-
-    float3 posC = ReconstructPosition(pix, dC);
-    float3 posL = ReconstructPosition(pixL, dL);
-    float3 posR = ReconstructPosition(pixR, dR);
-    float3 posD = ReconstructPosition(pixD, dD);
-    float3 posU = ReconstructPosition(pixU, dU);
-
+    // 중앙 차분: 양쪽 차분을 합쳐서 진짜 기울기 계산
     float3 ddx = posR - posC;
+    float3 ddy = posD - posC;
+
     float3 ddx2 = posC - posL;
     if (abs(ddx.z) > abs(ddx2.z))
         ddx = ddx2;
 
-    float3 ddy = posU - posC;
-    float3 ddy2 = posC - posD;
+    float3 ddy2 = posC - posU;
     if (abs(ddy.z) > abs(ddy2.z))
         ddy = ddy2;
 
     float3 normalVS = normalize(cross(ddx, ddy));
-    normalVS.x *= -1;
 
     float4 outputNormal = float4(normalVS * 0.5 + 0.5, 1.0);
 
     NormalMap[pix] = outputNormal;
 
-    float3 nWorld = mul((float3x3)invView, normalVS);
-
-    // Lighting
-    float4 worldPos_h = mul(invView, float4(posC, 1.0));
-    float3 worldPos = worldPos_h.xyz / worldPos_h.w;
-
-    float3 N = normalize(nWorld);
-
-    float3 L = normalize(lightPos - worldPos);
-    float3 V = normalize(eyeWorld - worldPos);
+    float3 N = normalVS;
+    float3 V = normalize(-posC);
+    float3 L = normalize(mul(float4(lightPos, 1.0), view).xyz - posC);
     float3 H = normalize(L + V);
 
-    float NdotL = saturate(dot(nWorld, L));
-    float NdotH = saturate(dot(nWorld, H));
+    float  NdotL = saturate(dot(N, L));
+    float  NdotH = saturate(dot(N, H));
 
     float3 ambient = ambientColor;
     float3 diffuse = diffuseColor * NdotL;
     float3 specular = specularColor * pow(NdotH, shininess);
+
     float3 localLighting = ambient + diffuse + specular;
 
-    float thickness = ThicknessMap.Load(int3(pix, 0)).r;
+    float  thickness = ThicknessMap.Load(int3(pix, 0)).r;
+    float3 beerTrans = exp(-waterDensity * thickness * (1.0 - diffuseColor));
 
-    float3 beerTransmittance = exp(-waterDensity * thickness * (1.0 - ambientColor));
+    float3 absorbed = localLighting * beerTrans;
 
     float cosTheta = saturate(dot(N, V));
-    float fresnel = fresnel0 + (1.0 - fresnel0) * pow(1.0 - cosTheta, fresnelPower);
-    fresnel = clamp(fresnel, 0.0f, fresnelClamp);
+    float fresnel = fresnel0 + (1 - fresnel0) * pow(1 - cosTheta, fresnelPower);
+    fresnel = clamp(fresnel, 0, fresnelClamp);
 
-    float3 absorbedLocalLighting = localLighting * beerTransmittance;
+    float4 finalColor_rgb = float4(lerp(absorbed, specularColor, fresnel), 1.0);
 
-    float3 testReflectionColor = specularColor;
-
-    float3 finalColor_rgb = lerp(absorbedLocalLighting, testReflectionColor, fresnel);
-
-    LastScene[pix] = float4(finalColor_rgb, 1.0);
+    LastScene[pix] = float4(localLighting, 1.0);
 }

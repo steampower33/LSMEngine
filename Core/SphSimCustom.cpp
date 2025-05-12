@@ -243,7 +243,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera)
+void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -253,7 +253,8 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
 	m_simParamsData.radius = m_radius;
 
-	m_simParamsData.currentTime += m_simParamsData.deltaTime;
+	if (!isPaused)
+		m_simParamsData.currentTime += m_simParamsData.deltaTime;
 
 	if (forceKey == 1)
 	{
@@ -277,8 +278,7 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 
 	memcpy(m_renderParamsConstantBufferDataBegin, &m_renderParamsData, sizeof(m_renderParamsData));
 
-	XMMATRIX invView = XMMatrixInverse(nullptr, view);
-	XMStoreFloat4x4(&m_computeParamsData.invView, XMMatrixTranspose(invView));
+	XMStoreFloat4x4(&m_computeParamsData.view, XMMatrixTranspose(view));
 
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_computeParamsData.invProj, XMMatrixTranspose(invProj));

@@ -661,7 +661,7 @@ void MainEngine::UpdateGUI()
 					}
 
 					flag += DrawTableRow("LightPos", [&]() {
-						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_computeParamsData.lightPos.x, 0.01f, -20.0f, 20.0f);
+						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_computeParamsData.lightPos.x, 0.01f, -100.0f, 100.0f);
 						});
 					flag += DrawTableRow("Shininess", [&]() {
 						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_computeParamsData.shininess, 0.01f, 0.0f, 100.0f);
@@ -841,10 +841,7 @@ void MainEngine::Update(float dt)
 
 	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
 
-	if (!m_isPaused)
-	{
-		m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera);
-	}
+	m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera, m_isPaused);
 
 	// Update BoundsBox
 	{
