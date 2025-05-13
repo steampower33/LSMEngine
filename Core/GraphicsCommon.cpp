@@ -421,6 +421,10 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"BasicVS.hlsl", L"vs_6_0", basicVS);
 	CreateShader(device, L"BasicPS.hlsl", L"ps_6_0", basicPS);
 
+	// Skybox
+	CreateShader(device, L"SkyboxVS.hlsl", L"vs_6_0", skyboxVS);
+	CreateShader(device, L"SkyboxPS.hlsl", L"ps_6_0", skyboxPS);
+
 	// Sph
 	CreateShader(device, L"SphExternalCS.hlsl", L"cs_6_0", sphExternalCS);
 	CreateShader(device, L"SphClearCountCellCS.hlsl", L"cs_6_0", sphClearCountCellCS);
@@ -791,7 +795,11 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 
-	UINT sampleCount = 4;
+	D3D12_INPUT_LAYOUT_DESC emptyInputLayout = {};
+	emptyInputLayout.pInputElementDescs = nullptr;
+	emptyInputLayout.NumElements = 0;
+
+	UINT sampleCount = 1;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC basicSolidPSODesc = {};
 	basicSolidPSODesc.InputLayout = { basicIE, _countof(basicIE) };
@@ -809,6 +817,12 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	basicSolidPSODesc.NumRenderTargets = 1;
 	basicSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&basicSolidPSODesc, IID_PPV_ARGS(&basicSolidPSO)));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyboxSolidPSODesc = basicSolidPSODesc;
+	skyboxSolidPSODesc.VS = { skyboxVS->GetBufferPointer(), skyboxVS->GetBufferSize() };
+	skyboxSolidPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
+	skyboxSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxSolidPSODesc, IID_PPV_ARGS(&skyboxSolidPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphClearCountCellCSPSODesc = {};
 	sphClearCountCellCSPSODesc.pRootSignature = sphComputeRootSignature.Get();

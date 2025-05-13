@@ -46,9 +46,10 @@ FrameResource::~FrameResource()
 
 }
 
-void FrameResource::UpdateGlobalConsts(
+void FrameResource::UpdateConsts(
 	shared_ptr<Camera>& camera,
-	GlobalConstants& globalConsts)
+	GlobalConstants& globalConsts,
+	CubemapIndexConstants& cubemapIndexConsts)
 {
 	XMMATRIX view = camera->GetViewMatrix();
 	XMMATRIX viewTrans = XMMatrixTranspose(view);
@@ -63,7 +64,7 @@ void FrameResource::UpdateGlobalConsts(
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_globalConstsData.invProj, XMMatrixTranspose(invProj));
 
-	//m_globalConstsData.eyeWorld = camera->GetEyePos();
+	m_globalConstsData.eyeWorld = camera->GetEyePos();
 	//m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
 	//m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
 	//m_globalConstsData.envLodBias = globalConsts.envLodBias;
@@ -73,6 +74,10 @@ void FrameResource::UpdateGlobalConsts(
 	//m_globalConstsData.frameIndex = globalConsts.frameIndex;
 
 	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
+
+	m_cubemapIndexConstsData = cubemapIndexConsts;
+
+	memcpy(m_cubemapIndexConstsDataBegin, &m_cubemapIndexConstsData, sizeof(m_cubemapIndexConstsData));
 }
 
 void FrameResource::Update(
@@ -96,31 +101,31 @@ void FrameResource::Update(
 	XMStoreFloat4x4(&m_globalConstsData.invProj, XMMatrixTranspose(invProj));
 
 	m_globalConstsData.eyeWorld = camera->GetEyePos();
-	m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
-	m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
-	m_globalConstsData.envLodBias = globalConsts.envLodBias;
-	m_globalConstsData.light[0] = globalConsts.light[0];
-	m_globalConstsData.light[1] = globalConsts.light[1];
-	m_globalConstsData.isEnvEnabled = globalConsts.isEnvEnabled;
+	//m_globalConstsData.strengthIBL = globalConsts.strengthIBL;
+	//m_globalConstsData.choiceEnvMap = globalConsts.choiceEnvMap;
+	//m_globalConstsData.envLodBias = globalConsts.envLodBias;
+	//m_globalConstsData.light[0] = globalConsts.light[0];
+	//m_globalConstsData.light[1] = globalConsts.light[1];
+	//m_globalConstsData.isEnvEnabled = globalConsts.isEnvEnabled;
 
 	memcpy(m_globalConstsDataBegin, &m_globalConstsData, sizeof(m_globalConstsData));
 
-	// Shadow
-	for (UINT i = 0; i < MAX_LIGHTS; i++)
-	{
-		m_shadowGlobalConstsData[i] = shadowGlobalConsts[i];
-		memcpy(m_shadowGlobalConstsDataBegin[i], &m_shadowGlobalConstsData[i], sizeof(m_shadowGlobalConstsData[i]));
-	}
+	//// Shadow
+	//for (UINT i = 0; i < MAX_LIGHTS; i++)
+	//{
+	//	m_shadowGlobalConstsData[i] = shadowGlobalConsts[i];
+	//	memcpy(m_shadowGlobalConstsDataBegin[i], &m_shadowGlobalConstsData[i], sizeof(m_shadowGlobalConstsData[i]));
+	//}
 
-	// Reflect
-	m_reflectConstsData = m_globalConstsData;
+	//// Reflect
+	//m_reflectConstsData = m_globalConstsData;
 
-	XMVECTOR plane = XMLoadFloat4(&mirrorPlane);
-	XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
-	XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
-	XMStoreFloat4x4(&m_reflectConstsData.view, XMMatrixTranspose(reflectedViewMatrix));
+	//XMVECTOR plane = XMLoadFloat4(&mirrorPlane);
+	//XMMATRIX reflectionMatrix = XMMatrixReflect(plane);
+	//XMMATRIX reflectedViewMatrix = XMMatrixMultiply(reflectionMatrix, view);
+	//XMStoreFloat4x4(&m_reflectConstsData.view, XMMatrixTranspose(reflectedViewMatrix));
 
-	memcpy(m_reflectConstsDataBegin, &m_reflectConstsData, sizeof(m_reflectConstsData));
+	//memcpy(m_reflectConstsDataBegin, &m_reflectConstsData, sizeof(m_reflectConstsData));
 
 	m_cubemapIndexConstsData = cubemapIndexConsts;
 

@@ -17,7 +17,7 @@ void MainEngine::Initialize()
 	ThrowIfFailed(m_pCurrFR->m_cmdAlloc->Reset());
 	ThrowIfFailed(m_pCurrFR->m_cmdList->Reset(m_pCurrFR->m_cmdAlloc.Get(), nullptr));
 
-	//m_textureManager->Initialize(m_device, m_pCurrFR->m_cmdList);
+	m_textureManager->Initialize(m_device, m_pCurrFR->m_cmdList);
 	for (UINT i = 0; i < FrameCount; i++)
 		m_frameResources[i]->InitializeDescriptorHeaps(m_device, m_textureManager);
 
@@ -41,19 +41,19 @@ void MainEngine::Initialize()
 		m_boundsBox->m_key = "m_boundsBox";
 	}
 
-	//{
-	//	MeshData skybox = GeometryGenerator::MakeBox(50.0f);
-	//	std::reverse(skybox.indices.begin(), skybox.indices.end());
+	{
+		MeshData skybox = GeometryGenerator::MakeBox(50.0f);
+		std::reverse(skybox.indices.begin(), skybox.indices.end());
 
-	//	skybox.cubeEnvFilename = "./Assets/IBL/IBLEnvHDR.dds";
-	//	skybox.cubeDiffuseFilename = "./Assets/IBL/IBLDiffuseHDR.dds";
-	//	skybox.cubeSpecularFilename = "./Assets/IBL/IBLSpecularHDR.dds";
-	//	skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
+		skybox.cubeEnvFilename = "./Assets/IBL/IBLEnvHDR.dds";
+		skybox.cubeDiffuseFilename = "./Assets/IBL/IBLDiffuseHDR.dds";
+		skybox.cubeSpecularFilename = "./Assets/IBL/IBLSpecularHDR.dds";
+		skybox.cubeBrdfFilename = "./Assets/IBL/IBLBrdf.dds";
 
-	//	m_skybox = make_shared<Model>(
-	//		m_device, m_pCurrFR->m_cmdList, m_commandQueue,
-	//		vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
-	//}
+		m_skybox = make_shared<Model>(
+			m_device, m_pCurrFR->m_cmdList, m_commandQueue,
+			vector{ skybox }, m_cubemapIndexConstsData, m_textureManager, XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
 
 	//{
 	//	MeshData meshData = GeometryGenerator::MakeSphere(0.025f, 20, 20);
@@ -593,6 +593,19 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_thicknessRender = false;
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
+					flag += DrawTableRow("Background", [&]() {
+						return ImGui::Checkbox("##Background", &m_sphSimCustom->m_backgroundRender);
+						});
+					if (m_sphSimCustom->m_backgroundRender)
+					{
+						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_backgroundSRVIndex;
+
+						m_sphSimCustom->m_particleRender = false;
+						m_sphSimCustom->m_particleDepthRender = false;
+						m_sphSimCustom->m_smoothingDepthRender = false;
+						m_sphSimCustom->m_normalRender = false;
+						m_sphSimCustom->m_finalSceneRender = false;
+					}
 
 					flag += DrawTableRow("Thickness", [&]() {
 						return ImGui::Checkbox("##Thickness", &m_sphSimCustom->m_thicknessRender);
@@ -601,6 +614,7 @@ void MainEngine::UpdateGUI()
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_thicknessSRVIndex;
 
+						m_sphSimCustom->m_backgroundRender = false;
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
@@ -618,6 +632,7 @@ void MainEngine::UpdateGUI()
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_particleDepthOutputSRVIndex;
 
+						m_sphSimCustom->m_backgroundRender = false;
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
@@ -632,6 +647,7 @@ void MainEngine::UpdateGUI()
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_smoothedDepthSRVIndex;
 
+						m_sphSimCustom->m_backgroundRender = false;
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_normalRender = false;
@@ -655,6 +671,7 @@ void MainEngine::UpdateGUI()
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_normalSRVIndex;
 
+						m_sphSimCustom->m_backgroundRender = false;
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
@@ -662,8 +679,8 @@ void MainEngine::UpdateGUI()
 						m_sphSimCustom->m_finalSceneRender = false;
 					}
 
-					flag += DrawTableRow("LightPos", [&]() {
-						return ImGui::DragFloat3("##LightPos", &m_sphSimCustom->m_computeParamsData.lightPos.x, 0.01f, -100.0f, 100.0f);
+					flag += DrawTableRow("LightDir", [&]() {
+						return ImGui::DragFloat3("##LightDir", &m_sphSimCustom->m_computeParamsData.lightDir.x, 0.01f, -100.0f, 100.0f);
 						});
 					flag += DrawTableRow("Shininess", [&]() {
 						return ImGui::DragFloat("##Shininess", &m_sphSimCustom->m_computeParamsData.shininess, 0.01f, 0.0f, 100.0f);
@@ -707,6 +724,7 @@ void MainEngine::UpdateGUI()
 					{
 						m_sphSimCustom->m_finalSRVIndex = m_sphSimCustom->m_sceneSRVIndex;
 
+						m_sphSimCustom->m_backgroundRender = false;
 						m_sphSimCustom->m_particleRender = false;
 						m_sphSimCustom->m_particleDepthRender = false;
 						m_sphSimCustom->m_smoothingDepthRender = false;
@@ -841,7 +859,7 @@ void MainEngine::Update(float dt)
 
 	m_globalConstsData.frameIndex = m_frameIndex;
 
-	m_pCurrFR->UpdateGlobalConsts(m_camera, m_globalConstsData);
+	m_pCurrFR->UpdateConsts(m_camera, m_globalConstsData, m_cubemapIndexConstsData);
 
 	m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera, m_isPaused);
 
@@ -857,6 +875,8 @@ void MainEngine::Update(float dt)
 		XMStoreFloat4(&m_boundsBox->m_position, center);
 		m_boundsBox->Update();
 	}
+
+	m_skybox->Update();
 
 	//UpdateMouseControl();
 	//UpdateLight(dt);
@@ -947,13 +967,38 @@ void MainEngine::SphRenderPass()
 	SetBarrier(m_pCurrFR->m_cmdList, m_renderTargets[m_frameIndex],
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	//m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
-
-	//ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
-	//m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
 	m_pCurrFR->m_cmdList->RSSetViewports(1, &m_sceneViewport);
 	m_pCurrFR->m_cmdList->RSSetScissorRects(1, &m_sceneScissorRect);
+	
+	{
+		SetBarrier(m_pCurrFR->m_cmdList, m_sphSimCustom->m_backgroundRTVBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		m_pCurrFR->m_cmdList->SetGraphicsRootSignature(Graphics::basicRootSignature.Get());
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_textureManager->m_textureHeap.Get() };
+		m_pCurrFR->m_cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(0, m_pCurrFR->m_globalConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_cmdList->SetGraphicsRootConstantBufferView(3, m_pCurrFR->m_cubemapIndexConstsUploadHeap.Get()->GetGPUVirtualAddress());
+		m_pCurrFR->m_cmdList->SetGraphicsRootDescriptorTable(5, m_textureManager->m_textureHeap->GetGPUDescriptorHandleForHeapStart());
+
+		m_pCurrFR->m_cmdList->SetPipelineState(Graphics::skyboxSolidPSO.Get());
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sphSimCustom->m_backgroundRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_sphSimCustom->m_backgroundDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
+		m_pCurrFR->m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+		const float particleRTVClearValue[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		m_pCurrFR->m_cmdList->ClearRenderTargetView(rtvHandle, particleRTVClearValue, 0, nullptr);
+		m_pCurrFR->m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+		m_skybox->RenderSkybox(m_device, m_pCurrFR->m_cmdList);
+
+		SetBarrier(m_pCurrFR->m_cmdList, m_sphSimCustom->m_backgroundRTVBuffer,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
 
 	// Sph Render
 	m_sphSimCustom->Render(m_pCurrFR->m_cmdList, m_pCurrFR->m_globalConstsUploadHeap);

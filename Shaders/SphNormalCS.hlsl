@@ -29,7 +29,7 @@ cbuffer ComputeParams : register(b1)
     float3 eyeWorld;
     float refractionStrength;
 
-    float3 lightPos;
+    float3 lightDir;
     float p1;
 
     float3 lightColor;
@@ -57,9 +57,9 @@ float3 LinearToneMapping(float3 color)
 float3 ReconstructPosition(int2 pix, float z) {
     float2 invScreen = float2(invWidth, invHeight);
 
-    float2 uv = (float2(pix) + 0.5) * invScreen;
+    float2 uv = (float2(pix)+0.5) * invScreen;
     float2 ndc = uv * 2.0 - 1.0;
-    
+
     float4 clipPos = float4(ndc, 1.0, 1.0);
 
     float4 viewPosHom = mul(clipPos, invProj);
@@ -101,16 +101,17 @@ void main(uint3 gid : SV_GroupID,
     float3 ddx = (posR - posL) * 0.5;
     float3 ddy = (posD - posU) * 0.5;
 
-    float3 normalVS = normalize(cross(ddx, ddy));
-    float4 outputNormal = float4(normalVS * 0.5 + 0.5, 1.0);
+    float3 viewNormal = normalize(cross(ddx, ddy));
+    float4 outputNormal = float4(viewNormal * 0.5 + 0.5, 1.0);
 
     NormalMap[pix] = outputNormal;
 
-    float3 worldPos = mul(float4(posC, 1.0), invView).xyz;
+    float3 nWorld = normalize(mul((float3x3)invView, viewNormal));
+    float3 worldPos = mul((float3x3)invView, posC);
 
-    float3 L = normalize(lightPos - worldPos);
+    float3 L = normalize(lightDir);
     float3 V = normalize(eyeWorld - worldPos);
-    float3 N = normalize(mul(normalVS, (float3x3)invView).xyz);
+    float3 N = nWorld;
     float3 H = normalize(L + V);
 
     float  NdotL = saturate(dot(N, L));
@@ -124,10 +125,13 @@ void main(uint3 gid : SV_GroupID,
     float3 beerTrans = exp(-waterDensity * thickness * (1.0 - diffuseColor));
     float3 colorNoSpec = (ambient + diffuse) * beerTrans;
 
-    float fresnel = saturate(fresnel0 + (1 - fresnel0) * pow(1 - saturate(dot(N, V)), fresnelPower));
+    float fresnel = fresnel0 + (1 - fresnel0) * pow(1 - saturate(dot(N, V)), fresnelPower);
     fresnel = clamp(fresnel, 0, fresnelClamp);
 
     float4 finalColor = float4(lerp(colorNoSpec, colorNoSpec + specular, fresnel), 1.0);
 
     LastScene[pix] = finalColor;
+    //LastScene[pix] = float4(ambient + diffuse + specular, 1.0);
+    //float dNorm = (dC - 0.1) / (10.0 - 0.1);
+    //LastScene[pix] = float4(dNorm, dNorm, dNorm, 1.0);;
 }

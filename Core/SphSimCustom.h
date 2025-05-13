@@ -11,6 +11,9 @@
 #include "ConstantBuffers.h"
 #include "GraphicsCommon.h"
 #include "Camera.h"
+#include "Mesh.h"
+#include "MeshData.h"
+#include "Vertex.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -112,7 +115,7 @@ public:
 		XMFLOAT3 eyeWorld;
 		float refractionStrength = 0.0f;
 
-		XMFLOAT3 lightPos = XMFLOAT3(-5.0f, 5.0f, 5.0f);
+		XMFLOAT3 lightDir = XMFLOAT3(-5.0f, 5.0f, 0.0f);
 		float p;
 
 		XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
@@ -158,7 +161,7 @@ public:
 
 	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height);
 
-	UINT m_renderSRVCnt = 6;
+	UINT m_renderSRVCnt = 7;
 	UINT m_renderUAVCnt = 4;
 	UINT m_renderCBVCnt = 2;
 	UINT m_renderCubemapSRVCnt = 4;
@@ -194,10 +197,17 @@ public:
 	UINT m_sceneSRVIndex = 5;
 	UINT m_sceneUAVIndex = m_renderSRVCnt + 3;
 
+	ComPtr<ID3D12Resource> m_backgroundRTVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_backgroundRTVHeap;
+	UINT m_backgroundSRVIndex = 6;
+	ComPtr<ID3D12Resource> m_backgroundDSVBuffer;
+	ComPtr<ID3D12DescriptorHeap> m_backgroundDSVHeap;
+
 	UINT m_finalSRVIndex = m_sceneUAVIndex;
 
 	UINT m_renderCBVIndex = m_renderSRVCnt + m_renderUAVCnt;
 
+	bool m_backgroundRender = false;
 	bool m_particleRender = false;
 	bool m_particleDepthRender = false;
 	bool m_smoothingDepthRender = false;
@@ -270,4 +280,6 @@ private:
 	template <typename T>
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, vector<T>& data, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
+
+	shared_ptr<Mesh> dummy;
 };

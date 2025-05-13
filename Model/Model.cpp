@@ -25,6 +25,8 @@ Model::Model(
 			m_meshConstsBufferData.useAlbedoMap = 1;
 			m_useAlbedoMap = true;
 		}
+		newMesh->vertexBufferCount = meshDatas[i].vertices.size();
+		newMesh->indexBufferCount = meshDatas[i].indices.size();
 
 		CreateConstUploadBuffer(device, newMesh->textureIndexConstsUploadHeap, newMesh->textureIndexConstsBufferData, newMesh->textureIndexConstsBufferDataBegin);
 

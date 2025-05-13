@@ -68,7 +68,6 @@ void Camera::MoveRight(float dt) {
 	XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) + XMLoadFloat3(&m_rightDir) * m_moveSpeed * dt);
 }
 
-
 void Camera::UpdateMouse(float deltaX, float deltaY, float dt)
 {
 	// 마우스 이동량(Delta)에 속도와 deltaTime 적용
@@ -101,11 +100,23 @@ XMFLOAT3 Camera::GetEyePos()
 
 XMMATRIX Camera::GetViewMatrix()
 {
-	XMVECTOR pos = XMLoadFloat3(&m_pos);                      // 카메라 위치
-	XMVECTOR target = XMVectorAdd(pos, XMLoadFloat3(&m_lookDir)); // 카메라가 바라보는 지점
-	XMVECTOR up = XMLoadFloat3(&m_upDir);                      // 업 벡터
+	//XMVECTOR pos = XMLoadFloat3(&m_pos);
+	//XMVECTOR target = XMVectorAdd(pos, XMLoadFloat3(&m_lookDir)); // 카메라가 바라보는 지점
+	//XMVECTOR up = XMLoadFloat3(&m_upDir);                      // 업 벡터
 
-	return XMMatrixLookAtLH(pos, target, up);
+	//return XMMatrixLookAtLH(pos, target, up);
+	XMVECTOR P = XMLoadFloat3(&m_pos);       // 월드 공간 카메라 위치
+	float    pitch = m_pitch;                // 상하 회전 (라디안)
+	float    yaw = m_yaw;                  // 좌우 회전 (라디안)
+
+	XMMATRIX R_x = XMMatrixRotationX(-pitch);
+	XMMATRIX R_y = XMMatrixRotationY(-yaw);
+
+	XMMATRIX T = XMMatrixTranslation(-m_pos.x, -m_pos.y, -m_pos.z);
+
+	XMMATRIX view = T * R_y * R_x;
+
+	return view;
 }
 
 XMMATRIX Camera::GetProjectionMatrix()

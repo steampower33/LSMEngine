@@ -6,7 +6,7 @@ TextureManager::TextureManager(
 {
 	m_cubeTextureIndex = Graphics::textureSize;
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = {};
-	textureHeapDesc.NumDescriptors = Graphics::textureSize + Graphics::cubeTextureSize + Graphics::imguiTextureSize;
+	textureHeapDesc.NumDescriptors = Graphics::textureSize + Graphics::cubeTextureSize;
 	textureHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureHeap)));
@@ -18,7 +18,7 @@ TextureManager::TextureManager(
 	CD3DX12_GPU_DESCRIPTOR_HANDLE heapStartGpu(m_textureHeap->GetGPUDescriptorHandleForHeapStart());
 	m_heapStartGpu = heapStartGpu;
 
-	srvAlloc.Create(device.Get(), m_textureHeap.Get());
+	//srvAlloc.Create(device.Get(), m_textureHeap.Get());
 }
 
 void TextureManager::Initialize(

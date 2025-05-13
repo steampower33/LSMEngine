@@ -62,7 +62,7 @@ void EngineBase::LoadPipeline()
 	InitializeFence();
 	Graphics::Initialize(m_device);
 
-	//m_textureManager = make_shared<TextureManager>(m_device, m_srvAlloc);
+	m_textureManager = make_shared<TextureManager>(m_device, m_srvAlloc);
 	for (UINT i = 0; i < FrameCount; i++)
 	{
 		m_frameResources[i] = make_shared<FrameResource>(m_device, m_sceneSize.x, m_sceneSize.y, i);

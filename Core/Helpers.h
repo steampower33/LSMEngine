@@ -215,16 +215,17 @@ static void CreateBuffer(
 	}
 }
 
+template <typename T>
 static void CreateVertexBuffer(
 	ComPtr<ID3D12Device>& device,
 	ComPtr<ID3D12GraphicsCommandList>& commandList,
-	const vector<Vertex>& vertices,
+	const vector<T>& vertices,
 	shared_ptr<Mesh>& mesh)
 {
 	mesh->vertexBufferCount = static_cast<UINT>(vertices.size());
 
 	const UINT vertexBufferSizeInBytes =
-		static_cast<UINT>(vertices.size() * sizeof(Vertex));
+		static_cast<UINT>(vertices.size() * sizeof(T));
 
 	auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSizeInBytes);
 
@@ -260,7 +261,7 @@ static void CreateVertexBuffer(
 		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 	mesh->vertexBufferView.BufferLocation = mesh->vertexBuffer->GetGPUVirtualAddress();
-	mesh->vertexBufferView.StrideInBytes = sizeof(Vertex);
+	mesh->vertexBufferView.StrideInBytes = sizeof(T);
 	mesh->vertexBufferView.SizeInBytes = vertexBufferSizeInBytes;
 
 }

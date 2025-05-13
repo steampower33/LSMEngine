@@ -111,6 +111,10 @@ void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 		currentGpuHandle.Offset(1, m_cbvSrvUavSize);
 	}
 	m_simParamsCbvGpuHandle = currentGpuHandle;
+
+	std::vector<XMFLOAT3> vertex(m_numParticles);
+	dummy = make_shared<Mesh>();
+	CreateVertexBuffer(device, commandList, vertex, dummy);
 }
 
 void SphSimCustom::GenerateEmitterParticles()
@@ -254,7 +258,10 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	m_simParamsData.radius = m_radius;
 
 	if (!isPaused)
+	{
 		m_simParamsData.currentTime += m_simParamsData.deltaTime;
+
+	}
 
 	if (forceKey == 1)
 	{
@@ -278,13 +285,13 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 
 	memcpy(m_renderParamsConstantBufferDataBegin, &m_renderParamsData, sizeof(m_renderParamsData));
 
+	m_computeParamsData.eyeWorld = camera->GetEyePos();
+
 	XMMATRIX invView = XMMatrixInverse(nullptr, view);
 	XMStoreFloat4x4(&m_computeParamsData.invView, XMMatrixTranspose(invView));
 
 	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
 	XMStoreFloat4x4(&m_computeParamsData.invProj, XMMatrixTranspose(invProj));
-
-	m_computeParamsData.eyeWorld = camera->GetEyePos();
 
 	memcpy(m_computeParamsConstantBufferDataBegin, &m_computeParamsData, sizeof(m_computeParamsData));
 }
@@ -621,9 +628,10 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
+		commandList->IASetVertexBuffers(0, 1, &dummy->vertexBufferView);
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 		commandList->DrawInstanced(m_numParticles, 1, 0, 0);
-
+		
 		SetBarrier(commandList, m_particleRTVBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -653,11 +661,6 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		SetBarrier(commandList, m_particleDepthOutputBuffer,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	}
-
-
-	{
-
 	}
 
 	// SSFR
@@ -1029,5 +1032,70 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 			nullptr, 0, clearValue,
 			m_renderHeap, m_sceneSRVIndex, D3D12_SRV_DIMENSION_TEXTURE2D,
 			m_renderHeap, m_sceneUAVIndex, D3D12_UAV_DIMENSION_TEXTURE2D);
+	}
+
+	// Background Buffer
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = 1;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_backgroundRTVHeap)));
+		m_backgroundRTVHeap->SetName(L"m_backgroundRTVHeap");
+
+		D3D12_CLEAR_VALUE clearValue = {};
+		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearValue.Color[0] = 0.0f;
+		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;
+		clearValue.Color[3] = 1.0f;
+
+		CreateBuffer(device, m_backgroundRTVBuffer, L"m_backgroundRTVBuffer",
+			DXGI_FORMAT_R8G8B8A8_UNORM, static_cast<UINT>(width), static_cast<UINT>(height), 1,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			m_backgroundRTVHeap, 0, clearValue,
+			m_renderHeap, m_backgroundSRVIndex, D3D12_SRV_DIMENSION_TEXTURE2D);
+
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+		dsvHeapDesc.NumDescriptors = 1;
+		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_backgroundDSVHeap)));
+		m_backgroundDSVHeap->SetName(L"m_backgroundDSVHeap");
+
+		D3D12_CLEAR_VALUE depthClearValue = {};
+		depthClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthClearValue.DepthStencil.Depth = 1.0f;
+		depthClearValue.DepthStencil.Stencil = 0;
+
+		D3D12_RESOURCE_DESC depthStencilDesc = {};
+		depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		depthStencilDesc.Width = static_cast<UINT>(width); // 화면 너비
+		depthStencilDesc.Height = static_cast<UINT>(height); // 화면 높이
+		depthStencilDesc.DepthOrArraySize = 1;
+		depthStencilDesc.MipLevels = 1;
+		depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthStencilDesc.SampleDesc.Count = 1;
+		depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+		auto defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+		ThrowIfFailed(device->CreateCommittedResource(
+			&defaultHeapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&depthStencilDesc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&depthClearValue,
+			IID_PPV_ARGS(&m_backgroundDSVBuffer)
+		));
+		m_backgroundDSVBuffer->SetName(L"m_backgroundDSVBuffer");
+
+		// DSV 핸들 생성
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+		device->CreateDepthStencilView(m_backgroundDSVBuffer.Get(), &dsvDesc, m_backgroundDSVHeap->GetCPUDescriptorHandleForHeapStart());
+
 	}
 }
