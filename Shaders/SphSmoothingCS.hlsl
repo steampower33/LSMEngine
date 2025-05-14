@@ -35,6 +35,10 @@ cbuffer ComputeParams : register(b1)
     float p0;
     float p1;
     float p2;
+
+    float4 p3;
+    float4 p4;
+    float4 p5;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];

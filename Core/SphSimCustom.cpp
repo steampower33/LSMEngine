@@ -263,6 +263,7 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	m_simParamsData.gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	m_simParamsData.gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
+	m_radius = m_smoothingRadius * 0.5f;
 	m_simParamsData.radius = m_radius;
 
 	if (!isPaused)

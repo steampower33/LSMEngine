@@ -45,6 +45,10 @@ cbuffer ComputeParams : register(b1)
     float p0;
     float p1;
     float p2;
+    
+    float4 p3;
+    float4 p4;
+    float4 p5;
 };
 
 float3 LinearToneMapping(float3 color)

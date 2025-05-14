@@ -52,6 +52,7 @@ public:
 
 		XMFLOAT3 minBounds;
 		float currentTime = 0.0f;
+
 		XMFLOAT3 maxBounds;
 		float endTime = 0.0f;
 
@@ -61,14 +62,14 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 60.0f;
+		float pressureCoeff = 40.0f;
 		float nearPressureCoeff = 2.0f;
 		float viscosity = 0.1f;
 	
 		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
-		float boundaryDamping = 1.4f;
+		float boundaryDamping = 1.0f;
 		
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
@@ -77,8 +78,8 @@ public:
 
 		XMFLOAT4 p2;
 
-		XMMATRIX p3;
-		XMMATRIX p4;
+		XMFLOAT4X4 p3;
+		XMFLOAT4X4 p4;
 	};
 
 	// Render Param
@@ -123,13 +124,17 @@ public:
 		float p0;
 		float p1;
 		float p2;
+
+		XMFLOAT4 p3;
+		XMFLOAT4 p4;
+		XMFLOAT4 p5;
 	};
 
 	SimParams m_simParamsData;
 	RenderParams m_renderParamsData;
 	ComputeParams m_computeParamsData;
 	const UINT m_groupSizeX = 512;
-	float m_smoothingRadius = 0.15f;
+	float m_smoothingRadius = 0.18f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
 	float m_maxBoundsX = 6.0f;
@@ -138,7 +143,7 @@ public:
 
 	XMFLOAT3 m_emitterPos = XMFLOAT3{ 0.0f, 1.0f, 0.0f };
 	XMFLOAT3 m_emitterDir = XMFLOAT3{ 1.0f, 0.0f, 0.0f };
-	float m_emitterVel = 5.0f;
+	float m_emitterVel = 4.0f;
 	float m_spawnTimeStep = 2.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
