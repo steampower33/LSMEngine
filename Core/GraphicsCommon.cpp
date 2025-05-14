@@ -11,6 +11,7 @@ namespace Graphics
 	ComPtr<ID3D12RootSignature> sphComputeRootSignature;
 	ComPtr<ID3D12RootSignature> sphRenderRootSignature;
 	ComPtr<ID3D12RootSignature> sphSSFRSignature;
+	ComPtr<ID3D12RootSignature> sphSceneSignature;
 
 	ComPtr<IDxcBlob> basicVS;
 	ComPtr<IDxcBlob> basicPS;
@@ -55,6 +56,8 @@ namespace Graphics
 	ComPtr<IDxcBlob> sphThicknessPS;
 	ComPtr<IDxcBlob> sphSmoothingCS;
 	ComPtr<IDxcBlob> sphNormalCS;
+	ComPtr<IDxcBlob> sphSceneVS;
+	ComPtr<IDxcBlob> sphScenePS;
 
 	ComPtr<IDxcBlob> boundsBoxVS;
 	ComPtr<IDxcBlob> boundsBoxPS;
@@ -115,6 +118,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> sphThicknessPSO;
 	ComPtr<ID3D12PipelineState> sphSmoothingCSPSO;
 	ComPtr<ID3D12PipelineState> sphNormalCSPSO;
+	ComPtr<ID3D12PipelineState> sphScenePSO;
 
 	ComPtr<ID3D12PipelineState> boundsBoxPSO;
 
@@ -295,21 +299,45 @@ void Graphics::InitSphSSFRSignature(ComPtr<ID3D12Device>& device)
 	}
 
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[3];
-	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 5, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
 	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
 	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
+	
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
+
+	// LinearClamp
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplers[0].MipLODBias = 0.0f;
+	staticSamplers[0].MaxAnisotropy = 1;
+	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	staticSamplers[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	staticSamplers[0].MinLOD = 0.0f;
+	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplers[0].ShaderRegister = 0;
+	staticSamplers[0].RegisterSpace = 0;
+	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	// LinearWrap
+	staticSamplers[1] = staticSamplers[0];
+	staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[1].ShaderRegister = 1;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(
 		_countof(rootParameters),
 		rootParameters,
-		0,
-		nullptr,
+		2,
+		staticSamplers,
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	ComPtr<ID3DBlob> signatureBlob;
@@ -318,6 +346,52 @@ void Graphics::InitSphSSFRSignature(ComPtr<ID3D12Device>& device)
 	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphSSFRSignature)));
 	sphSSFRSignature->SetName(L"SphSSFRSignature");
 
+}
+
+void Graphics::InitSphSceneSignature(ComPtr<ID3D12Device>& device)
+{
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+	{
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
+
+	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
+	staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // 화면 가장자리 클램프
+	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplerDesc.MipLODBias = 0;
+	staticSamplerDesc.MaxAnisotropy = 0;
+	staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	staticSamplerDesc.MinLOD = 0.0f;
+	staticSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplerDesc.ShaderRegister = 0; // s0
+	staticSamplerDesc.RegisterSpace = 0;
+	staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // 픽셀 셰이더에서만 사용
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),
+		rootParameters,
+		1,
+		&staticSamplerDesc,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> signatureBlob;
+	ComPtr<ID3DBlob> errorBlob;
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signatureBlob, &errorBlob));
+	ThrowIfFailed(device->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&sphSceneSignature)));
+	sphSceneSignature->SetName(L"sphSceneSignature");
 }
 
 void Graphics::InitPostProcessComputeRootSignature(ComPtr<ID3D12Device>& device)
@@ -442,6 +516,8 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SphThicknessPS.hlsl", L"ps_6_0", sphThicknessPS);
 	CreateShader(device, L"SphSmoothingCS.hlsl", L"cs_6_0", sphSmoothingCS);
 	CreateShader(device, L"SphNormalCS.hlsl", L"cs_6_0", sphNormalCS);
+	CreateShader(device, L"SphSceneVS.hlsl", L"vs_6_0", sphSceneVS);
+	CreateShader(device, L"SphScenePS.hlsl", L"ps_6_0", sphScenePS);
 
 	// BoundsBox
 	CreateShader(device, L"BoundsBoxVS.hlsl", L"vs_6_0", boundsBoxVS);
@@ -556,7 +632,7 @@ void Graphics::InitBlendStates()
 		alphaBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;            // 알파는 누적
 		alphaBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
 		alphaBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		alphaBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		alphaBlendDesc.LogicOp = D3D12_LOGIC_OP_CLEAR;
 		alphaBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 		alphaBlend.AlphaToCoverageEnable = FALSE;
@@ -575,7 +651,7 @@ void Graphics::InitBlendStates()
 		additiveBlendDesc.DestBlendAlpha = D3D12_BLEND_ONE;
 		additiveBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 		additiveBlendDesc.LogicOp = D3D12_LOGIC_OP_CLEAR;
-		additiveBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		additiveBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_RED;
 
 		additiveBlend.AlphaToCoverageEnable = FALSE;
 		additiveBlend.IndependentBlendEnable = FALSE;
@@ -777,7 +853,6 @@ void Graphics::InitPipelineStates(ComPtr<ID3D12Device>& device)
 	D3D12_COMPUTE_PIPELINE_STATE_DESC blurYCSPSODesc = samplingCSPSODesc;
 	blurYCSPSODesc.CS = { blurYCS->GetBufferPointer(), blurYCS->GetBufferSize() };
 	ThrowIfFailed(device->CreateComputePipelineState(&blurYCSPSODesc, IID_PPV_ARGS(&blurYCSPSO)));
-
 }
 
 void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
@@ -918,6 +993,22 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	sphThicknessPSODesc.RTVFormats[0] = DXGI_FORMAT_R32_FLOAT;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphThicknessPSODesc, IID_PPV_ARGS(&sphThicknessPSO)));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC sphScenePSODesc = basicSolidPSODesc;
+	sphScenePSODesc.pRootSignature = sphSceneSignature.Get();
+	sphScenePSODesc.InputLayout = { nullptr, 0 };
+	sphScenePSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	sphScenePSODesc.VS = { sphSceneVS->GetBufferPointer(), sphSceneVS->GetBufferSize() };
+	sphScenePSODesc.PS = { sphScenePS->GetBufferPointer(), sphScenePS->GetBufferSize() };
+	sphScenePSODesc.BlendState = alphaBlend;
+	sphScenePSODesc.DepthStencilState = disabledDS;
+	sphScenePSODesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	sphScenePSODesc.SampleDesc.Count = 1;
+	sphScenePSODesc.SampleDesc.Quality = 0;
+	sphScenePSODesc.SampleMask = UINT_MAX;
+	sphScenePSODesc.NumRenderTargets = 1;
+	sphScenePSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&sphScenePSODesc, IID_PPV_ARGS(&sphScenePSO)));
+	sphScenePSO->SetName(L"sphScenePSO");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphSmoothingCSPSODesc = {};
 	sphSmoothingCSPSODesc.pRootSignature = sphSSFRSignature.Get();
@@ -946,6 +1037,7 @@ void Graphics::Initialize(ComPtr<ID3D12Device>& device)
 	InitSphRenderRootSignature(device);
 	InitSphComputeRootSignature(device);
 	InitSphSSFRSignature(device);
+	InitSphSceneSignature(device);
 	//InitPostProcessComputeRootSignature(device);
 
 	//InitShaders(device);

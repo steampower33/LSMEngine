@@ -7,7 +7,7 @@ SphSimCustom::SphSimCustom()
 SphSimCustom::~SphSimCustom() {}
 
 void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
-	ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height)
+	ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12CommandQueue> commandQueue, UINT width, UINT height)
 {
 	m_position.resize(m_numParticles);
 	m_velocity.resize(m_numParticles);
@@ -115,12 +115,16 @@ void SphSimCustom::Initialize(ComPtr<ID3D12Device> device,
 	std::vector<XMFLOAT3> vertex(m_numParticles);
 	dummy = make_shared<Mesh>();
 	CreateVertexBuffer(device, commandList, vertex, dummy);
+
+	//CreateCubeMapTexture(device, commandQueue, "./Assets/Indoor/IndoorEnvHDR.dds", m_cubemapSRVIndex, true);
+	CreateCubeMapTexture(device, commandQueue, diffuseBuffer, "./Assets/Indoor/IndoorDiffuseHDR.dds", m_cubemapSRVIndex, true);
+	CreateCubeMapTexture(device, commandQueue, specularBuffer, "./Assets/Indoor/IndoorSpecularHDR.dds", m_cubemapSRVIndex + 1, true);
+	//CreateCubeMapTexture(device, commandQueue, "./Assets/Indoor/IndoorBrdf.dds", m_cubemapSRVIndex + 3, false);
+
 }
 
 void SphSimCustom::GenerateEmitterParticles()
 {
-	XMFLOAT3 centerPos = { 0.0f, m_maxBoundsY * 1.5f, 0.0f };
-
 	const UINT num1 = 8, num2 = 16, num3 = 24, num4 = 32;
 	const float radius1 = m_dp * 3.0f;
 	const float radius2 = m_dp * 6.0f;
@@ -128,59 +132,63 @@ void SphSimCustom::GenerateEmitterParticles()
 	const float radius4 = m_dp * 12.0f;
 	const UINT batchSize = 1 + num1 + num2 + num3 + num4;
 
+	// 미리 한 번만 계산해 두기
+	XMVECTOR W = XMVector3Normalize(XMLoadFloat3(&m_emitterDir));
+	XMVECTOR worldUp = XMVectorSet(0, 1, 0, 0);
+	if (fabs(XMVectorGetX(XMVector3Dot(W, worldUp))) > 0.99f)
+		worldUp = XMVectorSet(1, 0, 0, 0);
+
+	XMVECTOR U = XMVector3Normalize(XMVector3Cross(worldUp, W));
+	XMVECTOR V = XMVector3Cross(W, U);
+
+	float ringSpacing = m_simParamsData.deltaTime * m_spawnTimeStep;
+
+
 	for (UINT i = 0; i < m_numParticles; ++i)
 	{
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = groupIdx * m_simParamsData.deltaTime * 7.0f;
+		m_spawnTime[i] = groupIdx * ringSpacing;
+
+		XMVECTOR center = XMLoadFloat3(&m_emitterPos);
 
 		if (subIdx == 0) {
-			m_position[i] = centerPos;
+			XMStoreFloat3(&m_position[i], center);
 		}
-		else if (subIdx < 1 + num1)
+		else if (subIdx < batchSize)
 		{
-			int idx = subIdx - 1;
-			float angle = idx * (2 * XM_PI / num1);
-			m_position[i] = {
-			  centerPos.x,
-			  centerPos.y + radius1 * cosf(angle),
-			  centerPos.z + radius1 * sinf(angle)
-			};
-		}
-		else if (subIdx < 1 + num1 + num2)
-		{
-			int idx = subIdx - 1 - num1;
-			float angle = idx * (2 * XM_PI / num2);
-			m_position[i] = {
-			  centerPos.x,
-			  centerPos.y + radius2 * cosf(angle),
-			  centerPos.z + radius2 * sinf(angle)
-			};
-		}
-		else if (subIdx < 1 + num1 + num2 + num3)
-		{
-			int idx = subIdx - 1 - num1 - num2;
-			float angle = idx * (2 * XM_PI / num3);
-			m_position[i] = {
-			  centerPos.x,
-			  centerPos.y + radius3 * cosf(angle),
-			  centerPos.z + radius3 * sinf(angle)
-			};
-		}
-		else
-		{
-			int idx = subIdx - 1 - num1 - num2 - num3;
-			float angle = idx * (2 * XM_PI / num4);
-			m_position[i] = {
-			  centerPos.x,
-			  centerPos.y + radius4 * cosf(angle),
-			  centerPos.z + radius4 * sinf(angle)
-			};
+			float radius;
+			UINT   idx;
+			float  angle;
+			if (subIdx < 1 + num1) {
+				idx = subIdx - 1;
+				radius = radius1;
+				angle = idx * (2 * XM_PI / num1);
+			}
+			else if (subIdx < 1 + num1 + num2) {
+				idx = subIdx - 1 - num1;
+				radius = radius2;
+				angle = idx * (2 * XM_PI / num2);
+			}
+			else if (subIdx < 1 + num1 + num2 + num3) {
+				idx = subIdx - 1 - num1 - num2;
+				radius = radius3;
+				angle = idx * (2 * XM_PI / num3);
+			}
+			else {
+				idx = subIdx - 1 - num1 - num2 - num3;
+				radius = radius4;
+				angle = idx * (2 * XM_PI / num4);
+			}
+			XMVECTOR offset = U * (radius * cosf(angle))
+				+ V * (radius * sinf(angle));
+			XMVECTOR worldPos = center + offset;
+			XMStoreFloat3(&m_position[i], worldPos);
 		}
 
-
-		XMStoreFloat3(&m_velocity[i], XMVector3Normalize(XMVECTOR{ -1.0f, -0.5f, 0.0f }) * 5.0f);
+		XMVECTOR emitterDir = XMLoadFloat3(&m_emitterDir);
+		XMStoreFloat3(&m_velocity[i], XMVector3Normalize(emitterDir) * m_emitterVel);
 	}
 }
 
@@ -247,7 +255,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused)
+void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -602,6 +610,10 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+		SetBarrier(commandList, m_shadedRTVBuffer,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 		commandList->SetGraphicsRootSignature(Graphics::sphRenderRootSignature.Get());
 
 		ID3D12DescriptorHeap* ppHeap[] = { m_cbvSrvUavHeap.Get() };
@@ -671,7 +683,7 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(m_renderHeap->GetGPUDescriptorHandleForHeapStart());
-		CD3DX12_GPU_DESCRIPTOR_HANDLE uavGpuHandle(m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_renderSRVCnt);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE uavGpuHandle(m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_renderUAVStart);
 		commandList->SetComputeRootDescriptorTable(0, srvGpuHandle);
 		commandList->SetComputeRootDescriptorTable(1, uavGpuHandle);
 		CD3DX12_GPU_DESCRIPTOR_HANDLE cbvGPUHandle(m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_renderCBVIndex);
@@ -703,7 +715,39 @@ void SphSimCustom::Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 
 		commandList->Dispatch(dispatchX, dispatchY, 1);
 
-		SetUAVBarrier(commandList, m_sceneRTVBuffer);
+		SetUAVBarrier(commandList, m_shadedRTVBuffer);
+		SetBarrier(commandList, m_shadedRTVBuffer,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	}
+
+	// Scene 
+	{
+		SetBarrier(commandList, m_sceneRTVBuffer,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET);
+	
+		commandList->SetGraphicsRootSignature(Graphics::sphSceneSignature.Get());
+
+		ID3D12DescriptorHeap* ppHeap[] = { m_renderHeap.Get() };
+		commandList->SetDescriptorHeaps(_countof(ppHeap), ppHeap);
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle(m_renderHeap->GetGPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * m_shadedSRVIndex);
+		commandList->SetGraphicsRootDescriptorTable(0, srvGpuHandle);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_sceneRTVHeap->GetCPUDescriptorHandleForHeapStart());
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+		const float clearValue[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		commandList->ClearRenderTargetView(rtvHandle, clearValue, 0, nullptr);
+
+		commandList->SetPipelineState(Graphics::sphScenePSO.Get());
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP); // 삼각형 스트립
+		commandList->DrawInstanced(4, 1, 0, 0);
+
+		SetBarrier(commandList, m_sceneRTVBuffer,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 }
 
@@ -1019,6 +1063,14 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 	// Scene Buffer
 	{
+
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = 1;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_sceneRTVHeap)));
+		m_sceneRTVHeap->SetName(L"m_sceneRTVHeap");
+
 		D3D12_CLEAR_VALUE clearValue = {};
 		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		clearValue.Color[0] = 0.0f;
@@ -1028,8 +1080,8 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 
 		CreateBuffer(device, m_sceneRTVBuffer, L"m_sceneRTVBuffer",
 			DXGI_FORMAT_R8G8B8A8_UNORM, static_cast<UINT>(width), static_cast<UINT>(height), 1,
-			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-			nullptr, 0, clearValue,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			m_sceneRTVHeap, 0, clearValue,
 			m_renderHeap, m_sceneSRVIndex, D3D12_SRV_DIMENSION_TEXTURE2D,
 			m_renderHeap, m_sceneUAVIndex, D3D12_UAV_DIMENSION_TEXTURE2D);
 	}
@@ -1098,4 +1150,69 @@ void SphSimCustom::InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT w
 		device->CreateDepthStencilView(m_backgroundDSVBuffer.Get(), &dsvDesc, m_backgroundDSVHeap->GetCPUDescriptorHandleForHeapStart());
 
 	}
+
+	// Shaded Buffer
+	{
+		D3D12_CLEAR_VALUE clearValue = {};
+		clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearValue.Color[0] = 0.0f;
+		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;
+		clearValue.Color[3] = 1.0f;
+
+		CreateBuffer(device, m_shadedRTVBuffer, L"m_shadedRTVBuffer",
+			DXGI_FORMAT_R8G8B8A8_UNORM, static_cast<UINT>(width), static_cast<UINT>(height), 1,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			nullptr, 0, clearValue,
+			m_renderHeap, m_shadedSRVIndex, D3D12_SRV_DIMENSION_TEXTURE2D,
+			m_renderHeap, m_shadedUAVIndex, D3D12_UAV_DIMENSION_TEXTURE2D);
+	}
+}
+
+void SphSimCustom::CreateCubeMapTexture(
+	ComPtr<ID3D12Device>& device,
+	ComPtr<ID3D12CommandQueue>& commandQueue,
+	ComPtr<ID3D12Resource>& buffer,
+	const string& filepath,
+	UINT srvIndex,
+	bool isCubeMap)
+{
+	wstring wideFilename = StringToWString(filepath);
+
+	// ResourceUploadBatch 객체 생성
+	ResourceUploadBatch resourceUpload(device.Get());
+	resourceUpload.Begin();
+
+	// DDS 텍스처 로드
+	DDS_ALPHA_MODE alphaMode;
+
+	ThrowIfFailed(CreateDDSTextureFromFileEx(
+		device.Get(),
+		resourceUpload,
+		wideFilename.c_str(),
+		0,
+		D3D12_RESOURCE_FLAG_NONE,
+		DDS_LOADER_DEFAULT,
+		buffer.GetAddressOf(),
+		&alphaMode,
+		&isCubeMap));
+
+	// 업로드 배치 종료 및 GPU에 제출
+	auto uploadFuture = resourceUpload.End(commandQueue.Get());
+	uploadFuture.wait();
+
+	// SRV 생성
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = buffer->GetDesc().Format;
+	srvDesc.ViewDimension = isCubeMap ? D3D12_SRV_DIMENSION_TEXTURECUBE : D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = buffer->GetDesc().MipLevels;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(m_renderHeap->GetCPUDescriptorHandleForHeapStart(), m_cbvSrvUavSize * srvIndex);
+
+	device->CreateShaderResourceView(
+		buffer.Get(),
+		&srvDesc,
+		srvHandle
+	);
 }

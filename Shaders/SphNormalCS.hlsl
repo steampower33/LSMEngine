@@ -4,12 +4,21 @@
 
 Texture2D<float> ThicknessMap : register(t1);
 Texture2D<float> SmoothedDepthMap : register(t3);
+Texture2D<float4> Background : register(t6);
+
+TextureCube<float4> DiffuseEnvMap : register(t8);
+TextureCube<float4> SpecularEnvMap : register(t9);
 
 RWTexture2D<float4> NormalMap : register(u2);
-RWTexture2D<float4> LastScene : register(u3);
+RWTexture2D<float4> Shaded : register(u4);
+
+SamplerState SamplerLinearClamp : register(s0);
+SamplerState SamplerLinearWrap : register(s1);
 
 #define IOR_AIR 1.0
 #define IOR_WATER 1.333
+#define FRESNEL_0 0.02
+#define FRESNEL_POWER 5.0
 
 cbuffer ComputeParams : register(b1)
 {
@@ -19,7 +28,7 @@ cbuffer ComputeParams : register(b1)
     int   filterRadius;
     float sigmaSpatial;
     float sigmaDepth;
-    float shininess;
+    float opacityMultiplier;
 
     uint width;
     float invWidth;
@@ -29,20 +38,13 @@ cbuffer ComputeParams : register(b1)
     float3 eyeWorld;
     float refractionStrength;
 
-    float3 lightDir;
-    float p1;
-
-    float3 lightColor;
+    float3 specularColor;
     float waterDensity;
 
-    float3 ambientColor;
-    float fresnel0;
-
-    float3 diffuseColor;
-    float fresnelPower;
-
-    float3 specularColor;
     float fresnelClamp;
+    float p0;
+    float p1;
+    float p2;
 };
 
 float3 LinearToneMapping(float3 color)
@@ -76,11 +78,13 @@ void main(uint3 gid : SV_GroupID,
     int2 pix = dtid.xy;
     if (pix.x >= width || pix.y >= height) return;
 
+    float2 uv = (float2(pix)+0.5) * float2(invWidth, invHeight);
+
     float dC = SmoothedDepthMap.Load(int3(pix, 0));
     if (dC >= 100.0 || dC <= 0.0)
     {
         NormalMap[pix] = float4(0.5f, 0.5f, 0.5f, 1.0f);
-        LastScene[pix] = float4(0.0, 0.0, 0.0, 1.0);
+        Shaded[pix] = float4(LinearToneMapping(Background.SampleLevel(SamplerLinearClamp, uv, 0).rgb), 1.0);
         return;
     }
 
@@ -102,36 +106,53 @@ void main(uint3 gid : SV_GroupID,
     float3 ddy = (posD - posU) * 0.5;
 
     float3 viewNormal = normalize(cross(ddx, ddy));
-    float4 outputNormal = float4(viewNormal * 0.5 + 0.5, 1.0);
 
+    float4 outputNormal = float4(viewNormal * 0.5 + 0.5, 1.0);
     NormalMap[pix] = outputNormal;
 
-    float3 nWorld = normalize(mul((float3x3)invView, viewNormal));
-    float3 worldPos = mul((float3x3)invView, posC);
-
-    float3 L = normalize(lightDir);
+    // 쉐이딩 -> 월드 공간
+    float3 worldNormal = normalize(mul(viewNormal, (float3x3)invView));
+    float3 worldPos = mul(float4(posC, 1.0), invView).xyz;
     float3 V = normalize(eyeWorld - worldPos);
-    float3 N = nWorld;
-    float3 H = normalize(L + V);
 
-    float  NdotL = saturate(dot(N, L));
-    float  NdotH = saturate(dot(N, H));
+    float2 latlongUV;
+    latlongUV.x = atan2(worldNormal.z, worldNormal.x) * (1.0 / 6.2831853) + 0.5;
+    latlongUV.y = asin(worldNormal.y) * (1.0 / 3.1415926) + 0.5;
 
-    float3 ambient = ambientColor;
-    float3 diffuse = diffuseColor * NdotL;
-    float3 specular = specularColor * pow(NdotH, shininess);
+    float3 diffuseEnvColor = DiffuseEnvMap.SampleLevel(SamplerLinearWrap, float3(latlongUV, 0.0), 0.0).rgb;
 
+    float3 reflectionDir = reflect(-V, worldNormal);
+    float3 specularEnvColor = SpecularEnvMap.SampleLevel(SamplerLinearWrap, reflectionDir, 0.0).rgb;
+
+    specularEnvColor *= specularColor;
+
+    // Thickness
     float  thickness = ThicknessMap.Load(int3(pix, 0)).r;
-    float3 beerTrans = exp(-waterDensity * thickness * (1.0 - diffuseColor));
-    float3 colorNoSpec = (ambient + diffuse) * beerTrans;
 
-    float fresnel = fresnel0 + (1 - fresnel0) * pow(1 - saturate(dot(N, V)), fresnelPower);
-    fresnel = clamp(fresnel, 0, fresnelClamp);
+    float3 beerTrans = exp(-waterDensity * thickness * (1.0 - diffuseEnvColor));
 
-    float4 finalColor = float4(lerp(colorNoSpec, colorNoSpec + specular, fresnel), 1.0);
+    // 굴절 효과 적용
+    float3 rayDirView = normalize(posC);
+    float3 refractionDir = refract(rayDirView, viewNormal, IOR_AIR / IOR_WATER);
 
-    LastScene[pix] = finalColor;
-    //LastScene[pix] = float4(ambient + diffuse + specular, 1.0);
+    float2 refracted_uv = uv + refractionDir.xy * thickness * refractionStrength;
+    refracted_uv = clamp(refracted_uv, float2(0.0, 0.0), float2(1.0, 1.0));
+    float3 refracted_background_color = Background.SampleLevel(SamplerLinearClamp, refracted_uv, 0).rgb;
+    float3 transmitted_background_color = refracted_background_color * beerTrans;
+
+    //float3 transmitted_color = diffuseEnvColor + (diffuseColor * beerTrans) + transmitted_background_color;
+    float3 transmitted_color = transmitted_background_color;
+
+    float3 reflected_color = specularEnvColor;
+
+    float fresnel = clamp(FRESNEL_0 + (1 - FRESNEL_0) * pow(1 - saturate(dot(worldNormal, V)), FRESNEL_POWER), 0.0, fresnelClamp);
+
+    float3 final_rgb = lerp(transmitted_color, reflected_color, fresnel);
+
+    float opacity = saturate(thickness * opacityMultiplier);
+
+    Shaded[pix] = float4(LinearToneMapping(final_rgb), opacity);
+    //Shaded[pix] = float4(ambient + diffuse + specular, 1.0);
     //float dNorm = (dC - 0.1) / (10.0 - 0.1);
-    //LastScene[pix] = float4(dNorm, dNorm, dNorm, 1.0);;
+    //Shaded[pix] = float4(dNorm, dNorm, dNorm, 1.0);;
 }

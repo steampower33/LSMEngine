@@ -18,7 +18,7 @@ cbuffer ComputeParams : register(b1)
     int   filterRadius;
     float sigmaSpatial;
     float sigmaDepth;
-    float shininess;
+    float opacityMultiplier;
 
     uint width;
     float invWidth;
@@ -28,20 +28,13 @@ cbuffer ComputeParams : register(b1)
     float3 eyeWorld;
     float refractionStrength;
 
-    float3 lightPos;
-    float p;
-
-    float3 lightColor;
+    float3 specularColor;
     float waterDensity;
 
-    float3 ambientColor;
-    float fresnel0;
-
-    float3 diffuseColor;
-    float fresnelPower;
-
-    float3 specularColor;
     float fresnelClamp;
+    float p0;
+    float p1;
+    float p2;
 };
 
 groupshared float sharedDepth[TILE_H][TILE_W];

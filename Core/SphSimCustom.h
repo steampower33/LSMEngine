@@ -14,6 +14,7 @@
 #include "Mesh.h"
 #include "MeshData.h"
 #include "Vertex.h"
+#include "Model.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -60,11 +61,11 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 80.0f;
+		float pressureCoeff = 60.0f;
 		float nearPressureCoeff = 2.0f;
 		float viscosity = 0.1f;
 	
-		float mass = 0.8f;
+		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
 		float boundaryDamping = 1.4f;
@@ -85,7 +86,7 @@ public:
 		XMFLOAT4X4 view;
 		XMFLOAT4X4 proj;
 
-		float thicknessContributionScale = 0.1f;
+		float thicknessContributionScale = 0.01f;
 		float p1;
 		float p2;
 		float p3;
@@ -105,7 +106,7 @@ public:
 		int filterRadius = 16;
 		float sigmaSpatial = 8.0f;
 		float sigmaDepth = 1.0f;
-		float shininess = 1.0f;
+		float opacityMultiplier = 1000.0f;
 
 		UINT width;
 		float invWidth;
@@ -113,22 +114,15 @@ public:
 		float invHeight;
 
 		XMFLOAT3 eyeWorld;
-		float refractionStrength = 0.0f;
-
-		XMFLOAT3 lightDir = XMFLOAT3(-5.0f, 5.0f, 0.0f);
-		float p;
-
-		XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		float waterDensity = 0.1f;
-
-		XMFLOAT3 ambientColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		float fresnel0 = 0.02f;
-
-		XMFLOAT3 diffuseColor = XMFLOAT3(0.4f, 0.5f, 1.0f);
-		float fresnelPower = 5.0f;
+		float refractionStrength = 0.1f;
 
 		XMFLOAT3 specularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		float fresnelClamp = 1.0f;
+		float waterDensity = 0.1f;
+
+		float fresnelClamp = 0.3f;
+		float p0;
+		float p1;
+		float p2;
 	};
 
 	SimParams m_simParamsData;
@@ -142,6 +136,11 @@ public:
 	float m_maxBoundsY = 4.0f;
 	float m_maxBoundsZ = 6.0f;
 
+	XMFLOAT3 m_emitterPos = XMFLOAT3{ 0.0f, 1.0f, 0.0f };
+	XMFLOAT3 m_emitterDir = XMFLOAT3{ 1.0f, 0.0f, 0.0f };
+	float m_emitterVel = 5.0f;
+	float m_spawnTimeStep = 2.0f;
+
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));
 	UINT m_gridDimZ = static_cast<UINT>(ceil(m_maxBoundsZ * 2.0f / m_smoothingRadius));
@@ -151,22 +150,23 @@ public:
 	const UINT m_numParticles = m_nX * m_nY * m_nZ * 2;
 	UINT m_cellCnt = m_numParticles < 0 ? 2048 : m_numParticles;
 
-	void Initialize(ComPtr<ID3D12Device> device,
-		ComPtr<ID3D12GraphicsCommandList> commandList, UINT width, UINT height);
+	void Initialize(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
+		ComPtr<ID3D12CommandQueue> commandQueue, UINT width, UINT height);
 
-	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused);
+	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
 
 	void InitializeDesciptorHeaps(ComPtr<ID3D12Device>& device, UINT width, UINT height);
 
-	UINT m_renderSRVCnt = 7;
-	UINT m_renderUAVCnt = 4;
+	UINT m_renderSRVCnt = 8;
+	UINT m_renderCubemapSRVCnt = 2;
+	UINT m_renderUAVCnt = 5;
 	UINT m_renderCBVCnt = 2;
-	UINT m_renderCubemapSRVCnt = 4;
-	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
-	
+	UINT m_renderHeapCnt = m_renderSRVCnt + m_renderCubemapSRVCnt + m_renderUAVCnt + m_renderCBVCnt + Graphics::imguiTextureSize;
+	UINT m_renderUAVStart = m_renderSRVCnt + m_renderCubemapSRVCnt;
+
 	ComPtr<ID3D12DescriptorHeap> m_renderHeap;
 
 	ComPtr<ID3D12Resource> m_particleRTVBuffer;
@@ -178,7 +178,7 @@ public:
 	ComPtr<ID3D12Resource> m_thicknessRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_thicknessRTVHeap;
 	UINT m_thicknessSRVIndex = 1;
-	UINT m_thicknessUAVIndex = m_renderSRVCnt;
+	UINT m_thicknessUAVIndex = m_renderUAVStart;
 
 	ComPtr<ID3D12Resource> m_particleDepthOutputBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_particleDepthOutputRTVHeap;
@@ -186,16 +186,16 @@ public:
 
 	ComPtr<ID3D12Resource> m_smoothedDepthBuffer;
 	UINT m_smoothedDepthSRVIndex = 3;
-	UINT m_smoothedDepthUAVIndex = m_renderSRVCnt + 1;
+	UINT m_smoothedDepthUAVIndex = m_renderUAVStart + 1;
 
 	ComPtr<ID3D12Resource> m_normalBuffer;
 	UINT m_normalSRVIndex = 4;
-	UINT m_normalUAVIndex = m_renderSRVCnt + 2;
+	UINT m_normalUAVIndex = m_renderUAVStart + 2;
 
 	ComPtr<ID3D12Resource> m_sceneRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_sceneRTVHeap;
 	UINT m_sceneSRVIndex = 5;
-	UINT m_sceneUAVIndex = m_renderSRVCnt + 3;
+	UINT m_sceneUAVIndex = m_renderUAVStart + 3;
 
 	ComPtr<ID3D12Resource> m_backgroundRTVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_backgroundRTVHeap;
@@ -203,9 +203,15 @@ public:
 	ComPtr<ID3D12Resource> m_backgroundDSVBuffer;
 	ComPtr<ID3D12DescriptorHeap> m_backgroundDSVHeap;
 
-	UINT m_finalSRVIndex = m_sceneUAVIndex;
+	ComPtr<ID3D12Resource> m_shadedRTVBuffer;
+	UINT m_shadedSRVIndex = 7;
+	UINT m_shadedUAVIndex = m_renderUAVStart + 4;
 
-	UINT m_renderCBVIndex = m_renderSRVCnt + m_renderUAVCnt;
+	UINT m_renderCBVIndex = m_renderUAVStart + m_renderUAVCnt;
+
+	UINT m_cubemapSRVIndex = m_renderSRVCnt;
+
+	UINT m_finalSRVIndex = m_sceneSRVIndex;
 
 	bool m_backgroundRender = false;
 	bool m_particleRender = false;
@@ -213,7 +219,11 @@ public:
 	bool m_smoothingDepthRender = false;
 	bool m_normalRender = false;
 	bool m_thicknessRender = false;
-	bool m_finalSceneRender = true;
+	bool m_shadedRender = false;
+	bool m_sceneRender = true;
+
+	ComPtr<ID3D12Resource> diffuseBuffer;
+	ComPtr<ID3D12Resource> specularBuffer;
 
 private:
 	const UINT m_particleHashDataSize = sizeof(ParticleHash);
@@ -280,6 +290,13 @@ private:
 	template <typename T>
 	void UploadAndCopyData(ComPtr<ID3D12Device> device,
 		ComPtr<ID3D12GraphicsCommandList> commandList, vector<T>& data, UINT dataSize, ComPtr<ID3D12Resource>& uploadBuffer, wstring dataName, ComPtr<ID3D12Resource>& destBuffer, D3D12_RESOURCE_STATES destBufferState);
+	void CreateCubeMapTexture(
+		ComPtr<ID3D12Device>& device,
+		ComPtr<ID3D12CommandQueue>& commandQueue,
+		ComPtr<ID3D12Resource>& buffer,
+		const string& filepath,
+		UINT srvIndex,
+		bool isCubeMap);
 
 	shared_ptr<Mesh> dummy;
 };
