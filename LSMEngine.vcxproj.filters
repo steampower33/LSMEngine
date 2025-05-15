@@ -182,9 +182,6 @@
     <None Include="Shaders\SphCommon.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Shaders\SphRenderCommon.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\BasicPS.hlsl">

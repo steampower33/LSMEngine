@@ -54,12 +54,12 @@ PSOutput main(PSInput input)
 
 	N = N * 0.5 + 0.5;
 	//o.color = float4(N, 1.0);
-	o.color = float4(dNorm, dNorm, dNorm, 1.0);
+	//o.color = float4(dNorm, dNorm, dNorm, 1.0);
 
-	//float3 lightDir = normalize(float3(1, 1, 0));
-	//float  NdotL = saturate(dot(N, lightDir));
-	//float3 color = float3(1.0, 1.0, 1.0) * NdotL;
-	//o.color = float4(color, 1.0);
+	float3 lightDir = normalize(float3(1, 1, 0));
+	float  NdotL = saturate(dot(N, lightDir));
+	float3 color = float3(1.0, 1.0, 1.0) * NdotL;
+	o.color = float4(color, 1.0);
 
 	return o;
 }

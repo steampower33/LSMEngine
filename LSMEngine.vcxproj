@@ -81,7 +81,6 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
     </None>
     <None Include="Shaders\SphCommon.hlsli" />
-    <None Include="Shaders\SphRenderCommon.hlsli" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>

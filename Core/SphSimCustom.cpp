@@ -554,6 +554,9 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 	{
 		commandList->SetPipelineState(Graphics::sphCSPSO.Get());
 
+		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 		commandList->Dispatch(dispatchX, 1, 1);
 
 		SetUAVBarrier(commandList, m_structuredBuffer[m_positionIndex]);

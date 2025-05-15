@@ -62,14 +62,14 @@ public:
 		UINT forceKey = 0;
 		
 		float density0 = 1000.0f;
-		float pressureCoeff = 40.0f;
-		float nearPressureCoeff = 2.0f;
+		float pressureCoeff = 80.0f;
+		float nearPressureCoeff = 10.0f;
 		float viscosity = 0.1f;
 	
 		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
-		float boundaryDamping = 1.0f;
+		float boundaryDamping = 1.5f;
 		
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
