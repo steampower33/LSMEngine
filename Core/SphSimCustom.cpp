@@ -149,7 +149,7 @@ void SphSimCustom::GenerateEmitterParticles()
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = groupIdx * ringSpacing;
+		m_spawnTime[i] = (groupIdx + 1.0) * ringSpacing;
 
 		XMVECTOR center = XMLoadFloat3(&m_emitterPos);
 
@@ -320,12 +320,12 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 		positionData.SlicePitch = sizeof(XMFLOAT3) * m_numParticles;
 
 		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
 
 		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_positionIndex].Get(), m_positionUploadBuffer.Get(), 0, 0, 1, &positionData);
 
 		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
-			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 		// Velocity
 		D3D12_SUBRESOURCE_DATA velocityData = {};
@@ -368,12 +368,12 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 		positionData.SlicePitch = sizeof(XMFLOAT3) * m_numParticles;
 
 		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
 
 		UpdateSubresources(commandList.Get(), m_structuredBuffer[m_positionIndex].Get(), m_positionUploadBuffer.Get(), 0, 0, 1, &positionData);
 
 		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
-			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 		// Velocity
 		D3D12_SUBRESOURCE_DATA velocityData = {};
