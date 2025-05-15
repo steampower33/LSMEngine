@@ -63,20 +63,23 @@ public:
 		
 		float density0 = 1000.0f;
 		float pressureCoeff = 80.0f;
-		float nearPressureCoeff = 10.0f;
+		float nearPressureCoeff = 2.0f;
 		float viscosity = 0.1f;
 	
 		float mass = 1.0f;
 		float radius = 0.0f;
 		float boundaryStiffness = 1000.0f;
-		float boundaryDamping = 1.5f;
+		float boundaryDamping = 1.0f;
 		
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
 		float startTime;
-		float p1;
+		UINT reset;
 
-		XMFLOAT4 p2;
+		UINT nX;
+		UINT nY;
+		UINT nZ;
+		float dp;
 
 		XMFLOAT4X4 p3;
 		XMFLOAT4X4 p4;
@@ -120,7 +123,7 @@ public:
 		XMFLOAT3 specularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		float waterDensity = 0.1f;
 
-		float fresnelClamp = 0.3f;
+		float fresnelClamp = 0.2f;
 		float p0;
 		float p1;
 		float p2;
@@ -137,13 +140,13 @@ public:
 	float m_smoothingRadius = 0.18f;
 	float m_radius = m_smoothingRadius * 0.5f;
 	float m_dp = m_smoothingRadius * 0.5f;
-	float m_maxBoundsX = 6.0f;
+	float m_maxBoundsX = 4.0f;
 	float m_maxBoundsY = 4.0f;
-	float m_maxBoundsZ = 6.0f;
+	float m_maxBoundsZ = 4.0f;
 
 	XMFLOAT3 m_emitterPos = XMFLOAT3{ 0.0f, 1.0f, 0.0f };
-	XMFLOAT3 m_emitterDir = XMFLOAT3{ 1.0f, 0.0f, 0.0f };
-	float m_emitterVel = 4.0f;
+	XMFLOAT3 m_emitterDir = XMFLOAT3{ 1.0f, -1.0f, 0.0f };
+	float m_emitterVel = 5.0f;
 	float m_spawnTimeStep = 2.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));

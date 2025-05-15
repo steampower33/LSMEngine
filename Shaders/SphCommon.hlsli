@@ -48,9 +48,12 @@ cbuffer SimParams : register(b0) {
 	float gravityCoeff;
 	float duration;
 	float startTime;
-	float p1;
+	uint reset;
 
-	float4 p2;
+	uint nX;
+	uint nY;
+	uint nZ;
+	float dp;
 
 	float4x4 p3;
 	float4x4 p4;

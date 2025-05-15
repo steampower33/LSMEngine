@@ -40,6 +40,7 @@ namespace Graphics
 	ComPtr<IDxcBlob> postEffectsVS;
 	ComPtr<IDxcBlob> postEffectsPS;
 
+	ComPtr<IDxcBlob> sphResetCS;
 	ComPtr<IDxcBlob> sphExternalCS;
 	ComPtr<IDxcBlob> sphClearCountCellCS;
 	ComPtr<IDxcBlob> sphCountCellCS;
@@ -104,6 +105,7 @@ namespace Graphics
 	ComPtr<ID3D12PipelineState> blurXCSPSO;
 	ComPtr<ID3D12PipelineState> blurYCSPSO;
 
+	ComPtr<ID3D12PipelineState> sphResetCSPSO;
 	ComPtr<ID3D12PipelineState> sphClearCountCellCSPSO;
 	ComPtr<ID3D12PipelineState> sphCountCellCSPSO;
 	ComPtr<ID3D12PipelineState> sphCellLocalScanCSPSO;
@@ -500,6 +502,7 @@ void Graphics::InitSphShaders(ComPtr<ID3D12Device>& device)
 	CreateShader(device, L"SkyboxPS.hlsl", L"ps_6_0", skyboxPS);
 
 	// Sph
+	CreateShader(device, L"SphResetCS.hlsl", L"cs_6_0", sphResetCS);
 	CreateShader(device, L"SphExternalCS.hlsl", L"cs_6_0", sphExternalCS);
 	CreateShader(device, L"SphClearCountCellCS.hlsl", L"cs_6_0", sphClearCountCellCS);
 	CreateShader(device, L"SphCellCountCS.hlsl", L"cs_6_0", sphCountCellCS);
@@ -898,6 +901,12 @@ void Graphics::InitSphPipelineStates(ComPtr<ID3D12Device>& device)
 	skyboxSolidPSODesc.PS = { skyboxPS->GetBufferPointer(), skyboxPS->GetBufferSize() };
 	skyboxSolidPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&skyboxSolidPSODesc, IID_PPV_ARGS(&skyboxSolidPSO)));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC sphResetCSPSODesc = {};
+	sphResetCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
+	sphResetCSPSODesc.CS = { sphResetCS->GetBufferPointer(), sphResetCS->GetBufferSize() };
+	sphResetCSPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(device->CreateComputePipelineState(&sphResetCSPSODesc, IID_PPV_ARGS(&sphResetCSPSO)));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC sphClearCountCellCSPSODesc = {};
 	sphClearCountCellCSPSODesc.pRootSignature = sphComputeRootSignature.Get();
