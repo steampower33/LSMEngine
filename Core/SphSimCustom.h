@@ -81,8 +81,15 @@ public:
 		UINT nZ;
 		float dp;
 
+		XMFLOAT3 emitterPos = XMFLOAT3{ 0.0f, 1.0f, 0.0f };
+		float emitterVel = 5.0f;
+		XMFLOAT3 emitterDir = XMFLOAT3{ 1.0f, -1.0f, 0.0f };
+		float spawnTimeStep = 2.0f;
+
+		XMFLOAT4 p1;
+		XMFLOAT4 p2;
+
 		XMFLOAT4X4 p3;
-		XMFLOAT4X4 p4;
 	};
 
 	// Render Param
@@ -144,10 +151,6 @@ public:
 	float m_maxBoundsY = 4.0f;
 	float m_maxBoundsZ = 4.0f;
 
-	XMFLOAT3 m_emitterPos = XMFLOAT3{ 0.0f, 1.0f, 0.0f };
-	XMFLOAT3 m_emitterDir = XMFLOAT3{ 1.0f, -1.0f, 0.0f };
-	float m_emitterVel = 5.0f;
-	float m_spawnTimeStep = 2.0f;
 
 	UINT m_gridDimX = static_cast<UINT>(ceil(m_maxBoundsX * 2.0f / m_smoothingRadius));
 	UINT m_gridDimY = static_cast<UINT>(ceil(m_maxBoundsY * 2.0f / m_smoothingRadius));

@@ -757,16 +757,16 @@ void MainEngine::UpdateGUI()
 					if (ImGui::BeginTable("Emitter Table", 2, flags))
 					{
 						flag += DrawTableRow("EmitterPosition", [&]() {
-							return ImGui::DragFloat3("##EmitterPosition", &m_sphSimCustom->m_emitterPos.x, 0.01f, -100.0f, 100.0f);
+							return ImGui::DragFloat3("##EmitterPosition", &m_sphSimCustom->m_simParamsData.emitterPos.x, 0.01f, -100.0f, 100.0f);
 							});
 						flag += DrawTableRow("EmitterDirection", [&]() {
-							return ImGui::DragFloat3("##EmitterDirection", &m_sphSimCustom->m_emitterDir.x, 0.01f, -100.0f, 100.0f);
+							return ImGui::DragFloat3("##EmitterDirection", &m_sphSimCustom->m_simParamsData.emitterDir.x, 0.01f, -100.0f, 100.0f);
 							});
 						flag += DrawTableRow("EmitterVelocity", [&]() {
-							return ImGui::DragFloat("##EmitterVelocity", &m_sphSimCustom->m_emitterVel, 0.01f, 0.0f, 100.0f);
+							return ImGui::DragFloat("##EmitterVelocity", &m_sphSimCustom->m_simParamsData.emitterVel, 0.01f, 0.0f, 100.0f);
 							});
 						flag += DrawTableRow("SpawnTimeStep", [&]() {
-							return ImGui::DragFloat("##SpawnTimeStep", &m_sphSimCustom->m_spawnTimeStep, 0.01f, 0.0f, 100.0f);
+							return ImGui::DragFloat("##SpawnTimeStep", &m_sphSimCustom->m_simParamsData.spawnTimeStep, 0.01f, 0.0f, 100.0f);
 							});
 						ImGui::EndTable();
 					}

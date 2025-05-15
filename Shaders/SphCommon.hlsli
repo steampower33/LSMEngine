@@ -55,8 +55,15 @@ cbuffer SimParams : register(b0) {
 	uint nZ;
 	float dp;
 
+	float3 emitterPos;
+	float emitterVel;
+	float3 emitterDir;
+	float spawnTimeStep;
+
+	float4 p1;
+	float4 p2;
+
 	float4x4 p3;
-	float4x4 p4;
 };
 
 uint GetCellKeyFromCellID(int3 cellID)
