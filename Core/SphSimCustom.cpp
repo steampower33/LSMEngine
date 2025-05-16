@@ -148,7 +148,7 @@ void SphSimCustom::GenerateEmitterParticles()
 		UINT groupIdx = i / batchSize;
 		UINT subIdx = i % batchSize;
 
-		m_spawnTime[i] = (groupIdx + 2.0) * ringSpacing;
+		m_spawnTime[i] = (groupIdx + 2) * ringSpacing;
 
 		XMVECTOR center = XMLoadFloat3(&m_simParamsData.emitterPos);
 

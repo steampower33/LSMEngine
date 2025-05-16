@@ -12,7 +12,7 @@ void CylinderBoundary(in float3 pos, inout float3 Fb, inout float3 vel)
 	float3 center = float3(0.0, 0.0, 0.0);
 	float3 displacement = float3(pos.x - center.x, 0.0, pos.z - center.z);
 	float distance = length(displacement);
-	float cylinderRadius = maxBounds.x;
+	float cylinderRadius = maxBounds.x * 1.5;
 	if (distance > cylinderRadius - radius)
 	{
 		float3 normal = normalize(displacement);
