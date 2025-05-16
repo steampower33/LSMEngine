@@ -48,7 +48,7 @@ cbuffer SimParams : register(b0) {
 	float gravityCoeff;
 	float duration;
 	float startTime;
-	uint reset;
+	uint boundaryMode;
 
 	uint nX;
 	uint nY;

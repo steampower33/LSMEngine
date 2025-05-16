@@ -4,6 +4,11 @@ RWStructuredBuffer<float3> Positions : register(u0);
 RWStructuredBuffer<float3> Velocities : register(u2);
 RWStructuredBuffer<float> SpawnTimes : register(u6);
 
+cbuffer ResetCB : register(b1)
+{
+	uint reset;
+};
+
 [numthreads(GROUP_SIZE_X, 1, 1)]
 void main(uint tid : SV_GroupThreadID,
 	uint3 gtid : SV_DispatchThreadID,
@@ -66,7 +71,6 @@ void main(uint tid : SV_GroupThreadID,
 		SpawnTimes[index] = group * ringSpacing;
 
 		float3 center = emitterPos;
-		float3 pos = float3(0.0, 0.0, 0.0);
 		if (subIdx == 0)
 		{
 			Positions[index] = center;
@@ -103,13 +107,12 @@ void main(uint tid : SV_GroupThreadID,
 			float3 V = cross(W, U);
 			float3 offset = U * (radius * cos(angle))
 				          + V * (radius * sin(angle));
-			pos = center + offset;
+			Positions[index] = center + offset;
 		}
 
 		float3 velDir = normalize(emitterDir);
 		float3 vel = velDir * emitterVel;
 
-		Positions[index] = pos;
 		Velocities[index] = vel;
 	}
 }

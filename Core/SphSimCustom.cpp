@@ -254,7 +254,7 @@ void SphSimCustom::GenerateDamParticles()
 	}
 }
 
-void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox)
+void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox, UINT boundaryMode)
 {
 	m_simParamsData.minBounds = XMFLOAT3(-m_maxBoundsX, -m_maxBoundsY, -m_maxBoundsZ);
 	m_simParamsData.maxBounds = XMFLOAT3(m_maxBoundsX, m_maxBoundsY, m_maxBoundsZ);
@@ -264,16 +264,15 @@ void SphSimCustom::Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Came
 	m_simParamsData.smoothingRadius = m_smoothingRadius;
 	m_radius = m_smoothingRadius * 0.5f;
 	m_simParamsData.radius = m_radius;
-	m_simParamsData.reset = reset;
 	m_simParamsData.nX = m_nX;
 	m_simParamsData.nY = m_nY;
 	m_simParamsData.nZ = m_nZ;
 	m_simParamsData.dp = m_dp;
+	m_simParamsData.boundaryMode = boundaryMode;
 
 	if (!isPaused)
 	{
 		m_simParamsData.currentTime += m_simParamsData.deltaTime;
-
 	}
 
 	if (forceKey == 1)
@@ -326,7 +325,6 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 
 	if (reset > 0)
 	{
-
 		SetBarrier(commandList, m_structuredBuffer[m_positionIndex],
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		SetBarrier(commandList, m_structuredBuffer[m_velocityIndex],
@@ -335,6 +333,8 @@ void SphSimCustom::Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT&
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		commandList->SetPipelineState(Graphics::sphResetCSPSO.Get());
+
+		commandList->SetComputeRoot32BitConstants(3, 1, &reset, 0);
 
 		commandList->Dispatch(dispatchX, 1, 1);
 

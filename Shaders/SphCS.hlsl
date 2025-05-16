@@ -106,8 +106,10 @@ void main(uint tid : SV_GroupThreadID,
 	float3 vel = Velocities[index];
 	float3 Fb = float3(0, 0, 0);
 
-	CylinderBoundary(pos, Fb, vel);
-	//BoxBoundary(pos, Fb, vel);
+	if (boundaryMode == 1)
+		BoxBoundary(pos, Fb, vel);
+	else if (boundaryMode == 2)
+		CylinderBoundary(pos, Fb, vel);
 
 	vel += (Fb / mass) * deltaTime;
 	Positions[index] += vel * deltaTime;

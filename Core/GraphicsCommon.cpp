@@ -270,10 +270,11 @@ void Graphics::InitSphComputeRootSignature(ComPtr<ID3D12Device>& device)
 	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 13, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-	CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+	CD3DX12_ROOT_PARAMETER1 rootParameters[4];
 	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
 	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
 	rootParameters[2].InitAsDescriptorTable(1, &ranges[2]);
+	rootParameters[3].InitAsConstants(1, 1, 0);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	rootSignatureDesc.Init_1_1(

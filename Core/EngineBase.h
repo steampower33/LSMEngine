@@ -94,6 +94,7 @@ public:
 	bool m_lightRot = false;
 	UINT m_forceKey = 0;
 	UINT m_reset = 0;
+	UINT m_boundaryMode = 1;
 
 	ImVec2 m_sceneControllerPos;
 	ImVec2 m_sceneControllerSize;

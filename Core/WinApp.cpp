@@ -164,6 +164,14 @@ LRESULT CALLBACK WinApp::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		{
 			pEngine->m_reset = 2;
 		}
+		if (wParam == '1')
+		{
+			pEngine->m_boundaryMode = 1;
+		}
+		if (wParam == '2')
+		{
+			pEngine->m_boundaryMode = 2;
+		}
 		pEngine->m_camera->KeyDown(wParam);
 		break;
 	}

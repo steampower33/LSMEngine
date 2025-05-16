@@ -900,7 +900,7 @@ void MainEngine::Update(float dt)
 
 	m_skybox->Update();
 
-	m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera, m_isPaused, m_skybox);
+	m_sphSimCustom->Update(dt, m_forceKey, m_reset, m_camera, m_isPaused, m_skybox, m_boundaryMode);
 
 	// Update BoundsBox
 	{

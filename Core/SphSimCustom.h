@@ -74,7 +74,7 @@ public:
 		float gravityCoeff = 1.0f;
 		float duration = 1.0f;
 		float startTime;
-		UINT reset;
+		UINT boundaryMode = 1;
 
 		UINT nX;
 		UINT nY;
@@ -164,7 +164,7 @@ public:
 	void Initialize(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList,
 		ComPtr<ID3D12CommandQueue> commandQueue, UINT width, UINT height);
 
-	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox);
+	void Update(float dt, UINT& forceKey, UINT& reset, shared_ptr<Camera>& camera, bool isPaused, shared_ptr<Model>& skybox, UINT boundaryMode);
 	void Compute(ComPtr<ID3D12GraphicsCommandList>& commandList, UINT& reset);
 	void Render(ComPtr<ID3D12GraphicsCommandList>& commandList,
 		ComPtr<ID3D12Resource>& globalConstsUploadHeap);
